@@ -20,27 +20,39 @@ pip install lfm-physics[gpu]
 ```python
 import lfm
 
-# Check fundamental constants
+# Fundamental constants derived from χ₀ = 19
 print(f"χ₀ = {lfm.CHI0}")       # 19.0
 print(f"κ  = {lfm.KAPPA}")      # 0.015873...
 print(f"α  = {lfm.ALPHA_EM}")   # 0.007299... ≈ 1/137.088
 
-# Create a simulation
-config = lfm.SimulationConfig(grid_size=64, dt=0.02)
+# Create and run a simulation
+config = lfm.SimulationConfig(grid_size=64, report_interval=500)
 sim = lfm.Simulation(config)
-
-# Initialize with a Gaussian soliton
-from lfm.fields import gaussian_soliton
-sim.add_soliton(gaussian_soliton(center=(32, 32, 32), amplitude=6.0, sigma=3.0))
-
-# Evolve
+sim.place_soliton((32, 32, 32), amplitude=6.0, sigma=5.0)
+sim.equilibrate()
 sim.run(steps=1000)
 
 # Analyze
-from lfm.analysis import compute_metrics
-metrics = compute_metrics(sim.state)
-print(f"χ_min = {metrics['chi_min']:.2f}")
+m = sim.metrics()
+print(f"χ_min = {m['chi_min']:.2f}")
+print(f"Wells = {m['well_fraction']*100:.1f}%")
+
+# 41+ predictions from one integer
+catalog = lfm.predict_all()
+for name, entry in list(catalog.items())[:5]:
+    print(f"  {name}: predicted={entry['predicted']:.6f}, "
+          f"measured={entry['measured']:.6f}, error={entry['error_pct']:.2f}%")
 ```
+
+## Examples
+
+See [`examples/`](examples/) for full working scripts:
+
+- **[cosmic_structure_formation.py](examples/cosmic_structure_formation.py)** —
+  256³ universe simulation showing spontaneous gravitational structure
+  (wells + voids) from GOV-01 + GOV-02 alone. Includes cosmic time
+  conversion, periodic snapshots, and milestone tracking.
+  Set `GRID_SIZE = 64` for a quick CPU test.
 
 ## What is LFM?
 
