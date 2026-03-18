@@ -1,0 +1,242 @@
+"""
+NumPy Backend (CPU)
+===================
+
+Pure-NumPy implementation of LFM leapfrog evolution.
+Uses the 19-point isotropic stencil via np.roll.
+"""
+
+from __future__ import annotations
+
+import numpy as np
+from numpy.typing import NDArray
+
+from lfm.core.stencils import laplacian_19pt
+
+
+class NumpyBackend:
+    """CPU compute backend using NumPy."""
+
+    @property
+    def name(self) -> str:
+        return "numpy"
+
+    def allocate(
+        self, N: int, n_psi_arrays: int, chi0: float,
+    ) -> dict[str, NDArray[np.float32]]:
+        total = N**3
+        psi_size = n_psi_arrays * total
+        zero_psi = np.zeros(psi_size, dtype=np.float32)
+        chi_init = np.full(total, chi0, dtype=np.float32)
+        return {
+            "psi_A": zero_psi.copy(), "psi_prev_A": zero_psi.copy(),
+            "chi_A": chi_init.copy(), "chi_prev_A": chi_init.copy(),
+            "psi_B": zero_psi.copy(), "psi_prev_B": zero_psi.copy(),
+            "chi_B": chi_init.copy(), "chi_prev_B": chi_init.copy(),
+        }
+
+    def create_boundary_mask(
+        self, N: int, boundary_fraction: float,
+    ) -> NDArray[np.float32]:
+        center = N / 2.0
+        r_max = N / 2.0
+        r_freeze = (1.0 - boundary_fraction) * r_max
+        coords = np.arange(N, dtype=np.float32) - center + 0.5
+        X, Y, Z = np.meshgrid(coords, coords, coords, indexing="ij")
+        R = np.sqrt(X**2 + Y**2 + Z**2)
+        mask = (R > r_freeze).astype(np.float32).ravel()
+        return mask
+
+    def _laplacian_3d(self, flat: NDArray[np.float32], N: int) -> NDArray[np.float32]:
+        """19-point Laplacian on a flat (N³,) or (K*N³,) array.
+
+        Reshapes to 3D, computes, and flattens back.
+        """
+        field = flat.reshape(N, N, N)
+        result = laplacian_19pt(field)
+        return result.ravel()
+
+    def step_real(
+        self,
+        psi_in: NDArray, psi_prev_in: NDArray,
+        chi_in: NDArray, chi_prev_in: NDArray,
+        boundary_mask: NDArray,
+        psi_out: NDArray, psi_prev_out: NDArray,
+        chi_out: NDArray, chi_prev_out: NDArray,
+        N: int, dt2: float, kappa: float,
+        lambda_self: float, chi0: float, e0_sq: float,
+    ) -> None:
+        E = psi_in
+        E_prev = psi_prev_in
+        chi = chi_in
+        chi_prev = chi_prev_in
+
+        lap_E = self._laplacian_3d(E, N)
+        lap_chi = self._laplacian_3d(chi, N)
+        chi_sq = chi * chi
+
+        # GOV-01
+        E_new = 2.0 * E - E_prev + dt2 * (lap_E - chi_sq * E)
+
+        # GOV-02
+        chi_source = kappa * (E * E - e0_sq)
+        chi_accel = lap_chi - chi_source
+        if lambda_self > 0:
+            chi_accel -= 4.0 * lambda_self * chi * (chi_sq - chi0 * chi0)
+        chi_new = 2.0 * chi - chi_prev + dt2 * chi_accel
+
+        # BH excision
+        np.clip(chi_new, -chi0, None, out=chi_new)
+
+        # Frozen boundary
+        E_new *= (1.0 - boundary_mask)
+        chi_new = boundary_mask * chi0 + (1.0 - boundary_mask) * chi_new
+
+        # Write to output buffers (double-buffer swap)
+        np.copyto(psi_out, E_new)
+        np.copyto(psi_prev_out, E)
+        np.copyto(chi_out, chi_new)
+        np.copyto(chi_prev_out, chi)
+
+    def step_complex(
+        self,
+        psi_r_in: NDArray, psi_r_prev_in: NDArray,
+        psi_i_in: NDArray, psi_i_prev_in: NDArray,
+        chi_in: NDArray, chi_prev_in: NDArray,
+        boundary_mask: NDArray,
+        psi_r_out: NDArray, psi_r_prev_out: NDArray,
+        psi_i_out: NDArray, psi_i_prev_out: NDArray,
+        chi_out: NDArray, chi_prev_out: NDArray,
+        N: int, dt2: float, kappa: float,
+        lambda_self: float, chi0: float, e0_sq: float,
+        epsilon_w: float,
+    ) -> None:
+        Pr, Pi = psi_r_in, psi_i_in
+        chi, chi_prev = chi_in, chi_prev_in
+        chi_sq = chi * chi
+
+        lap_Pr = self._laplacian_3d(Pr, N)
+        lap_Pi = self._laplacian_3d(Pi, N)
+        lap_chi = self._laplacian_3d(chi, N)
+
+        # GOV-01
+        Pr_new = 2.0 * Pr - psi_r_prev_in + dt2 * (lap_Pr - chi_sq * Pr)
+        Pi_new = 2.0 * Pi - psi_i_prev_in + dt2 * (lap_Pi - chi_sq * Pi)
+
+        # |Ψ|² and momentum density
+        psi_sq = Pr * Pr + Pi * Pi
+
+        # j = Im(Ψ*·∇Ψ) via central differences on 3D grid
+        Pr3 = Pr.reshape(N, N, N)
+        Pi3 = Pi.reshape(N, N, N)
+        # Face-neighbor central differences
+        dPr_dx = np.roll(Pr3, -1, 0) - np.roll(Pr3, 1, 0)
+        dPr_dy = np.roll(Pr3, -1, 1) - np.roll(Pr3, 1, 1)
+        dPr_dz = np.roll(Pr3, -1, 2) - np.roll(Pr3, 1, 2)
+        dPi_dx = np.roll(Pi3, -1, 0) - np.roll(Pi3, 1, 0)
+        dPi_dy = np.roll(Pi3, -1, 1) - np.roll(Pi3, 1, 1)
+        dPi_dz = np.roll(Pi3, -1, 2) - np.roll(Pi3, 1, 2)
+        j_x = (Pr3 * dPi_dx - Pi3 * dPr_dx).ravel()
+        j_y = (Pr3 * dPi_dy - Pi3 * dPr_dy).ravel()
+        j_z = (Pr3 * dPi_dz - Pi3 * dPr_dz).ravel()
+        j_total = 0.5 * (j_x + j_y + j_z)
+
+        # GOV-02
+        chi_source = kappa * (psi_sq + epsilon_w * j_total - e0_sq)
+        chi_accel = lap_chi - chi_source
+        if lambda_self > 0:
+            chi_accel -= 4.0 * lambda_self * chi * (chi_sq - chi0 * chi0)
+        chi_new = 2.0 * chi - chi_prev + dt2 * chi_accel
+
+        np.clip(chi_new, -chi0, None, out=chi_new)
+
+        # Frozen boundary
+        Pr_new *= (1.0 - boundary_mask)
+        Pi_new *= (1.0 - boundary_mask)
+        chi_new = boundary_mask * chi0 + (1.0 - boundary_mask) * chi_new
+
+        np.copyto(psi_r_out, Pr_new)
+        np.copyto(psi_r_prev_out, Pr)
+        np.copyto(psi_i_out, Pi_new)
+        np.copyto(psi_i_prev_out, Pi)
+        np.copyto(chi_out, chi_new)
+        np.copyto(chi_prev_out, chi)
+
+    def step_color(
+        self,
+        psi_r_in: NDArray, psi_r_prev_in: NDArray,
+        psi_i_in: NDArray, psi_i_prev_in: NDArray,
+        chi_in: NDArray, chi_prev_in: NDArray,
+        boundary_mask: NDArray,
+        psi_r_out: NDArray, psi_r_prev_out: NDArray,
+        psi_i_out: NDArray, psi_i_prev_out: NDArray,
+        chi_out: NDArray, chi_prev_out: NDArray,
+        N: int, dt2: float, kappa: float,
+        lambda_self: float, chi0: float, e0_sq: float,
+        epsilon_w: float,
+    ) -> None:
+        total = N**3
+        chi, chi_prev = chi_in, chi_prev_in
+        chi_sq = chi * chi
+
+        psi_sq_total = np.zeros(total, dtype=np.float32)
+        j_total_acc = np.zeros(total, dtype=np.float32)
+
+        for a in range(3):
+            off = a * total
+            s = slice(off, off + total)
+
+            Pr = psi_r_in[s]
+            Pi = psi_i_in[s]
+
+            lap_Pr = self._laplacian_3d(Pr, N)
+            lap_Pi = self._laplacian_3d(Pi, N)
+
+            # GOV-01
+            Pr_new = 2.0 * Pr - psi_r_prev_in[s] + dt2 * (lap_Pr - chi_sq * Pr)
+            Pi_new = 2.0 * Pi - psi_i_prev_in[s] + dt2 * (lap_Pi - chi_sq * Pi)
+
+            np.copyto(psi_r_out[s], Pr_new)
+            np.copyto(psi_r_prev_out[s], Pr)
+            np.copyto(psi_i_out[s], Pi_new)
+            np.copyto(psi_i_prev_out[s], Pi)
+
+            psi_sq_total += Pr * Pr + Pi * Pi
+
+            # momentum density
+            Pr3 = Pr.reshape(N, N, N)
+            Pi3 = Pi.reshape(N, N, N)
+            dPr_dx = np.roll(Pr3, -1, 0) - np.roll(Pr3, 1, 0)
+            dPr_dy = np.roll(Pr3, -1, 1) - np.roll(Pr3, 1, 1)
+            dPr_dz = np.roll(Pr3, -1, 2) - np.roll(Pr3, 1, 2)
+            dPi_dx = np.roll(Pi3, -1, 0) - np.roll(Pi3, 1, 0)
+            dPi_dy = np.roll(Pi3, -1, 1) - np.roll(Pi3, 1, 1)
+            dPi_dz = np.roll(Pi3, -1, 2) - np.roll(Pi3, 1, 2)
+            j_x = (Pr3 * dPi_dx - Pi3 * dPr_dx).ravel()
+            j_y = (Pr3 * dPi_dy - Pi3 * dPr_dy).ravel()
+            j_z = (Pr3 * dPi_dz - Pi3 * dPr_dz).ravel()
+            j_total_acc += 0.5 * (j_x + j_y + j_z)
+
+        # GOV-02
+        lap_chi = self._laplacian_3d(chi, N)
+        chi_source = kappa * (psi_sq_total + epsilon_w * j_total_acc - e0_sq)
+        chi_accel = lap_chi - chi_source
+        if lambda_self > 0:
+            chi_accel -= 4.0 * lambda_self * chi * (chi_sq - chi0 * chi0)
+        chi_new = 2.0 * chi - chi_prev + dt2 * chi_accel
+
+        np.clip(chi_new, -chi0, None, out=chi_new)
+
+        # Frozen boundary
+        psi_r_out *= (1.0 - np.tile(boundary_mask, 3))
+        psi_i_out *= (1.0 - np.tile(boundary_mask, 3))
+        chi_new = boundary_mask * chi0 + (1.0 - boundary_mask) * chi_new
+
+        np.copyto(chi_out, chi_new)
+        np.copyto(chi_prev_out, chi)
+
+    def to_numpy(self, arr: NDArray[np.float32]) -> NDArray[np.float32]:
+        return arr
+
+    def from_numpy(self, arr: NDArray) -> NDArray[np.float32]:
+        return arr.astype(np.float32) if arr.dtype != np.float32 else arr

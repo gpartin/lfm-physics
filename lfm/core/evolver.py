@@ -1,0 +1,293 @@
+"""
+Backend-Powered Evolver
+=======================
+
+High-performance evolution loop using the backend system.
+Matches the production double-buffering pattern from the canonical
+universe simulator. Supports CPU (NumPy) and GPU (CuPy) backends.
+
+For simple use, the existing ``step_leapfrog`` in integrator.py is
+still available. This module is for performance-critical loops.
+
+Usage::
+
+    from lfm.config import SimulationConfig
+    from lfm.core.evolver import Evolver
+
+    config = SimulationConfig(grid_size=128)
+    evolver = Evolver(config)              # auto-detect GPU
+    evolver = Evolver(config, backend="cpu")  # force CPU
+
+    # Run 10000 steps
+    evolver.evolve(10000)
+
+    # Get numpy arrays for analysis
+    chi = evolver.get_chi()       # shape (N, N, N)
+    psi = evolver.get_psi()       # shape depends on field_level
+"""
+
+from __future__ import annotations
+
+import numpy as np
+from numpy.typing import NDArray
+
+from lfm.config import FieldLevel, SimulationConfig
+from lfm.core.backends import get_backend
+
+
+class Evolver:
+    """Double-buffered LFM evolver using the backend system.
+
+    This class manages GPU/CPU arrays, boundary masks, and the
+    A/B buffer toggle — matching production code exactly.
+
+    Parameters
+    ----------
+    config : SimulationConfig
+        Simulation configuration.
+    backend : str
+        Backend preference: 'auto', 'cpu', or 'gpu'.
+    """
+
+    def __init__(
+        self,
+        config: SimulationConfig,
+        backend: str = "auto",
+    ) -> None:
+        self.config = config
+        self.backend = get_backend(backend)
+        self.N = config.grid_size
+        self.total = self.N**3
+        self.step = 0
+        self._use_buffer_A = True
+
+        # Determine number of psi component arrays
+        if config.field_level == FieldLevel.REAL:
+            self._n_psi = 1  # Just E
+        elif config.field_level == FieldLevel.COMPLEX:
+            self._n_psi = 1  # Single complex (Pr and Pi separate)
+        else:
+            self._n_psi = config.n_colors  # 3 colors
+
+        # For complex/color: we have separate real and imaginary arrays
+        # For real: psi_r is E, psi_i is unused (zero)
+        self._has_imag = config.field_level != FieldLevel.REAL
+
+        # Pre-compute scalar parameters
+        self._dt2 = config.dt**2
+        self._N = config.grid_size
+
+        # Allocate arrays via backend
+        self._init_arrays()
+
+    def _init_arrays(self) -> None:
+        """Allocate double-buffered arrays."""
+        N = self.N
+        total = self.total
+        cfg = self.config
+
+        if cfg.field_level == FieldLevel.REAL:
+            psi_size = total
+        elif cfg.field_level == FieldLevel.COMPLEX:
+            psi_size = total
+        else:  # COLOR
+            psi_size = cfg.n_colors * total
+
+        xp = self.backend
+
+        # Psi real part — A and B buffers
+        self.psi_r_A = xp.from_numpy(np.zeros(psi_size, dtype=np.float32))
+        self.psi_r_prev_A = xp.from_numpy(np.zeros(psi_size, dtype=np.float32))
+        self.psi_r_B = xp.from_numpy(np.zeros(psi_size, dtype=np.float32))
+        self.psi_r_prev_B = xp.from_numpy(np.zeros(psi_size, dtype=np.float32))
+
+        # Psi imaginary part (zero for real field, but allocated for uniform API)
+        if self._has_imag:
+            self.psi_i_A = xp.from_numpy(np.zeros(psi_size, dtype=np.float32))
+            self.psi_i_prev_A = xp.from_numpy(np.zeros(psi_size, dtype=np.float32))
+            self.psi_i_B = xp.from_numpy(np.zeros(psi_size, dtype=np.float32))
+            self.psi_i_prev_B = xp.from_numpy(np.zeros(psi_size, dtype=np.float32))
+        else:
+            self.psi_i_A = None
+            self.psi_i_prev_A = None
+            self.psi_i_B = None
+            self.psi_i_prev_B = None
+
+        # Chi — A and B buffers
+        chi_init = np.full(total, cfg.chi0, dtype=np.float32)
+        self.chi_A = xp.from_numpy(chi_init.copy())
+        self.chi_prev_A = xp.from_numpy(chi_init.copy())
+        self.chi_B = xp.from_numpy(chi_init.copy())
+        self.chi_prev_B = xp.from_numpy(chi_init.copy())
+
+        # Boundary mask
+        self.boundary_mask = xp.create_boundary_mask(N, cfg.boundary_fraction)
+
+    def evolve(self, steps: int, callback=None) -> None:
+        """Run the evolution loop for a given number of steps.
+
+        Parameters
+        ----------
+        steps : int
+            Number of leapfrog steps.
+        callback : callable, optional
+            Called as callback(evolver, step) every report_interval steps.
+        """
+        cfg = self.config
+        report = cfg.report_interval
+
+        for i in range(steps):
+            self._step()
+            self.step += 1
+
+            if callback is not None and report > 0 and self.step % report == 0:
+                callback(self, self.step)
+
+    def _step(self) -> None:
+        """Execute one leapfrog step with double-buffer toggle."""
+        cfg = self.config
+
+        if self._use_buffer_A:
+            r_in, rp_in = self.psi_r_A, self.psi_r_prev_A
+            r_out, rp_out = self.psi_r_B, self.psi_r_prev_B
+            i_in, ip_in = self.psi_i_A, self.psi_i_prev_A
+            i_out, ip_out = self.psi_i_B, self.psi_i_prev_B
+            c_in, cp_in = self.chi_A, self.chi_prev_A
+            c_out, cp_out = self.chi_B, self.chi_prev_B
+        else:
+            r_in, rp_in = self.psi_r_B, self.psi_r_prev_B
+            r_out, rp_out = self.psi_r_A, self.psi_r_prev_A
+            i_in, ip_in = self.psi_i_B, self.psi_i_prev_B
+            i_out, ip_out = self.psi_i_A, self.psi_i_prev_A
+            c_in, cp_in = self.chi_B, self.chi_prev_B
+            c_out, cp_out = self.chi_A, self.chi_prev_A
+
+        if cfg.field_level == FieldLevel.REAL:
+            self.backend.step_real(
+                r_in, rp_in, c_in, cp_in, self.boundary_mask,
+                r_out, rp_out, c_out, cp_out,
+                self._N, self._dt2, cfg.kappa,
+                cfg.lambda_self, cfg.chi0, cfg.e0_sq,
+            )
+        elif cfg.field_level == FieldLevel.COMPLEX:
+            self.backend.step_complex(
+                r_in, rp_in, i_in, ip_in, c_in, cp_in,
+                self.boundary_mask,
+                r_out, rp_out, i_out, ip_out, c_out, cp_out,
+                self._N, self._dt2, cfg.kappa,
+                cfg.lambda_self, cfg.chi0, cfg.e0_sq, cfg.epsilon_w,
+            )
+        else:  # COLOR
+            self.backend.step_color(
+                r_in, rp_in, i_in, ip_in, c_in, cp_in,
+                self.boundary_mask,
+                r_out, rp_out, i_out, ip_out, c_out, cp_out,
+                self._N, self._dt2, cfg.kappa,
+                cfg.lambda_self, cfg.chi0, cfg.e0_sq, cfg.epsilon_w,
+            )
+
+        self._use_buffer_A = not self._use_buffer_A
+
+    # --- Field accessors (return numpy arrays) ---
+
+    def _current_buf(self) -> str:
+        """Which buffer holds the most recent result."""
+        return "A" if self._use_buffer_A else "B"
+
+    def get_chi(self) -> NDArray[np.float32]:
+        """Get current χ field as numpy array, shape (N, N, N)."""
+        if self._use_buffer_A:
+            flat = self.backend.to_numpy(self.chi_A)
+        else:
+            flat = self.backend.to_numpy(self.chi_B)
+        return flat.reshape(self.N, self.N, self.N)
+
+    def get_psi_real(self) -> NDArray[np.float32]:
+        """Get real part of Ψ as numpy array.
+
+        Shape: (N,N,N) for REAL/COMPLEX, (n_colors,N,N,N) for COLOR.
+        """
+        if self._use_buffer_A:
+            flat = self.backend.to_numpy(self.psi_r_A)
+        else:
+            flat = self.backend.to_numpy(self.psi_r_B)
+
+        if self.config.field_level == FieldLevel.COLOR:
+            return flat.reshape(self.config.n_colors, self.N, self.N, self.N)
+        return flat.reshape(self.N, self.N, self.N)
+
+    def get_psi_imag(self) -> NDArray[np.float32] | None:
+        """Get imaginary part of Ψ. None for REAL field level."""
+        if not self._has_imag:
+            return None
+        if self._use_buffer_A:
+            flat = self.backend.to_numpy(self.psi_i_A)
+        else:
+            flat = self.backend.to_numpy(self.psi_i_B)
+
+        if self.config.field_level == FieldLevel.COLOR:
+            return flat.reshape(self.config.n_colors, self.N, self.N, self.N)
+        return flat.reshape(self.N, self.N, self.N)
+
+    def get_energy_density(self) -> NDArray[np.float32]:
+        """Compute |Ψ|² = Σₐ(Pr² + Pi²), shape (N, N, N)."""
+        pr = self.get_psi_real()
+        e2 = np.sum(pr**2, axis=0) if pr.ndim == 4 else pr**2
+        pi = self.get_psi_imag()
+        if pi is not None:
+            e2 += np.sum(pi**2, axis=0) if pi.ndim == 4 else pi**2
+        return e2
+
+    def set_psi_real(self, arr: NDArray) -> None:
+        """Set the real part of Ψ on both buffers.
+
+        Parameters
+        ----------
+        arr : ndarray
+            Shape (N,N,N) for REAL/COMPLEX, (n_colors,N,N,N) for COLOR.
+        """
+        flat = arr.astype(np.float32).ravel()
+        data = self.backend.from_numpy(flat)
+        # Set on current buffer (both current and prev for clean start)
+        for buf in [self.psi_r_A, self.psi_r_B]:
+            if hasattr(buf, 'copy_'):
+                buf[:] = data  # CuPy
+            else:
+                np.copyto(buf, data)  # NumPy
+        for buf in [self.psi_r_prev_A, self.psi_r_prev_B]:
+            if hasattr(buf, 'copy_'):
+                buf[:] = data
+            else:
+                np.copyto(buf, data)
+
+    def set_psi_imag(self, arr: NDArray) -> None:
+        """Set the imaginary part of Ψ on both buffers."""
+        if not self._has_imag:
+            raise ValueError("Cannot set imaginary part for REAL field level")
+        flat = arr.astype(np.float32).ravel()
+        data = self.backend.from_numpy(flat)
+        for buf in [self.psi_i_A, self.psi_i_B]:
+            if hasattr(buf, 'copy_'):
+                buf[:] = data
+            else:
+                np.copyto(buf, data)
+        for buf in [self.psi_i_prev_A, self.psi_i_prev_B]:
+            if hasattr(buf, 'copy_'):
+                buf[:] = data
+            else:
+                np.copyto(buf, data)
+
+    def set_chi(self, arr: NDArray) -> None:
+        """Set χ field on both buffers. Shape (N, N, N)."""
+        flat = arr.astype(np.float32).ravel()
+        data = self.backend.from_numpy(flat)
+        for buf in [self.chi_A, self.chi_B]:
+            if hasattr(buf, 'copy_'):
+                buf[:] = data
+            else:
+                np.copyto(buf, data)
+        for buf in [self.chi_prev_A, self.chi_prev_B]:
+            if hasattr(buf, 'copy_'):
+                buf[:] = data
+            else:
+                np.copyto(buf, data)

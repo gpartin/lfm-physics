@@ -36,6 +36,8 @@ from lfm.constants import (
     SIN2_THETA_W,
 )
 from lfm.config import BoundaryType, FieldLevel, SimulationConfig
+from lfm.core.backends import get_backend, gpu_available
+from lfm.core.evolver import Evolver
 
 __all__ = [
     "__version__",
@@ -59,4 +61,8 @@ __all__ = [
     "SimulationConfig",
     "FieldLevel",
     "BoundaryType",
+    # Backends & Simulation
+    "Evolver",
+    "get_backend",
+    "gpu_available",
 ]
