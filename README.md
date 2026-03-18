@@ -1,5 +1,10 @@
 # lfm-physics
 
+[![Tests](https://github.com/gpartin/lfm-physics/actions/workflows/test.yml/badge.svg)](https://github.com/gpartin/lfm-physics/actions/workflows/test.yml)
+[![PyPI](https://img.shields.io/pypi/v/lfm-physics)](https://pypi.org/project/lfm-physics/)
+[![Python](https://img.shields.io/pypi/pyversions/lfm-physics)](https://pypi.org/project/lfm-physics/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **Lattice Field Medium** — a physics simulation library implementing the LFM framework.
 
 Two governing equations. One integer (χ₀ = 19). All of physics.
@@ -70,6 +75,7 @@ the framework predicts 41+ fundamental constants within 2% of measured values.
 - [API Reference](https://github.com/gpartin/lfm-physics/wiki)
 - [LFM Physics Papers](https://zenodo.org/communities/lfm-physics)
 - [Constants & Predictions](https://github.com/gpartin/lfm-physics/blob/main/lfm/constants.py)
+- [Contributing](CONTRIBUTING.md)
 
 ## License
 

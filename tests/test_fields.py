@@ -141,7 +141,7 @@ class TestPoissonSolve:
         KX, KY, KZ = np.meshgrid(kx, ky, kz, indexing="ij")
         K2 = KX**2 + KY**2 + KZ**2
         lap_hat = -K2 * np.fft.rfftn(phi)
-        laplacian = np.fft.irfftn(lap_hat, s=(N, N, N))
+        laplacian = np.fft.irfftn(lap_hat, s=(N, N, N), axes=(0, 1, 2))
         assert np.allclose(laplacian, source, atol=1e-3)
 
 

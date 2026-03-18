@@ -18,6 +18,8 @@ Usage::
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Callable
 
 import numpy as np
@@ -292,3 +294,92 @@ class Simulation:
             self.config.dt, self.config.c,
             pi, pi_prev,
         )
+
+    # ── Checkpoint / Resume ───────────────────────────────
+
+    def save_checkpoint(self, path: str | Path) -> None:
+        """Save simulation state to a .npz file for later resumption.
+
+        Saves fields, step counter, config, and metric history.
+
+        Parameters
+        ----------
+        path : str or Path
+            Output file path (should end in .npz).
+        """
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        data: dict[str, object] = {
+            "step": np.int64(self.step),
+            "chi": self.get_chi(),
+            "psi_real": self.get_psi_real(),
+        }
+        pi = self.get_psi_imag()
+        if pi is not None:
+            data["psi_imag"] = pi
+        if self._psi_r_prev is not None:
+            data["psi_real_prev"] = self._psi_r_prev
+        if self._psi_i_prev is not None:
+            data["psi_imag_prev"] = self._psi_i_prev
+
+        # Serialize config + history as JSON strings
+        cfg_dict = {
+            k: v for k, v in vars(self.config).items()
+            if not k.startswith("_")
+        }
+        # Convert enums to their values
+        for k, v in cfg_dict.items():
+            if hasattr(v, "value"):
+                cfg_dict[k] = v.value
+        data["config_json"] = np.array(json.dumps(cfg_dict))
+        data["history_json"] = np.array(json.dumps(self._history))
+
+        np.savez_compressed(str(path), **data)
+
+    @classmethod
+    def load_checkpoint(cls, path: str | Path, backend: str = "auto") -> Simulation:
+        """Load a simulation from a checkpoint file.
+
+        Parameters
+        ----------
+        path : str or Path
+            Path to .npz checkpoint file.
+        backend : str
+            Backend preference: 'auto', 'cpu', or 'gpu'.
+
+        Returns
+        -------
+        Simulation
+            Restored simulation ready to continue with run().
+        """
+        path = Path(path)
+        data = np.load(str(path), allow_pickle=False)
+
+        # Restore config (exclude derived fields that are computed in __post_init__)
+        cfg_dict = json.loads(str(data["config_json"]))
+        cfg_dict["field_level"] = FieldLevel(cfg_dict["field_level"])
+        cfg_dict["boundary_type"] = BoundaryType(cfg_dict["boundary_type"])
+        for key in ("dx", "sigma"):
+            cfg_dict.pop(key, None)
+        config = SimulationConfig(**cfg_dict)
+
+        sim = cls(config, backend=backend)
+
+        # Restore fields
+        sim._evolver.set_psi_real(data["psi_real"])
+        if "psi_imag" in data:
+            sim._evolver.set_psi_imag(data["psi_imag"])
+        sim._evolver.set_chi(data["chi"])
+        sim._evolver.step = int(data["step"])
+
+        # Restore prev fields for energy calculation
+        if "psi_real_prev" in data:
+            sim._psi_r_prev = data["psi_real_prev"]
+        if "psi_imag_prev" in data:
+            sim._psi_i_prev = data["psi_imag_prev"]
+
+        # Restore history
+        sim._history = json.loads(str(data["history_json"]))
+
+        return sim

@@ -296,3 +296,92 @@ class TestTopLevelImport:
 
         sim = lfm.Simulation(lfm.SimulationConfig(grid_size=N))
         assert sim.step == 0
+
+
+# ──── Checkpoint / Resume ────
+
+
+class TestCheckpoint:
+    def test_save_creates_file(self, tmp_path):
+        sim = Simulation(_small_config())
+        sim.place_soliton((N // 2, N // 2, N // 2), amplitude=3.0, sigma=2.0)
+        sim.equilibrate()
+        sim.run(10, record_metrics=False)
+
+        path = tmp_path / "ckpt.npz"
+        sim.save_checkpoint(path)
+        assert path.exists()
+        assert path.stat().st_size > 0
+
+    def test_round_trip_preserves_step(self, tmp_path):
+        sim = Simulation(_small_config())
+        sim.place_soliton((N // 2, N // 2, N // 2), amplitude=3.0, sigma=2.0)
+        sim.run(20, record_metrics=False)
+
+        path = tmp_path / "ckpt.npz"
+        sim.save_checkpoint(path)
+        loaded = Simulation.load_checkpoint(path)
+        assert loaded.step == sim.step
+
+    def test_round_trip_preserves_chi(self, tmp_path):
+        sim = Simulation(_small_config())
+        sim.place_soliton((N // 2, N // 2, N // 2), amplitude=3.0, sigma=2.0)
+        sim.equilibrate()
+        sim.run(10, record_metrics=False)
+
+        path = tmp_path / "ckpt.npz"
+        sim.save_checkpoint(path)
+        loaded = Simulation.load_checkpoint(path)
+        np.testing.assert_allclose(loaded.get_chi(), sim.get_chi(), atol=1e-6)
+
+    def test_round_trip_preserves_psi_real(self, tmp_path):
+        sim = Simulation(_small_config())
+        sim.place_soliton((N // 2, N // 2, N // 2), amplitude=3.0, sigma=2.0)
+        sim.equilibrate()
+        sim.run(10, record_metrics=False)
+
+        path = tmp_path / "ckpt.npz"
+        sim.save_checkpoint(path)
+        loaded = Simulation.load_checkpoint(path)
+        np.testing.assert_allclose(
+            loaded.get_psi_real(), sim.get_psi_real(), atol=1e-6,
+        )
+
+    def test_round_trip_preserves_config(self, tmp_path):
+        cfg = _small_config(chi0=18.5, kappa=0.02)
+        sim = Simulation(cfg)
+        sim.run(10, record_metrics=False)
+
+        path = tmp_path / "ckpt.npz"
+        sim.save_checkpoint(path)
+        loaded = Simulation.load_checkpoint(path)
+        assert loaded.config.grid_size == cfg.grid_size
+        assert loaded.config.chi0 == pytest.approx(cfg.chi0)
+        assert loaded.config.kappa == pytest.approx(cfg.kappa)
+
+    def test_round_trip_preserves_history(self, tmp_path):
+        sim = Simulation(_small_config(report_interval=5))
+        sim.place_soliton((N // 2, N // 2, N // 2), amplitude=3.0, sigma=2.0)
+        sim.run(10)  # record_metrics=True by default
+
+        path = tmp_path / "ckpt.npz"
+        sim.save_checkpoint(path)
+        loaded = Simulation.load_checkpoint(path)
+        assert len(loaded.history) == len(sim.history)
+
+    def test_complex_field_round_trip(self, tmp_path):
+        cfg = _small_config(field_level=FieldLevel.COMPLEX)
+        sim = Simulation(cfg)
+        sim.place_soliton(
+            (N // 2, N // 2, N // 2), amplitude=3.0, sigma=2.0, phase=0.5,
+        )
+        sim.equilibrate()
+        sim.run(10, record_metrics=False)
+
+        path = tmp_path / "ckpt.npz"
+        sim.save_checkpoint(path)
+        loaded = Simulation.load_checkpoint(path)
+        assert loaded.config.field_level == FieldLevel.COMPLEX
+        np.testing.assert_allclose(
+            loaded.get_psi_imag(), sim.get_psi_imag(), atol=1e-6,
+        )
