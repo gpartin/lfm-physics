@@ -1,7 +1,6 @@
 """Tests for lfm.core.stencils — Laplacian operators."""
 
 import numpy as np
-import pytest
 
 from lfm.core.stencils import laplacian_7pt, laplacian_19pt
 

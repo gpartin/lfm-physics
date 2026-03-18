@@ -7,7 +7,6 @@ from lfm.config import BoundaryType, FieldLevel, SimulationConfig
 from lfm.constants import CHI0
 from lfm.simulation import Simulation
 
-
 N = 16  # small grid for fast tests
 
 

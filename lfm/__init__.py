@@ -18,11 +18,22 @@ Quick start::
 
 __version__ = "0.1.0"
 
+from lfm.analysis import (
+    chi_statistics,
+    compute_metrics,
+    count_clusters,
+    energy_components,
+    energy_conservation_drift,
+    interior_mask,
+    total_energy,
+    void_fraction,
+    well_fraction,
+)
+from lfm.config import BoundaryType, FieldLevel, SimulationConfig
 from lfm.constants import (
     ALPHA_EM,
     ALPHA_S,
     CHI0,
-    D,
     D_ST,
     DT_DEFAULT,
     E_AMPLITUDE_BY_GRID,
@@ -34,8 +45,8 @@ from lfm.constants import (
     OMEGA_LAMBDA,
     OMEGA_MATTER,
     SIN2_THETA_W,
+    D,
 )
-from lfm.config import BoundaryType, FieldLevel, SimulationConfig
 from lfm.core.backends import get_backend, gpu_available
 from lfm.core.evolver import Evolver
 from lfm.fields import (
@@ -50,17 +61,6 @@ from lfm.fields import (
     tetrahedral_positions,
     uniform_chi,
     wave_kick,
-)
-from lfm.analysis import (
-    chi_statistics,
-    compute_metrics,
-    count_clusters,
-    energy_components,
-    energy_conservation_drift,
-    interior_mask,
-    total_energy,
-    void_fraction,
-    well_fraction,
 )
 from lfm.formulas import (
     mass_table,

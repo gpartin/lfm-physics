@@ -1,9 +1,7 @@
 """Tests for lfm.analysis subpackage."""
 
 import numpy as np
-import pytest
 
-from lfm.constants import CHI0, WELL_THRESHOLD, VOID_THRESHOLD
 from lfm.analysis import (
     chi_statistics,
     compute_metrics,
@@ -15,14 +13,13 @@ from lfm.analysis import (
     void_fraction,
     well_fraction,
 )
-
+from lfm.constants import CHI0
 
 N = 16  # small grid for fast tests
 
 
 def _make_fields(n=N, amplitude=1.0, with_imag=False):
     """Create simple test fields: Gaussian blob in uniform chi."""
-    rng = np.random.default_rng(42)
     x = np.arange(n, dtype=np.float32)
     X, Y, Z = np.meshgrid(x, x, x, indexing="ij")
     center = n / 2.0

@@ -25,7 +25,7 @@ from typing import Callable
 import numpy as np
 from numpy.typing import NDArray
 
-from lfm.analysis.energy import energy_components, total_energy
+from lfm.analysis.energy import total_energy
 from lfm.analysis.metrics import compute_metrics
 from lfm.analysis.structure import interior_mask as make_interior_mask
 from lfm.config import BoundaryType, FieldLevel, SimulationConfig

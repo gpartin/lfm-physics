@@ -21,7 +21,6 @@ from lfm.constants import (
     E_AMPLITUDE_BY_GRID,
     EPSILON_W,
     KAPPA,
-    LAMBDA_H,
     N_COLORS,
 )
 

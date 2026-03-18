@@ -3,7 +3,6 @@
 import math
 
 import numpy as np
-import pytest
 
 from lfm.formulas import (
     alpha_em,

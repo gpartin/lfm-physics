@@ -19,7 +19,7 @@ from lfm.core.backends.numpy_backend import NumpyBackend
 
 # Check GPU availability at import time (but don't fail)
 try:
-    from lfm.core.backends.cupy_backend import CupyBackend, CUPY_AVAILABLE
+    from lfm.core.backends.cupy_backend import CUPY_AVAILABLE, CupyBackend
 except ImportError:
     CupyBackend = None  # type: ignore[misc, assignment]
     CUPY_AVAILABLE = False

@@ -12,8 +12,6 @@ All formulas from LFM_COMPLETE_MASS_DERIVATION.md.
 
 from __future__ import annotations
 
-import math
-
 
 def angular_momentum_mass(l: float) -> float:
     """Mass ratio from angular momentum quantum number: m/m_e = l(l+1).

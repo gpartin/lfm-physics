@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from lfm.core.backends import get_backend, gpu_available, NumpyBackend
+from lfm.core.backends import NumpyBackend, get_backend, gpu_available
 from lfm.core.backends.protocol import Backend
 
 

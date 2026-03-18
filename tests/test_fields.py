@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from lfm.constants import CHI0, KAPPA
+from lfm.constants import CHI0
 from lfm.fields import (
     equilibrate_chi,
     equilibrate_from_fields,
@@ -17,7 +17,6 @@ from lfm.fields import (
     uniform_chi,
     wave_kick,
 )
-
 
 # ──── soliton.py ────
 
