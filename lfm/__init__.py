@@ -51,6 +51,22 @@ from lfm.fields import (
     uniform_chi,
     wave_kick,
 )
+from lfm.analysis import (
+    chi_statistics,
+    compute_metrics,
+    count_clusters,
+    energy_components,
+    energy_conservation_drift,
+    interior_mask,
+    total_energy,
+    void_fraction,
+    well_fraction,
+)
+from lfm.formulas import (
+    mass_table,
+    predict_all,
+)
+from lfm.simulation import Simulation
 
 __all__ = [
     "__version__",
@@ -76,6 +92,7 @@ __all__ = [
     "BoundaryType",
     # Backends & Simulation
     "Evolver",
+    "Simulation",
     "get_backend",
     "gpu_available",
     # Fields
@@ -90,4 +107,17 @@ __all__ = [
     "tetrahedral_positions",
     "sparse_positions",
     "grid_positions",
+    # Analysis
+    "energy_components",
+    "total_energy",
+    "energy_conservation_drift",
+    "chi_statistics",
+    "well_fraction",
+    "void_fraction",
+    "count_clusters",
+    "interior_mask",
+    "compute_metrics",
+    # Formulas
+    "predict_all",
+    "mass_table",
 ]
