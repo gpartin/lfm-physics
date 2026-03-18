@@ -38,6 +38,19 @@ from lfm.constants import (
 from lfm.config import BoundaryType, FieldLevel, SimulationConfig
 from lfm.core.backends import get_backend, gpu_available
 from lfm.core.evolver import Evolver
+from lfm.fields import (
+    equilibrate_chi,
+    equilibrate_from_fields,
+    gaussian_soliton,
+    grid_positions,
+    place_solitons,
+    poisson_solve_fft,
+    seed_noise,
+    sparse_positions,
+    tetrahedral_positions,
+    uniform_chi,
+    wave_kick,
+)
 
 __all__ = [
     "__version__",
@@ -65,4 +78,16 @@ __all__ = [
     "Evolver",
     "get_backend",
     "gpu_available",
+    # Fields
+    "gaussian_soliton",
+    "place_solitons",
+    "wave_kick",
+    "poisson_solve_fft",
+    "equilibrate_chi",
+    "equilibrate_from_fields",
+    "seed_noise",
+    "uniform_chi",
+    "tetrahedral_positions",
+    "sparse_positions",
+    "grid_positions",
 ]

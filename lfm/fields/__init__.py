@@ -1,1 +1,28 @@
 """Field initialization: solitons, equilibrium, arrangements."""
+
+from lfm.fields.arrangements import (
+    grid_positions,
+    sparse_positions,
+    tetrahedral_positions,
+)
+from lfm.fields.equilibrium import (
+    equilibrate_chi,
+    equilibrate_from_fields,
+    poisson_solve_fft,
+)
+from lfm.fields.random import seed_noise, uniform_chi
+from lfm.fields.soliton import gaussian_soliton, place_solitons, wave_kick
+
+__all__ = [
+    "gaussian_soliton",
+    "place_solitons",
+    "wave_kick",
+    "poisson_solve_fft",
+    "equilibrate_chi",
+    "equilibrate_from_fields",
+    "seed_noise",
+    "uniform_chi",
+    "tetrahedral_positions",
+    "sparse_positions",
+    "grid_positions",
+]
