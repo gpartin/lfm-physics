@@ -10,6 +10,175 @@ import numpy as np
 from numpy.typing import NDArray
 
 
+def momentum_density(
+    psi_real: NDArray,
+    psi_imag: NDArray,
+) -> dict[str, NDArray]:
+    """Compute momentum density j = Im(Ψ*∇Ψ) from complex fields.
+
+    Parameters
+    ----------
+    psi_real, psi_imag : ndarray
+        Complex field components. Supported shapes:
+        - (N, N, N): single complex field
+        - (C, N, N, N): multi-component (e.g. color) field
+
+    Returns
+    -------
+    dict
+        Keys:
+        - ``j_x``, ``j_y``, ``j_z``: momentum-density components
+        - ``j_total``: scalar parity-odd combination used by GOV-02
+    """
+    if psi_real.shape != psi_imag.shape:
+        raise ValueError("psi_real and psi_imag must have identical shapes")
+
+    if psi_real.ndim == 3:
+        pr = psi_real
+        pi = psi_imag
+        dpr_dx = 0.5 * (np.roll(pr, -1, axis=0) - np.roll(pr, 1, axis=0))
+        dpr_dy = 0.5 * (np.roll(pr, -1, axis=1) - np.roll(pr, 1, axis=1))
+        dpr_dz = 0.5 * (np.roll(pr, -1, axis=2) - np.roll(pr, 1, axis=2))
+        dpi_dx = 0.5 * (np.roll(pi, -1, axis=0) - np.roll(pi, 1, axis=0))
+        dpi_dy = 0.5 * (np.roll(pi, -1, axis=1) - np.roll(pi, 1, axis=1))
+        dpi_dz = 0.5 * (np.roll(pi, -1, axis=2) - np.roll(pi, 1, axis=2))
+
+        j_x = pr * dpi_dx - pi * dpr_dx
+        j_y = pr * dpi_dy - pi * dpr_dy
+        j_z = pr * dpi_dz - pi * dpr_dz
+        j_total = 0.5 * (j_x + j_y + j_z)
+        return {"j_x": j_x, "j_y": j_y, "j_z": j_z, "j_total": j_total}
+
+    if psi_real.ndim == 4:
+        j_x = np.zeros_like(psi_real[0], dtype=np.float32)
+        j_y = np.zeros_like(psi_real[0], dtype=np.float32)
+        j_z = np.zeros_like(psi_real[0], dtype=np.float32)
+
+        for a in range(psi_real.shape[0]):
+            comp = momentum_density(psi_real[a], psi_imag[a])
+            j_x += comp["j_x"]
+            j_y += comp["j_y"]
+            j_z += comp["j_z"]
+
+        j_total = 0.5 * (j_x + j_y + j_z)
+        return {"j_x": j_x, "j_y": j_y, "j_z": j_z, "j_total": j_total}
+
+    raise ValueError("Expected psi arrays with ndim 3 or 4")
+
+
+def weak_parity_asymmetry(
+    chi: NDArray,
+    axis: int = 0,
+) -> dict[str, float]:
+    """Measure parity asymmetry in χ depressions along one axis.
+
+    Uses only the simulated χ field: depression = max(χ) - χ.
+    The metric is
+
+        A = (W_plus - W_minus) / (W_plus + W_minus)
+
+    where W_plus and W_minus are summed depressions in opposite
+    hemispheres split at the lattice center along ``axis``.
+
+    Parameters
+    ----------
+    chi : ndarray (N,N,N)
+        Chi field.
+    axis : int
+        Axis to test (0, 1, or 2).
+
+    Returns
+    -------
+    dict
+        ``plus_weight``, ``minus_weight``, ``asymmetry``.
+    """
+    if chi.ndim != 3:
+        raise ValueError("chi must be a 3D array")
+    if axis not in (0, 1, 2):
+        raise ValueError("axis must be 0, 1, or 2")
+
+    n = chi.shape[0]
+    center = n // 2
+    dep = np.max(chi) - chi
+
+    idx = np.arange(n)
+    slicer_plus = [slice(None), slice(None), slice(None)]
+    slicer_minus = [slice(None), slice(None), slice(None)]
+    slicer_plus[axis] = idx > center
+    slicer_minus[axis] = idx < center
+
+    plus = float(np.sum(dep[tuple(slicer_plus)]))
+    minus = float(np.sum(dep[tuple(slicer_minus)]))
+    denom = plus + minus
+    asym = (plus - minus) / denom if denom > 0 else 0.0
+    return {
+        "plus_weight": plus,
+        "minus_weight": minus,
+        "asymmetry": float(asym),
+    }
+
+
+def confinement_proxy(
+    chi: NDArray,
+    p0: tuple[float, float, float],
+    p1: tuple[float, float, float],
+    samples: int = 64,
+) -> dict[str, float]:
+    """Estimate line-like confinement energy between two points.
+
+    Computes a line integral of χ depression (max(χ)-χ) along the
+    segment p0→p1 with nearest-grid sampling:
+
+        I = ∫ (χ_ref - χ) ds,  with χ_ref = max(χ)
+
+    For a flux-tube-like configuration, I grows approximately linearly
+    with segment length.
+
+    Parameters
+    ----------
+    chi : ndarray (N,N,N)
+        Chi field.
+    p0, p1 : tuple[float, float, float]
+        Segment endpoints in grid coordinates.
+    samples : int
+        Number of samples along the segment.
+
+    Returns
+    -------
+    dict
+        ``distance``, ``line_integral``, ``mean_depression``.
+    """
+    if chi.ndim != 3:
+        raise ValueError("chi must be a 3D array")
+    if samples < 2:
+        raise ValueError("samples must be >= 2")
+
+    n = chi.shape[0]
+    p0v = np.asarray(p0, dtype=np.float64)
+    p1v = np.asarray(p1, dtype=np.float64)
+    distance = float(np.linalg.norm(p1v - p0v))
+
+    ts = np.linspace(0.0, 1.0, samples)
+    pts = p0v[None, :] + (p1v - p0v)[None, :] * ts[:, None]
+    idx = np.rint(pts).astype(int)
+    idx = np.clip(idx, 0, n - 1)
+
+    chi_ref = float(np.max(chi))
+    vals = chi_ref - chi[idx[:, 0], idx[:, 1], idx[:, 2]]
+    if samples > 1:
+        ds = distance / (samples - 1)
+    else:
+        ds = 0.0
+    line_integral = float(np.sum(vals) * ds)
+    mean_dep = float(np.mean(vals))
+
+    return {
+        "distance": distance,
+        "line_integral": line_integral,
+        "mean_depression": mean_dep,
+    }
+
+
 def radial_profile(
     field: NDArray,
     center: tuple[int, int, int] | None = None,

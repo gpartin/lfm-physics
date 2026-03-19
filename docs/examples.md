@@ -1,6 +1,6 @@
 # Examples
 
-The `examples/` directory contains eight self-contained scripts that form a
+The `examples/` directory contains fourteen self-contained scripts that form a
 progressive tutorial, from vacuum to a full universe simulation.  Run them in
 order — each one builds on the concepts introduced by the previous.
 
@@ -137,3 +137,35 @@ Time         χ_min   Wells%   Voids%  Clusters  Energy
  5.0 Gyr     12.xx    xx.x%    xx.x%       xx   ...
 13.8 Gyr     11.xx    xx.x%    xx.x%       xx   ...
 ```
+
+---
+
+## 13 — Weak Force (Parity Asymmetry)
+
+**File**: `examples/13_weak_force.py`
+
+Isolate the `epsilon_w * j` term in GOV-02 by running the same setup with
+`epsilon_w=0.1` and with `epsilon_w=0.0` (control).  Use
+`lfm.momentum_density()` and `lfm.weak_parity_asymmetry()` to measure the
+left/right chi-depression imbalance.
+
+**Concept**: parity asymmetry emerges from a lattice current observable `j`,
+not from an injected weak-force potential.
+
+---
+
+## 14 — Strong Force (Color Confinement Proxy)
+
+**File**: `examples/14_strong_force.py`
+
+Switch to `FieldLevel.COLOR` and measure a confinement proxy directly from chi:
+
+```
+I = integral (max(chi) - chi) ds
+```
+
+For tube-like color flux, this line integral grows approximately with source
+separation. The script prints a linear fit and R^2 for the trend.
+
+**Concept**: confinement can be quantified from the simulated substrate field
+without injecting an external strong-potential formula.

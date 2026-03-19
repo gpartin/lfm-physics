@@ -21,11 +21,13 @@ from lfm.analysis import (
     chi_statistics,
     compute_metrics,
     continuity_residual,
+    confinement_proxy,
     count_clusters,
     energy_components,
     energy_conservation_drift,
     find_peaks,
     fit_power_law,
+    momentum_density,
     fluid_fields,
     interior_mask,
     measure_force,
@@ -33,6 +35,7 @@ from lfm.analysis import (
     radial_profile,
     total_energy,
     void_fraction,
+    weak_parity_asymmetry,
     well_fraction,
 )
 from lfm.config import BoundaryType, FieldLevel, SimulationConfig
@@ -139,6 +142,9 @@ __all__ = [
     "fit_power_law",
     "measure_separation",
     "measure_force",
+    "momentum_density",
+    "weak_parity_asymmetry",
+    "confinement_proxy",
     "fluid_fields",
     "continuity_residual",
     # Units

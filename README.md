@@ -50,7 +50,7 @@ profile = lfm.radial_profile(sim.chi, center=(32,32,32), max_radius=20)
 # profile['r'] and profile['profile'] — does it fall like 1/r?
 ```
 
-## Examples — Build a Universe in 12 Steps
+## Examples — Build a Universe in 14 Steps
 
 Each example builds on the one before, from empty space to a simulated cosmos.
 Run them in order:
@@ -69,6 +69,8 @@ Run them in order:
 | 10 | [10_hydrogen_molecule.py](examples/10_hydrogen_molecule.py) | Two H atoms bond — bonding vs anti-bonding orbitals |
 | 11 | [11_oxygen.py](examples/11_oxygen.py) | Heavier nucleus (8 electrons) — deeper well, richer structure |
 | 12 | [12_fluid_dynamics.py](examples/12_fluid_dynamics.py) | 40-soliton gas → Euler equation from the stress-energy tensor |
+| 13 | [13_weak_force.py](examples/13_weak_force.py) | Turn epsilon_w on/off and measure parity asymmetry from chi + j |
+| 14 | [14_strong_force.py](examples/14_strong_force.py) | Run color fields and measure confinement proxy via chi line integrals |
 
 ```bash
 cd examples

@@ -4,13 +4,16 @@ import numpy as np
 
 from lfm.analysis import (
     chi_statistics,
+    confinement_proxy,
     compute_metrics,
     count_clusters,
     energy_components,
     energy_conservation_drift,
+    momentum_density,
     interior_mask,
     total_energy,
     void_fraction,
+    weak_parity_asymmetry,
     well_fraction,
 )
 from lfm.constants import CHI0
@@ -269,3 +272,51 @@ def test_top_level_imports():
     assert hasattr(lfm, "count_clusters")
     assert hasattr(lfm, "interior_mask")
     assert hasattr(lfm, "compute_metrics")
+    assert hasattr(lfm, "momentum_density")
+    assert hasattr(lfm, "weak_parity_asymmetry")
+    assert hasattr(lfm, "confinement_proxy")
+
+
+class TestWeakStrongHelpers:
+    def test_momentum_density_zero_for_constant_phase(self):
+        n = 10
+        pr = np.ones((n, n, n), dtype=np.float32)
+        pi = np.zeros((n, n, n), dtype=np.float32)
+        j = momentum_density(pr, pi)
+        assert np.allclose(j["j_x"], 0.0)
+        assert np.allclose(j["j_y"], 0.0)
+        assert np.allclose(j["j_z"], 0.0)
+        assert np.allclose(j["j_total"], 0.0)
+
+    def test_momentum_density_color_shape(self):
+        n = 8
+        pr = np.random.default_rng(0).standard_normal((3, n, n, n)).astype(np.float32)
+        pi = np.random.default_rng(1).standard_normal((3, n, n, n)).astype(np.float32)
+        j = momentum_density(pr, pi)
+        assert j["j_total"].shape == (n, n, n)
+
+    def test_weak_parity_asymmetry_balanced(self):
+        n = 12
+        chi = np.full((n, n, n), CHI0, dtype=np.float32)
+        # symmetric dip around center
+        chi[5, 6, 6] = CHI0 - 1.0
+        chi[7, 6, 6] = CHI0 - 1.0
+        a = weak_parity_asymmetry(chi, axis=0)
+        assert abs(a["asymmetry"]) < 1e-6
+
+    def test_weak_parity_asymmetry_signed(self):
+        n = 12
+        chi = np.full((n, n, n), CHI0, dtype=np.float32)
+        chi[8, 6, 6] = CHI0 - 2.0   # +x side dip
+        chi[4, 6, 6] = CHI0 - 0.5   # -x side dip
+        a = weak_parity_asymmetry(chi, axis=0)
+        assert a["asymmetry"] > 0
+
+    def test_confinement_proxy_monotonic_with_distance(self):
+        n = 20
+        chi = np.full((n, n, n), CHI0, dtype=np.float32)
+        # Build a low-chi tube along x at y=z=10
+        chi[2:18, 10, 10] = CHI0 - 2.0
+        short = confinement_proxy(chi, (6, 10, 10), (10, 10, 10), samples=32)
+        long = confinement_proxy(chi, (6, 10, 10), (16, 10, 10), samples=64)
+        assert long["line_integral"] > short["line_integral"]

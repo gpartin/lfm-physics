@@ -9,11 +9,14 @@ from lfm.analysis.energy import (
 )
 from lfm.analysis.metrics import compute_metrics
 from lfm.analysis.observables import (
+    confinement_proxy,
     find_peaks,
     fit_power_law,
+    momentum_density,
     measure_force,
     measure_separation,
     radial_profile,
+    weak_parity_asymmetry,
 )
 from lfm.analysis.structure import (
     chi_statistics,
@@ -44,4 +47,7 @@ __all__ = [
     "fit_power_law",
     "measure_separation",
     "measure_force",
+    "momentum_density",
+    "weak_parity_asymmetry",
+    "confinement_proxy",
 ]
