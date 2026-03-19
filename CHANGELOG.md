@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.1.3] - 2026-03-19
+
+### Added
+- `PlanckScale.at_planck_resolution(grid_size, dt)` — classmethod that sets 1 cell = 1 Planck length exactly
+- `PlanckScale.is_planck_resolution` — bool property, True when cells_per_planck == 1.0
+- `PlanckScale.cell_size_m` — cell size in metres (Planck length × cells_per_planck)
+- `PlanckScale.step_to_planck_ticks(step)` — convert simulation steps to Planck time ticks
+- `PlanckScale.planck_ticks_to_step(ticks)` — inverse conversion
+- `PlanckScale.step_to_seconds(step)` — convert steps to SI seconds
+- Sphinx documentation source tree (`docs/`) with furo theme and autodoc
+- Read the Docs configuration (`.readthedocs.yaml`)
+- Benchmark suite (`benchmarks/`) with evolver and field-ops benchmarks
+- `lfm.io` module with module-level `save_checkpoint` / `load_checkpoint` wrappers
+
+### Removed
+- `lfm/formulas/` stub directory (untracked, had no content)
+
+## [0.1.2] - 2026-03-18
+
+### Added
+- `Simulation.save_checkpoint(path)` — full state persistence (fields, step counter, config, metric history) to compressed `.npz`
+- `Simulation.load_checkpoint(path, backend)` — classmethod to restore a simulation from checkpoint, ready for `run()`
+- `Simulation.history` property — list of metric snapshots recorded during `run()`
+- `CosmicScale` unit mapper: converts lattice cells/steps to Mpc/Gyr with Hubble calibration
+- `PlanckScale` unit mapper: default observable-universe scale and Planck-resolution mode
+
 ## [0.1.1] - 2026-03-18
 
 ### Fixed
