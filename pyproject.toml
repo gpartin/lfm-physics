@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lfm-physics"
-version = "0.1.0"
+version = "0.1.1"
 description = "Lattice Field Medium physics simulation library"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "Greg Partin", email = "greg@lfmphysics.org" },
+    { name = "Greg Partin", email = "gpartin@gmail.com" },
 ]
 keywords = ["physics", "simulation", "lattice", "field-theory", "klein-gordon"]
 classifiers = [
