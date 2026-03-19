@@ -75,6 +75,38 @@ class Simulation:
 
     # ── Field access ──────────────────────────────────────
 
+    @property
+    def chi(self) -> NDArray[np.float32]:
+        """Current χ field, shape (N, N, N)."""
+        return self._evolver.get_chi()
+
+    @chi.setter
+    def chi(self, value: NDArray[np.float32]) -> None:
+        self._evolver.set_chi(value)
+
+    @property
+    def psi_real(self) -> NDArray[np.float32]:
+        """Real part of Ψ, shape (N, N, N)."""
+        return self._evolver.get_psi_real()
+
+    @psi_real.setter
+    def psi_real(self, value: NDArray[np.float32]) -> None:
+        self._evolver.set_psi_real(value)
+
+    @property
+    def psi_imag(self) -> NDArray[np.float32] | None:
+        """Imaginary part of Ψ (None for real field level)."""
+        return self._evolver.get_psi_imag()
+
+    @psi_imag.setter
+    def psi_imag(self, value: NDArray[np.float32]) -> None:
+        self._evolver.set_psi_imag(value)
+
+    @property
+    def energy_density(self) -> NDArray[np.float32]:
+        """Energy density |Ψ|², shape (N, N, N)."""
+        return self._evolver.get_energy_density()
+
     def get_chi(self) -> NDArray[np.float32]:
         """Get current χ field, shape (N, N, N)."""
         return self._evolver.get_chi()
@@ -90,6 +122,18 @@ class Simulation:
     def get_energy_density(self) -> NDArray[np.float32]:
         """Get |Ψ|² energy density, shape (N, N, N)."""
         return self._evolver.get_energy_density()
+
+    def set_psi_real(self, value: NDArray[np.float32]) -> None:
+        """Set real part of Ψ."""
+        self._evolver.set_psi_real(value)
+
+    def set_psi_imag(self, value: NDArray[np.float32]) -> None:
+        """Set imaginary part of Ψ."""
+        self._evolver.set_psi_imag(value)
+
+    def set_chi(self, value: NDArray[np.float32]) -> None:
+        """Set χ field."""
+        self._evolver.set_chi(value)
 
     # ── Field initialization ──────────────────────────────
 

@@ -184,7 +184,7 @@ def main() -> None:
     rng = np.random.default_rng(config.random_seed)
     N = config.grid_size
     noise = AMPLITUDE * rng.standard_normal((N, N, N)).astype(np.float32)
-    sim._evolver.set_psi_real(noise)
+    sim.set_psi_real(noise)
 
     # Poisson-equilibrate χ from initial |Ψ|² distribution.
     # This gives self-consistent gravitational wells from step 0
@@ -202,7 +202,7 @@ def main() -> None:
     config.e0_sq = e0_sq
     # Rebuild simulation with updated E₀²
     sim = Simulation(config)
-    sim._evolver.set_psi_real(noise)
+    sim.set_psi_real(noise)
     sim.equilibrate()
     print(f"  E₀² = {e0_sq:.6f} (vacuum energy density)")
 

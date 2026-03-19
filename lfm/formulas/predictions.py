@@ -218,6 +218,42 @@ def higgs_self_coupling(chi0: float = 19.0) -> float:
     return 4.0 / (chi0 + 12)
 
 
+# ── Structure & dimensions ───────────────────────────────
+
+
+def spacetime_dimensions(chi0: float = 19.0) -> int:
+    """Spacetime dimensions D_st = (χ₀ − 11)/2 = 4."""
+    return int((chi0 - 11) // 2)
+
+
+def string_dimensions(chi0: float = 19.0) -> int:
+    """String theory dimensions = χ₀ − 9 = 10."""
+    return int(chi0 - 9)
+
+
+def mtheory_dimensions(chi0: float = 19.0) -> int:
+    """M-theory dimensions = χ₀ − 8 = 11."""
+    return int(chi0 - 8)
+
+
+def beta0_qcd(chi0: float = 19.0) -> float:
+    """QCD one-loop beta function coefficient β₀ = χ₀ − 12 = 7."""
+    return chi0 - 12
+
+
+def tau_muon_ratio(chi0: float = 19.0) -> float:
+    """m_τ/m_μ = χ₀ − 2 = 17."""
+    return chi0 - 2
+
+
+def proton_electron_ratio_3gen(chi0: float = 19.0) -> float:
+    """m_p/m_e via 3-generation decomposition.
+
+    = (χ₀−8)³ + χ₀² + (χ₀−7)² = 11³ + 19² + 12² = 1836.
+    """
+    return (chi0 - 8) ** 3 + chi0**2 + (chi0 - 7) ** 2
+
+
 # ── Master catalog ───────────────────────────────────────
 
 
@@ -346,5 +382,24 @@ def predict_all(chi0: float = 19.0) -> dict[str, dict]:
         ),
         "lambda_Higgs": _entry(
             higgs_self_coupling(chi0), 0.1291, "4/(χ₀+12)"
+        ),
+        # Structure & dimensions
+        "D_spacetime": _entry(
+            float(spacetime_dimensions(chi0)), 4.0, "(χ₀−11)/2"
+        ),
+        "N_string_dim": _entry(
+            float(string_dimensions(chi0)), 10.0, "χ₀−9"
+        ),
+        "N_mtheory_dim": _entry(
+            float(mtheory_dimensions(chi0)), 11.0, "χ₀−8"
+        ),
+        "beta0_QCD": _entry(
+            beta0_qcd(chi0), 7.0, "χ₀−12"
+        ),
+        "m_tau/m_mu": _entry(
+            tau_muon_ratio(chi0), 16.817, "χ₀−2"
+        ),
+        "m_p/m_e_3gen": _entry(
+            proton_electron_ratio_3gen(chi0), 1836.15, "(χ₀−8)³+χ₀²+(χ₀−7)²"
         ),
     }

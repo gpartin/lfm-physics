@@ -53,11 +53,17 @@ for name, entry in list(catalog.items())[:5]:
 
 See [`examples/`](examples/) for full working scripts:
 
-- **[cosmic_structure_formation.py](examples/cosmic_structure_formation.py)** —
-  256³ universe simulation showing spontaneous gravitational structure
-  (wells + voids) from GOV-01 + GOV-02 alone. Includes cosmic time
-  conversion, periodic snapshots, and milestone tracking.
-  Set `GRID_SIZE = 64` for a quick CPU test.
+| Example | What it shows |
+|---------|---------------|
+| [soliton_gravity.py](examples/soliton_gravity.py) | Place a soliton, watch GOV-02 carve a χ-well — gravity from scratch |
+| [em_from_phase.py](examples/em_from_phase.py) | Complex Ψ with θ=0 vs θ=π — Coulomb-like attraction/repulsion from phase interference |
+| [parametric_resonance.py](examples/parametric_resonance.py) | Oscillate χ at 2χ₀ — matter creation via Mathieu instability |
+| [cosmic_structure_formation.py](examples/cosmic_structure_formation.py) | 256³ universe simulation with wells + voids (set `GRID_SIZE=64` for a quick CPU test) |
+| [predict_constants.py](examples/predict_constants.py) | Print all 35 analytic predictions and compare to measured values |
+| [particle_masses.py](examples/particle_masses.py) | Full mass table from l(l+1) angular-momentum quantisation |
+| [dark_matter_memory.py](examples/dark_matter_memory.py) | Remove matter, watch the χ-well persist — dark matter as substrate memory |
+| [checkpoint_resume.py](examples/checkpoint_resume.py) | Save a simulation checkpoint to disk and resume from it |
+| [two_body_orbit.py](examples/two_body_orbit.py) | Two solitons orbiting via mutual χ-wells — no Newton injected |
 
 ## What is LFM?
 

@@ -15,6 +15,8 @@ from lfm.formulas.masses import (
 from lfm.formulas.predictions import (
     alpha_em,
     alpha_strong,
+    beta0_qcd,
+    mtheory_dimensions,
     muon_g2_anomaly,
     n_efoldings,
     n_generations,
@@ -22,7 +24,11 @@ from lfm.formulas.predictions import (
     omega_lambda,
     omega_matter,
     predict_all,
+    proton_electron_ratio_3gen,
     sin2_theta_w,
+    spacetime_dimensions,
+    string_dimensions,
+    tau_muon_ratio,
     z_recombination,
 )
 
@@ -39,6 +45,12 @@ __all__ = [
     "n_generations",
     "n_gluons",
     "muon_g2_anomaly",
+    "beta0_qcd",
+    "spacetime_dimensions",
+    "string_dimensions",
+    "mtheory_dimensions",
+    "tau_muon_ratio",
+    "proton_electron_ratio_3gen",
     # masses
     "angular_momentum_mass",
     "lepton_mass_ratio",

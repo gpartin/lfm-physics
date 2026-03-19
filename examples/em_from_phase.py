@@ -59,7 +59,7 @@ def run_pair(name: str, phase_a: float, phase_b: float) -> float:
     sim.equilibrate()
 
     # Measure initial separation
-    pr0 = sim.psi_real.copy()
+    pr0 = sim.get_psi_real().copy()
     x0_a = measure_center_of_mass(pr0[:c, :, :], axis=0)
     x0_b = measure_center_of_mass(pr0[c:, :, :], axis=0) + c
     d0 = x0_b - x0_a
@@ -68,7 +68,7 @@ def run_pair(name: str, phase_a: float, phase_b: float) -> float:
     sim.run(steps=3000, record_metrics=False)
 
     # Measure final separation
-    pr1 = sim.psi_real.copy()
+    pr1 = sim.get_psi_real().copy()
     x1_a = measure_center_of_mass(pr1[:c, :, :], axis=0)
     x1_b = measure_center_of_mass(pr1[c:, :, :], axis=0) + c
     d1 = x1_b - x1_a

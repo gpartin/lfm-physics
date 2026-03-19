@@ -38,7 +38,7 @@ def main() -> None:
     pr = sim.psi_real.copy()
     rng = np.random.default_rng(42)
     pr += rng.normal(0, 1e-6, pr.shape).astype(np.float32)
-    sim._evolver.set_psi_real(pr)
+    sim.psi_real = pr
 
     # Record |Psi|^2 growth
     energies: list[tuple[int, float]] = []

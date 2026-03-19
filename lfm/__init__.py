@@ -16,7 +16,7 @@ Quick start::
     sim = lfm.Simulation(config)
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 from lfm.analysis import (
     chi_statistics,
