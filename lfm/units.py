@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from lfm.constants import CHI0, DT_DEFAULT, OBSERVABLE_RADIUS_PLANCK, PLANCK_TIME_SEC
+from lfm.constants import CHI0, DT_DEFAULT, OBSERVABLE_RADIUS_PLANCK, PLANCK_LENGTH_M, PLANCK_TIME_SEC
 
 
 @dataclass(frozen=True)
@@ -95,16 +95,28 @@ class PlanckScale:
         Physical radius of the simulation box in Planck cells.
         Default: OBSERVABLE_RADIUS_PLANCK ≈ 8.07×10⁶⁰.
 
-    .. note::
-        ``PlanckScale`` is for simulations whose box physically spans
-        ``box_planck_radius`` Planck cells — e.g. a true universe-scale grid.
-        At the default (observable-universe) scale a 256-cell sim has
-        ~6.3×10⁵⁸ Planck lengths per cell and ~0.11 Gyr per step, so
-        ``step_to_gyr(541_000) ≈ 58_000 Gyr`` (not 13.8 Gyr).
+    Parameters
+    ----------
+    dt : float
+        Simulation timestep in lattice units (default 0.02).  The
+        physical time per step scales as ``dt × Δx / c``, so this must
+        match the value used in the kernel.
 
-        For the canonical 256³ 100 Mpc cosmological simulation use
-        :class:`CosmicScale` instead — it is empirically calibrated so
-        that step 541_000 ≅ 13.8 Gyr.
+    .. note::
+        ``PlanckScale`` derives time from first principles:
+        ``gyr_per_step = cells_per_planck × dt / ticks_per_gyr``.
+        At the default observable-universe scale with N=256 and dt=0.02:
+
+        * 1 cell ≈ 6.31×10⁵⁸ Planck lengths ≈ 33 Mpc
+        * 1 step ≈ 2.16×10⁻³ Gyr (≈ 2.16 Myr)
+        * Present epoch (13.8 Gyr) ≈ step 6,401
+        * Total box diameter ≈ 8,462 Mpc (full observable universe)
+
+        ``CosmicScale`` is the empirically calibrated alternative
+        (step 541,000 ≅ 13.8 Gyr for a 100 Mpc box).  Use
+        ``CosmicScale`` for the compact canonical sim;
+        use ``PlanckScale`` when you specifically want the
+        first-principles Planck calibration.
 
     Examples
     --------
@@ -114,30 +126,44 @@ class PlanckScale:
 
         ps = PlanckScale(grid_size=256)
         print(ps)
-        # PlanckScale(N=256): 1 cell = 6.31e+58 Planck lengths, 1 step = 1.08e-01 Gyr
+        # PlanckScale(N=256): 1 cell = 6.31e+58 Planck lengths (~33 Mpc), 1 step = 2.16e-03 Gyr
 
-        # How many steps for the universe to reach present age at this scale?
-        print(ps.gyr_to_step(13.8))   # ≈ 128 steps
+        print(ps.box_size_mpc)          # ≈ 8,462 Mpc (observable universe)
+        print(ps.gyr_to_step(13.8))     # 6401  (present epoch)
+        print(ps.step_to_gyr(6401))     # ≈ 13.80 Gyr
     """
 
     grid_size: int = 256
     box_planck_radius: float = OBSERVABLE_RADIUS_PLANCK
+    dt: float = DT_DEFAULT
 
     @property
     def cells_per_planck(self) -> float:
-        """Number of Planck lengths per grid cell (diameter / N)."""
+        """Number of Planck lengths per grid cell (= box_diameter / N)."""
         return (2.0 * self.box_planck_radius) / self.grid_size
 
     @property
-    def steps_per_planck_tick(self) -> float:
-        """Planck ticks per simulation step (= cells_per_planck since c=1)."""
-        return self.cells_per_planck
+    def planck_ticks_per_step(self) -> float:
+        """Physical Planck-time ticks that elapse each simulation step.
+
+        With c = 1 Planck-length / Planck-tick and the leapfrog timestep
+        ``dt`` (in lattice units), one step advances physical time by
+        ``dt × Δx_physical / c = dt × cells_per_planck`` Planck ticks.
+        """
+        return self.cells_per_planck * self.dt
 
     @property
     def gyr_per_step(self) -> float:
-        """Giga-years of cosmic time per simulation step."""
+        """Giga-years of cosmic time per simulation step (first-principles)."""
         ticks_per_gyr = (1e9 * 365.25 * 24 * 3600) / PLANCK_TIME_SEC
-        return self.steps_per_planck_tick / ticks_per_gyr
+        return self.planck_ticks_per_step / ticks_per_gyr
+
+    @property
+    def box_size_mpc(self) -> float:
+        """Physical box diameter in Mpc (derived from Planck lengths)."""
+        MPC_IN_METERS: float = 3.0857e22
+        diameter_m = 2.0 * self.box_planck_radius * PLANCK_LENGTH_M
+        return diameter_m / MPC_IN_METERS
 
     def step_to_gyr(self, step: int) -> float:
         """Convert a simulation step count to Giga-years."""
@@ -150,8 +176,9 @@ class PlanckScale:
     def __str__(self) -> str:
         cppg = self.cells_per_planck
         gps = self.gyr_per_step
+        mpc = self.box_size_mpc
         return (
             f"PlanckScale(N={self.grid_size}): "
-            f"1 cell = {cppg:.2e} Planck lengths, "
-            f"1 step = {gps:.3e} Gyr"
+            f"1 cell = {cppg:.2e} Planck lengths (~{mpc/self.grid_size:.1f} Mpc), "
+            f"1 step = {gps:.2e} Gyr"
         )
