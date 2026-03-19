@@ -36,6 +36,7 @@ from lfm.config import BoundaryType, FieldLevel, SimulationConfig
 from lfm.constants import (
     ALPHA_EM,
     ALPHA_S,
+    AGE_UNIVERSE_GYR,
     CHI0,
     D_ST,
     DT_DEFAULT,
@@ -44,10 +45,15 @@ from lfm.constants import (
     KAPPA,
     LAMBDA_H,
     N_COLORS,
+    N_EFOLDINGS,
     N_GENERATIONS,
+    OBSERVABLE_RADIUS_PLANCK,
     OMEGA_LAMBDA,
     OMEGA_MATTER,
+    PLANCK_LENGTH_M,
+    PLANCK_TIME_SEC,
     SIN2_THETA_W,
+    TOTAL_RADIUS_LOWER_BOUND_PLANCK,
     D,
 )
 from lfm.core.backends import get_backend, gpu_available
@@ -66,7 +72,7 @@ from lfm.fields import (
     wave_kick,
 )
 from lfm.simulation import Simulation
-from lfm.units import CosmicScale
+from lfm.units import CosmicScale, PlanckScale
 
 __all__ = [
     "__version__",
@@ -84,8 +90,15 @@ __all__ = [
     "SIN2_THETA_W",
     "N_COLORS",
     "N_GENERATIONS",
+    "N_EFOLDINGS",
     "DT_DEFAULT",
     "E_AMPLITUDE_BY_GRID",
+    # Cosmological scale
+    "AGE_UNIVERSE_GYR",
+    "OBSERVABLE_RADIUS_PLANCK",
+    "TOTAL_RADIUS_LOWER_BOUND_PLANCK",
+    "PLANCK_TIME_SEC",
+    "PLANCK_LENGTH_M",
     # Config
     "SimulationConfig",
     "FieldLevel",
@@ -124,4 +137,5 @@ __all__ = [
     "measure_force",
     # Units
     "CosmicScale",
+    "PlanckScale",
 ]

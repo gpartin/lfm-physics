@@ -22,6 +22,7 @@ from lfm.constants import (
     EPSILON_W,
     KAPPA,
     N_COLORS,
+    OBSERVABLE_RADIUS_PLANCK,
 )
 
 
@@ -124,6 +125,16 @@ class SimulationConfig:
     report_interval: int = 5000
     """Print metrics every N steps."""
 
+    # Cosmological scale (metadata — does not affect physics kernels)
+    box_planck_radius: float = OBSERVABLE_RADIUS_PLANCK
+    """Physical radius of the simulation box in Planck cells.
+
+    Default = OBSERVABLE_RADIUS_PLANCK ≈ 8.07×10⁶⁰ (observable universe).
+    Every grid cell then represents ~(2×radius/N) Planck lengths.
+    Override to simulate a sub-universe region at finer Planck resolution.
+    This value is metadata only — it does not change the physics kernels.
+    """
+
     # Derived (computed in __post_init__)
     dx: float = field(init=False, default=1.0)
     """Grid spacing. Always 1.0 in natural units."""
@@ -163,3 +174,19 @@ class SimulationConfig:
             )
         if self.field_level == FieldLevel.COLOR and self.n_colors < 1:
             raise ValueError(f"n_colors must be >= 1, got {self.n_colors}")
+
+    @property
+    def planck_scale(self) -> "PlanckScale":
+        """Planck-unit scale for this configuration.
+
+        Returns a :class:`~lfm.units.PlanckScale` providing the conversion
+        between simulation steps/cells and Planck ticks/lengths.
+
+        Example::
+
+            cfg = SimulationConfig(grid_size=256)
+            print(cfg.planck_scale)
+            # PlanckScale(N=256): 1 cell = 6.30e+58 Planck lengths, ...
+        """
+        from lfm.units import PlanckScale
+        return PlanckScale(grid_size=self.grid_size, box_planck_radius=self.box_planck_radius)

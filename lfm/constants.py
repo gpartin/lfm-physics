@@ -177,3 +177,37 @@ MEXICAN_HAT_PERIOD: float = 2 * math.pi / HIGGS_OSCILLATION_FREQ
 
 RESONANCE_FREQUENCY: float = 2 * CHI0
 """Ω = 2χ₀ = 38. Parametric resonance frequency for matter creation."""
+
+# ============================================================
+# COSMOLOGICAL SCALE
+# ============================================================
+
+PLANCK_TIME_SEC: float = 5.391e-44
+"""Planck time in seconds (SI measurement)."""
+
+PLANCK_LENGTH_M: float = 1.616e-35
+"""Planck length in meters (SI measurement)."""
+
+AGE_UNIVERSE_GYR: float = 13.8
+"""Age of the observable universe in Gyr.
+
+OBSERVED INPUT — not derived by LFM. LFM derives universe SIZE given this
+age, not the age itself. Calibrated from canonical 256³ simulation:
+541,000 steps ≅ 13.8 Gyr.
+"""
+
+_SEC_PER_GYR: float = 1e9 * 365.25 * 24 * 3600
+
+OBSERVABLE_RADIUS_PLANCK: float = (AGE_UNIVERSE_GYR * _SEC_PER_GYR) / PLANCK_TIME_SEC
+"""Observable universe radius in Planck cells ≈ 8.07×10⁶⁰.
+
+Since c = 1 cell/tick in LFM natural units, radius = age in Planck ticks.
+Uses AGE_UNIVERSE_GYR as input.
+"""
+
+TOTAL_RADIUS_LOWER_BOUND_PLANCK: float = math.exp(N_EFOLDINGS) * OBSERVABLE_RADIUS_PLANCK
+"""Lower bound on total universe radius in Planck cells ≈ 9×10⁸⁶.
+
+DERIVED: e^N_EFOLDINGS × OBSERVABLE_RADIUS_PLANCK.
+The ratio e^60 ≈ 10²⁶ is fully LFM-derived from χ₀ = 19.
+"""
