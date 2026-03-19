@@ -1,8 +1,8 @@
 # lfm-physics
 
 [![Tests](https://github.com/gpartin/lfm-physics/actions/workflows/test.yml/badge.svg)](https://github.com/gpartin/lfm-physics/actions/workflows/test.yml)
-[![PyPI](https://img.shields.io/pypi/v/lfm-physics)](https://pypi.org/project/lfm-physics/)
-[![Python 3.10+](https://img.shields.io/pypi/pyversions/lfm-physics)](https://pypi.org/project/lfm-physics/)
+[![PyPI](https://img.shields.io/pypi/v/lfm-physics?v=2)](https://pypi.org/project/lfm-physics/)
+[![Python 3.10+](https://img.shields.io/pypi/pyversions/lfm-physics?v=2)](https://pypi.org/project/lfm-physics/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **Lattice Field Medium** — a physics simulation library implementing the LFM framework.
