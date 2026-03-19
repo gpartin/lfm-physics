@@ -5,9 +5,12 @@
 [![Python 3.10+](https://img.shields.io/pypi/pyversions/lfm-physics?v=2)](https://pypi.org/project/lfm-physics/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**Lattice Field Medium** — a physics simulation library implementing the LFM framework.
+**Simulate a universe from two equations.**
 
-Two governing equations. One integer (χ₀ = 19). All of physics.
+The Lattice Field Medium (LFM) framework runs two coupled wave equations on a
+discrete 3D lattice — and gravity, electromagnetism, dark matter, and cosmic
+structure all emerge from the dynamics.  No forces injected.  No constants
+assumed.  Just a grid, two update rules, and initial noise.
 
 ## Install
 
@@ -15,7 +18,7 @@ Two governing equations. One integer (χ₀ = 19). All of physics.
 pip install lfm-physics
 ```
 
-For GPU acceleration (NVIDIA):
+GPU acceleration (NVIDIA):
 ```bash
 pip install lfm-physics[gpu]
 ```
@@ -25,62 +28,100 @@ pip install lfm-physics[gpu]
 ```python
 import lfm
 
-# Fundamental constants derived from χ₀ = 19
-print(f"χ₀ = {lfm.CHI0}")       # 19.0
-print(f"κ  = {lfm.KAPPA}")      # 0.015873...
-print(f"α  = {lfm.ALPHA_EM}")   # 0.007299... ≈ 1/137.088
+# 1. Create a 64³ lattice — empty space has χ = 19 everywhere
+sim = lfm.Simulation(lfm.SimulationConfig(grid_size=64))
 
-# Create and run a simulation
-config = lfm.SimulationConfig(grid_size=64, report_interval=500)
-sim = lfm.Simulation(config)
-sim.place_soliton((32, 32, 32), amplitude=6.0, sigma=5.0)
+# 2. Drop a soliton (energy blob) onto the grid
+sim.place_soliton((32, 32, 32), amplitude=6.0)
+
+# 3. Let the substrate settle into equilibrium
 sim.equilibrate()
-sim.run(steps=1000)
 
-# Analyze
+# 4. Run the two equations for 5 000 steps
+sim.run(steps=5000)
+
+# 5. Measure what emerged
 m = sim.metrics()
-print(f"χ_min = {m['chi_min']:.2f}")
+print(f"χ_min = {m['chi_min']:.2f}")   # χ dropped — a gravity well!
 print(f"Wells = {m['well_fraction']*100:.1f}%")
 
-# 41+ predictions from one integer
-catalog = lfm.predict_all()
-for name, entry in list(catalog.items())[:5]:
-    print(f"  {name}: predicted={entry['predicted']:.6f}, "
-          f"measured={entry['measured']:.6f}, error={entry['error_pct']:.2f}%")
+# 6. Look at the shape of gravity
+profile = lfm.radial_profile(sim.chi, center=(32,32,32), max_radius=20)
+# profile['r'] and profile['profile'] — does it fall like 1/r?
 ```
 
-## Examples
+## Examples — Build a Universe in 8 Steps
 
-See [`examples/`](examples/) for full working scripts:
+Each example builds on the one before, from empty space to a simulated cosmos.
+Run them in order:
 
-| Example | What it shows |
-|---------|---------------|
-| [soliton_gravity.py](examples/soliton_gravity.py) | Place a soliton, watch GOV-02 carve a χ-well — gravity from scratch |
-| [em_from_phase.py](examples/em_from_phase.py) | Complex Ψ with θ=0 vs θ=π — Coulomb-like attraction/repulsion from phase interference |
-| [parametric_resonance.py](examples/parametric_resonance.py) | Oscillate χ at 2χ₀ — matter creation via Mathieu instability |
-| [cosmic_structure_formation.py](examples/cosmic_structure_formation.py) | 256³ universe simulation with wells + voids (set `GRID_SIZE=64` for a quick CPU test) |
-| [predict_constants.py](examples/predict_constants.py) | Print all 35 analytic predictions and compare to measured values |
-| [particle_masses.py](examples/particle_masses.py) | Full mass table from l(l+1) angular-momentum quantisation |
-| [dark_matter_memory.py](examples/dark_matter_memory.py) | Remove matter, watch the χ-well persist — dark matter as substrate memory |
-| [checkpoint_resume.py](examples/checkpoint_resume.py) | Save a simulation checkpoint to disk and resume from it |
-| [two_body_orbit.py](examples/two_body_orbit.py) | Two solitons orbiting via mutual χ-wells — no Newton injected |
+| # | Example | What you'll see |
+|---|---------|-----------------|
+| 1 | [01_empty_space.py](examples/01_empty_space.py) | A grid with χ=19 everywhere — nothing happens (that's the point) |
+| 2 | [02_first_particle.py](examples/02_first_particle.py) | Add energy → χ drops → a gravity well appears |
+| 3 | [03_measuring_gravity.py](examples/03_measuring_gravity.py) | Measure χ(r) and check for 1/r falloff |
+| 4 | [04_two_bodies.py](examples/04_two_bodies.py) | Two solitons attract — gravitational interaction emerges |
+| 5 | [05_electric_charge.py](examples/05_electric_charge.py) | Phase = charge: same phase repels, opposite attracts |
+| 6 | [06_dark_matter.py](examples/06_dark_matter.py) | Remove matter — the χ-well persists (substrate memory) |
+| 7 | [07_matter_creation.py](examples/07_matter_creation.py) | Oscillate χ at 2χ₀ — matter appears from nothing |
+| 8 | [08_universe.py](examples/08_universe.py) | Random noise on 64³ → wells + voids → cosmic structure |
+
+```bash
+cd examples
+python 01_empty_space.py    # 30 seconds
+# ... work through each one ...
+python 08_universe.py       # the payoff
+```
 
 ## What is LFM?
 
-The Lattice Field Medium framework derives all physics from two coupled wave equations
-on a discrete 3D cubic lattice:
+Two coupled wave equations on a cubic lattice:
 
-- **GOV-01** (Wave Equation): `∂²Ψ/∂t² = c²∇²Ψ − χ²Ψ`
-- **GOV-02** (Field Equation): `∂²χ/∂t² = c²∇²χ − κ(|Ψ|² − E₀²) − 4λ_H·χ(χ² − χ₀²)`
+**GOV-01** — what matter does:
+```
+∂²Ψ/∂t² = c²∇²Ψ − χ²Ψ
+```
 
-From these two equations and χ₀ = 19 (derived from 3D lattice geometry: 1+6+12=19),
-the framework predicts 41+ fundamental constants within 2% of measured values.
+**GOV-02** — what the substrate does:
+```
+∂²χ/∂t² = c²∇²χ − κ(|Ψ|² − E₀²)
+```
+
+The substrate field χ starts at 19 everywhere (derived from 3D lattice
+geometry: 1 center + 6 face + 12 edge modes = 19).  Energy (|Ψ|²) pushes
+χ down, creating wells.  Waves curve toward low χ.  That's gravity.
+
+Complex phase differences in Ψ create interference — constructive (repulsion)
+or destructive (attraction).  That's electromagnetism.
+
+When matter leaves a region, χ doesn't snap back instantly — the well
+persists.  That's dark matter.
+
+No forces are coded in.  Everything emerges from the two update rules.
+
+## Measurement Tools
+
+The library includes tools to extract physics from your simulation:
+
+```python
+# Radial χ profile around a soliton
+profile = lfm.radial_profile(sim.chi, center=(32,32,32), max_radius=20)
+
+# Find the N brightest energy peaks
+peaks = lfm.find_peaks(sim.energy_density, n=5)
+
+# Track separation between two bodies over time
+sep = lfm.measure_separation(sim.energy_density)
+
+# Map lattice ticks to physical units (Gyr, Mpc)
+scale = lfm.CosmicScale(box_mpc=100.0, grid_size=64)
+print(scale.format_cosmic_time(50_000))  # "1.28 Gyr"
+```
 
 ## Documentation
 
-- [API Reference](https://github.com/gpartin/lfm-physics/wiki)
 - [LFM Physics Papers](https://zenodo.org/communities/lfm-physics)
-- [Constants & Predictions](https://github.com/gpartin/lfm-physics/blob/main/lfm/constants.py)
+- [Constants](https://github.com/gpartin/lfm-physics/blob/main/lfm/constants.py) — χ₀ = 19, κ = 1/63, and the rest
 - [Contributing](CONTRIBUTING.md)
 
 ## License

@@ -2,18 +2,17 @@
 LFM — Lattice Field Medium Physics Library
 ===========================================
 
-Two governing equations. One integer (χ₀ = 19). All of physics.
+Simulate the universe from two equations.
 
 Quick start::
 
     import lfm
 
-    print(lfm.CHI0)        # 19.0
-    print(lfm.KAPPA)       # 0.015873...
-    print(lfm.ALPHA_EM)    # 0.007299... ≈ 1/137.088
-
-    config = lfm.SimulationConfig(grid_size=64)
-    sim = lfm.Simulation(config)
+    sim = lfm.Simulation(lfm.SimulationConfig(grid_size=64))
+    sim.place_soliton((32, 32, 32), amplitude=6.0)
+    sim.equilibrate()
+    sim.run(steps=2000)
+    print(sim.metrics())
 """
 
 __version__ = "0.1.2"
@@ -24,7 +23,11 @@ from lfm.analysis import (
     count_clusters,
     energy_components,
     energy_conservation_drift,
+    find_peaks,
     interior_mask,
+    measure_force,
+    measure_separation,
+    radial_profile,
     total_energy,
     void_fraction,
     well_fraction,
@@ -62,11 +65,8 @@ from lfm.fields import (
     uniform_chi,
     wave_kick,
 )
-from lfm.formulas import (
-    mass_table,
-    predict_all,
-)
 from lfm.simulation import Simulation
+from lfm.units import CosmicScale
 
 __all__ = [
     "__version__",
@@ -117,7 +117,11 @@ __all__ = [
     "count_clusters",
     "interior_mask",
     "compute_metrics",
-    # Formulas
-    "predict_all",
-    "mass_table",
+    # Observables
+    "radial_profile",
+    "find_peaks",
+    "measure_separation",
+    "measure_force",
+    # Units
+    "CosmicScale",
 ]
