@@ -174,3 +174,60 @@ def measure_force(
 
     # Force = -∇χ (particles move toward lower χ)
     return -grad
+
+
+def fit_power_law(
+    r: NDArray,
+    profile: NDArray,
+    r_min: float = 2.0,
+    r_max: float | None = None,
+) -> tuple[float, float]:
+    """Fit a power-law to a radial profile via log-log regression.
+
+    Fits ``profile(r) ∝ r^exponent`` over the range ``[r_min, r_max]``.
+    Useful for checking that a χ-depression follows 1/r (Newtonian gravity)::
+
+        exponent, r_sq = lfm.fit_power_law(prof["r"], delta_chi)
+        # Expect exponent ≈ -1.00, r_sq ≈ 1.0 for perfect 1/r
+
+    Parameters
+    ----------
+    r : array-like
+        Radial distances (e.g. from :func:`radial_profile`).
+    profile : array-like
+        Values at each radius.  Only positive values are included.
+    r_min : float
+        Minimum radius to include in the fit.
+    r_max : float or None
+        Maximum radius to include.  Defaults to ``max(r)``.
+
+    Returns
+    -------
+    exponent : float
+        Best-fit power-law exponent.
+    r_squared : float
+        Coefficient of determination R² of the log-log fit.
+        Returns (nan, 0.0) if fewer than 3 usable points.
+    """
+    r_arr = np.asarray(r, dtype=np.float64)
+    p_arr = np.asarray(profile, dtype=np.float64)
+    if r_max is None:
+        r_max = float(r_arr.max())
+
+    mask = (r_arr >= r_min) & (r_arr <= r_max) & (p_arr > 0) & (r_arr > 0)
+    if mask.sum() < 3:
+        return float("nan"), 0.0
+
+    log_r = np.log(r_arr[mask])
+    log_p = np.log(p_arr[mask])
+
+    # Linear regression on log-log data: log_p = exponent * log_r + const
+    A = np.column_stack([log_r, np.ones_like(log_r)])
+    coeffs, _, _, _ = np.linalg.lstsq(A, log_p, rcond=None)
+
+    pred = A @ coeffs
+    ss_res = float(np.sum((log_p - pred) ** 2))
+    ss_tot = float(np.sum((log_p - log_p.mean()) ** 2))
+    r_sq = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
+
+    return float(coeffs[0]), float(r_sq)

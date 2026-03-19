@@ -50,7 +50,7 @@ profile = lfm.radial_profile(sim.chi, center=(32,32,32), max_radius=20)
 # profile['r'] and profile['profile'] — does it fall like 1/r?
 ```
 
-## Examples — Build a Universe in 8 Steps
+## Examples — Build a Universe in 12 Steps
 
 Each example builds on the one before, from empty space to a simulated cosmos.
 Run them in order:
@@ -65,13 +65,20 @@ Run them in order:
 | 6 | [06_dark_matter.py](examples/06_dark_matter.py) | Remove matter — the χ-well persists (substrate memory) |
 | 7 | [07_matter_creation.py](examples/07_matter_creation.py) | Oscillate χ at 2χ₀ — matter appears from nothing |
 | 8 | [08_universe.py](examples/08_universe.py) | Random noise on 64³ → wells + voids → cosmic structure |
+| 9 | [09_hydrogen_atom.py](examples/09_hydrogen_atom.py) | Proton χ-well traps an electron — energy-level ladder emerges |
+| 10 | [10_hydrogen_molecule.py](examples/10_hydrogen_molecule.py) | Two H atoms bond — bonding vs anti-bonding orbitals |
+| 11 | [11_oxygen.py](examples/11_oxygen.py) | Heavier nucleus (8 electrons) — deeper well, richer structure |
+| 12 | [12_fluid_dynamics.py](examples/12_fluid_dynamics.py) | 40-soliton gas → Euler equation from the stress-energy tensor |
 
 ```bash
 cd examples
 python 01_empty_space.py    # 30 seconds
 # ... work through each one ...
 python 08_universe.py       # the payoff
+python 12_fluid_dynamics.py # fluid velocity from wave mechanics
 ```
+
+**Interactive tutorials with visualisations:** https://emergentphysicslab.com/tutorials
 
 ## What is LFM?
 
@@ -120,6 +127,7 @@ print(scale.format_cosmic_time(50_000))  # "1.28 Gyr"
 
 ## Documentation
 
+- [Interactive Tutorials](https://emergentphysicslab.com/tutorials) — step-by-step guides with live visualisations
 - [LFM Physics Papers](https://zenodo.org/communities/lfm-physics)
 - [Constants](https://github.com/gpartin/lfm-physics/blob/main/lfm/constants.py) — χ₀ = 19, κ = 1/63, and the rest
 - [Contributing](CONTRIBUTING.md)

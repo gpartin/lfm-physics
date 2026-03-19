@@ -1,13 +1,16 @@
 """Post-processing analysis: structure detection, energy, observables."""
 
 from lfm.analysis.energy import (
+    continuity_residual,
     energy_components,
     energy_conservation_drift,
+    fluid_fields,
     total_energy,
 )
 from lfm.analysis.metrics import compute_metrics
 from lfm.analysis.observables import (
     find_peaks,
+    fit_power_law,
     measure_force,
     measure_separation,
     radial_profile,
@@ -25,6 +28,8 @@ __all__ = [
     "energy_components",
     "total_energy",
     "energy_conservation_drift",
+    "fluid_fields",
+    "continuity_residual",
     # structure
     "chi_statistics",
     "well_fraction",
@@ -36,6 +41,7 @@ __all__ = [
     # observables
     "radial_profile",
     "find_peaks",
+    "fit_power_law",
     "measure_separation",
     "measure_force",
 ]

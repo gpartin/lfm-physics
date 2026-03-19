@@ -103,6 +103,30 @@ class Simulation:
         self._evolver.set_psi_imag(value)
 
     @property
+    def psi_real_prev(self) -> NDArray[np.float32] | None:
+        """Real part of Ψ from the step *before* the last ``run()`` call.
+
+        Automatically updated after every :meth:`run` and :meth:`run_driven`
+        call.  Use with :func:`lfm.fluid_fields` to compute ∂Ψ/∂t without
+        manually snapshotting state::
+
+            sim.run(steps=1)
+            f = lfm.fluid_fields(
+                sim.psi_real, sim.psi_real_prev, sim.chi, config.dt,
+                psi_i=sim.psi_imag, psi_i_prev=sim.psi_imag_prev,
+            )
+        """
+        return self._psi_r_prev
+
+    @property
+    def psi_imag_prev(self) -> NDArray[np.float32] | None:
+        """Imaginary part of Ψ from the step *before* the last ``run()`` call.
+
+        See :attr:`psi_real_prev` for usage.
+        """
+        return self._psi_i_prev
+
+    @property
     def energy_density(self) -> NDArray[np.float32]:
         """Energy density |Ψ|², shape (N, N, N)."""
         return self._evolver.get_energy_density()
@@ -286,6 +310,67 @@ class Simulation:
             self._psi_i_prev = pi.copy() if pi is not None else None
 
         self._evolver.evolve(steps, callback=_internal_callback)
+
+    def run_driven(
+        self,
+        steps: int,
+        chi_forcing: Callable[[float], NDArray[np.float32]],
+        record_metrics: bool = False,
+    ) -> None:
+        """Run with χ forced at *every* leapfrog step by an external function.
+
+        At each step, χ is overwritten by ``chi_forcing(t)`` before the
+        leapfrog update.  This is the correct way to study parametric
+        resonance: the forcing is applied at the native ``dt`` rate rather
+        than once per N-step block.
+
+        Parameters
+        ----------
+        steps : int
+            Number of leapfrog steps.
+        chi_forcing : callable(t) -> ndarray
+            Function of simulation time ``t`` (float) returning either a
+            scalar or a (N,N,N) float32 array.  Use default-argument capture
+            to close over loop variables correctly in sweeps::
+
+                sim.run_driven(
+                    1000,
+                    chi_forcing=lambda t, A=3.0, w=omega:
+                        np.full((N, N, N),
+                                lfm.CHI0 + A * np.sin(w * t),
+                                dtype=np.float32),
+                )
+        record_metrics : bool
+            If True, append :meth:`metrics` to :attr:`history` every
+            ``config.report_interval`` steps.
+        """
+        evolver = self._evolver
+        dt = self.config.dt
+        base_step = self.step
+
+        # Snapshot state before this driven run
+        self._psi_r_prev = evolver.get_psi_real().copy()
+        pi = evolver.get_psi_imag()
+        self._psi_i_prev = pi.copy() if pi is not None else None
+
+        for s in range(steps):
+            t = (base_step + s) * dt
+            chi_raw = chi_forcing(t)
+            chi_arr = np.asarray(chi_raw, dtype=np.float32)
+            if chi_arr.ndim == 0:
+                N = self.config.grid_size
+                chi_arr = np.full((N, N, N), float(chi_arr), dtype=np.float32)
+            evolver.set_chi(chi_arr)
+            evolver.evolve(1)
+            self._psi_r_prev = evolver.get_psi_real().copy()
+            pi = evolver.get_psi_imag()
+            self._psi_i_prev = pi.copy() if pi is not None else None
+            if record_metrics and (
+                (base_step + s + 1) % self.config.report_interval == 0
+            ):
+                m = self.metrics()
+                m["step"] = float(base_step + s + 1)
+                self._history.append(m)
 
     # ── Analysis ──────────────────────────────────────────
 

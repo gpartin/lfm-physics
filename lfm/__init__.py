@@ -15,15 +15,18 @@ Quick start::
     print(sim.metrics())
 """
 
-__version__ = "0.1.3"
+__version__ = "0.2.0"
 
 from lfm.analysis import (
     chi_statistics,
     compute_metrics,
+    continuity_residual,
     count_clusters,
     energy_components,
     energy_conservation_drift,
     find_peaks,
+    fit_power_law,
+    fluid_fields,
     interior_mask,
     measure_force,
     measure_separation,
@@ -133,8 +136,11 @@ __all__ = [
     # Observables
     "radial_profile",
     "find_peaks",
+    "fit_power_law",
     "measure_separation",
     "measure_force",
+    "fluid_fields",
+    "continuity_residual",
     # Units
     "CosmicScale",
     "PlanckScale",
