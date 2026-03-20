@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.2.1] - 2026-03-20
+
+### Added
+- GOV-02 v14: color variance term `κ_c·f_c·Σ|Ψₐ|²` with `KAPPA_C = 1/189`
+- GOV-01 v15: cross-color coupling `ε_cc·χ²·(Ψₐ − Ψ̄)` with `EPSILON_CC = 2/17`
+- `color_variance()` analysis function for color field diagnostics
+- `momentum_density()`, `weak_parity_asymmetry()`, `confinement_proxy()` observables
+- `continuity_residual()`, `fluid_fields()` for hydrodynamic analysis
+- Constants: `KAPPA_C`, `EPSILON_CC`, `ALPHA_S`, `N_COLORS`
+- Config: `kappa_c`, `epsilon_cc`, `n_colors` parameters
+- Example 13: weak force (parity asymmetry)
+- Example 14: strong force (color screening and confinement proxy)
+- Website tutorials 13-14 (emergentphysicslab.com)
+
+### Fixed
+- Ruff lint: import sorting, unused imports, line lengths
+- `PlanckScale` type annotation in `SimulationConfig.planck_scale`
+- Version alignment between `pyproject.toml` and `__init__.py`
+
 ## [0.1.3] - 2026-03-19
 
 ### Added
