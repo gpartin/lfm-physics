@@ -15,7 +15,7 @@ Quick start::
     print(sim.metrics())
 """
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 from lfm.analysis import (
     chi_statistics,
