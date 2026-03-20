@@ -15,14 +15,14 @@ Quick start::
     print(sim.metrics())
 """
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 from lfm.analysis import (
     chi_statistics,
     color_variance,
     compute_metrics,
-    continuity_residual,
     confinement_proxy,
+    continuity_residual,
     count_clusters,
     energy_components,
     energy_conservation_drift,
@@ -41,9 +41,9 @@ from lfm.analysis import (
 )
 from lfm.config import BoundaryType, FieldLevel, SimulationConfig
 from lfm.constants import (
+    AGE_UNIVERSE_GYR,
     ALPHA_EM,
     ALPHA_S,
-    AGE_UNIVERSE_GYR,
     CHI0,
     D_ST,
     DT_DEFAULT,

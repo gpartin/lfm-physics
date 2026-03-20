@@ -15,9 +15,9 @@ from lfm.analysis.observables import (
     confinement_proxy,
     find_peaks,
     fit_power_law,
-    momentum_density,
     measure_force,
     measure_separation,
+    momentum_density,
     radial_profile,
     weak_parity_asymmetry,
 )

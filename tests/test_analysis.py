@@ -4,13 +4,13 @@ import numpy as np
 
 from lfm.analysis import (
     chi_statistics,
-    confinement_proxy,
     compute_metrics,
+    confinement_proxy,
     count_clusters,
     energy_components,
     energy_conservation_drift,
-    momentum_density,
     interior_mask,
+    momentum_density,
     total_energy,
     void_fraction,
     weak_parity_asymmetry,

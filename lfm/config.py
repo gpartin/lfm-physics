@@ -10,6 +10,10 @@ from __future__ import annotations
 
 import enum
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from lfm.units import PlanckScale
 
 from lfm.constants import (
     BOUNDARY_FRACTION_DEFAULT,
@@ -19,10 +23,8 @@ from lfm.constants import (
     DT_DEFAULT,
     E0_SQ_DEFAULT,
     E_AMPLITUDE_BY_GRID,
-    EPSILON_CC,
     EPSILON_W,
     KAPPA,
-    KAPPA_C,
     N_COLORS,
     OBSERVABLE_RADIUS_PLANCK,
 )

@@ -17,7 +17,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from lfm.constants import CHI0, DT_DEFAULT, OBSERVABLE_RADIUS_PLANCK, PLANCK_LENGTH_M, PLANCK_TIME_SEC
+from lfm.constants import (
+    CHI0,
+    DT_DEFAULT,
+    OBSERVABLE_RADIUS_PLANCK,
+    PLANCK_LENGTH_M,
+    PLANCK_TIME_SEC,
+)
 
 
 @dataclass(frozen=True)
@@ -135,7 +141,9 @@ class PlanckScale:
         # Planck-resolution scale: 1 cell = 1 Planck length
         pp = PlanckScale.at_planck_resolution(grid_size=256)
         print(pp)
-        # PlanckScale(N=256, Planck-resolution): 1 cell = 1 Planck length (1.616e-35 m), 1 step = 0.02 Planck ticks (1.08e-45 s)
+        # PlanckScale(N=256, Planck-resolution):
+        #   1 cell = 1 Planck length (1.616e-35 m),
+        #   1 step = 0.02 Planck ticks (1.08e-45 s)
         print(pp.cells_per_planck)      # 1.0  (exact)
         print(pp.is_planck_resolution)  # True
         print(pp.cell_size_m)           # 1.616e-35 m (= Planck length)
@@ -179,7 +187,9 @@ class PlanckScale:
             print(ps.cells_per_planck)      # 1.0 exactly
             print(ps.planck_ticks_per_step) # 0.02  (= dt)
             print(ps)
-            # PlanckScale(N=256, Planck-resolution): 1 cell = 1 Planck length, 1 step = 0.02 Planck ticks (1.08e-45 s)
+            # PlanckScale(N=256, Planck-resolution):
+            #   1 cell = 1 Planck length,
+            #   1 step = 0.02 Planck ticks (1.08e-45 s)
         """
         return cls(grid_size=grid_size, box_planck_radius=grid_size / 2.0, dt=dt)
 
