@@ -40,7 +40,9 @@ void evolve_gov01_gov02(
     const float lam,
     const float chi0,
     const float E0_sq,
-    const float eps_w)
+    const float eps_w,
+    const float kappa_c,
+    const float eps_cc)
 {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     int total = N * N * N;
@@ -85,6 +87,22 @@ void evolve_gov01_gov02(
     float psi_sq_total = 0.0f;
     float j_total = 0.0f;
 
+    // Per-color energy densities for f_c (v14)
+    float ea[3];
+
+    // v15: compute color average Psi_bar for cross-color coupling
+    float Pr_avg = 0.0f;
+    float Pi_avg = 0.0f;
+    if (eps_cc > 0.0f) {
+        for (int a = 0; a < 3; a++) {
+            int off = a * total;
+            Pr_avg += Psi_r[off + idx];
+            Pi_avg += Psi_i[off + idx];
+        }
+        Pr_avg *= (1.0f / 3.0f);
+        Pi_avg *= (1.0f / 3.0f);
+    }
+
     // Loop over 3 color components (a=0,1,2)
     #pragma unroll
     for (int a = 0; a < 3; a++) {
@@ -111,19 +129,37 @@ void evolve_gov01_gov02(
         float Pr_new = 2.0f * Pr - Psi_r_prev[aidx] + dt2 * (lap_Pr - chi_sq * Pr);
         float Pi_new = 2.0f * Pi_val - Psi_i_prev[aidx] + dt2 * (lap_Pi - chi_sq * Pi_val);
 
+        // v15: cross-color coupling -eps_cc * chi^2 * (Psi_a - Psi_bar)
+        if (eps_cc > 0.0f) {
+            Pr_new -= dt2 * eps_cc * chi_sq * (Pr - Pr_avg);
+            Pi_new -= dt2 * eps_cc * chi_sq * (Pi_val - Pi_avg);
+        }
+
         Psi_r_next[aidx] = Pr_new;
         Psi_r_prev_next[aidx] = Pr;
         Psi_i_next[aidx] = Pi_new;
         Psi_i_prev_next[aidx] = Pi_val;
 
+        // Per-color energy density
+        float e_a = Pr * Pr + Pi_val * Pi_val;
+        ea[a] = e_a;
+
         // Colorblind energy density: Sum_a |Psi_a|^2
-        psi_sq_total += Pr * Pr + Pi_val * Pi_val;
+        psi_sq_total += e_a;
 
         // Momentum density: Sum_a Im(Psi_a* . nabla(Psi_a))
         float j_x = Pr * (Psi_i[off+ip] - Psi_i[off+im]) - Pi_val * (Psi_r[off+ip] - Psi_r[off+im]);
         float j_y = Pr * (Psi_i[off+jp] - Psi_i[off+jm]) - Pi_val * (Psi_r[off+jp] - Psi_r[off+jm]);
         float j_z = Pr * (Psi_i[off+kp] - Psi_i[off+km]) - Pi_val * (Psi_r[off+kp] - Psi_r[off+km]);
         j_total += 0.5f * (j_x + j_y + j_z);
+    }
+
+    // v14: normalized color variance f_c = [Sum_a |Psi_a|^4 / (Sum_a |Psi_a|^2)^2] - 1/3
+    float color_var_term = 0.0f;
+    if (kappa_c > 0.0f && psi_sq_total > 1e-30f) {
+        float sum_sq = ea[0]*ea[0] + ea[1]*ea[1] + ea[2]*ea[2];
+        float f_c = sum_sq / (psi_sq_total * psi_sq_total) - (1.0f / 3.0f);
+        color_var_term = kappa_c * f_c * psi_sq_total;
     }
 
     // 19-point Laplacian for chi
@@ -136,9 +172,10 @@ void evolve_gov01_gov02(
     // Mexican hat: -4*lam*chi*(chi^2 - chi0^2)
     float chi_self = -4.0f * lam * chi_c * (chi_sq - chi0 * chi0);
 
-    // GOV-02 v13
+    // GOV-02 v14+: colorblind gravity + color variance
     float chi_new = 2.0f * chi_c - chi_prev[idx] + dt2 * (
-        lap_chi - kappa * (psi_sq_total + eps_w * j_total - E0_sq) + chi_self);
+        lap_chi - kappa * (psi_sq_total + eps_w * j_total - E0_sq)
+        - color_var_term + chi_self);
 
     // BH excision: clamp to Z2 second vacuum
     if (chi_new < -chi0) chi_new = -chi0;

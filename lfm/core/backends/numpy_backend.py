@@ -174,15 +174,30 @@ class NumpyBackend:
         N: int, dt2: float, kappa: float,
         lambda_self: float, chi0: float, e0_sq: float,
         epsilon_w: float,
+        kappa_c: float = 0.0,
+        epsilon_cc: float = 0.0,
     ) -> None:
         total = N**3
+        n_colors = 3
         chi, chi_prev = chi_in, chi_prev_in
         chi_sq = chi * chi
 
         psi_sq_total = np.zeros(total, dtype=np.float32)
         j_total_acc = np.zeros(total, dtype=np.float32)
+        color_energy = np.zeros((n_colors, total), dtype=np.float32)
 
-        for a in range(3):
+        # v15: precompute color average for cross-color coupling
+        if epsilon_cc > 0:
+            Pr_avg = np.zeros(total, dtype=np.float32)
+            Pi_avg = np.zeros(total, dtype=np.float32)
+            for a in range(n_colors):
+                s = slice(a * total, (a + 1) * total)
+                Pr_avg += psi_r_in[s]
+                Pi_avg += psi_i_in[s]
+            Pr_avg /= n_colors
+            Pi_avg /= n_colors
+
+        for a in range(n_colors):
             off = a * total
             s = slice(off, off + total)
 
@@ -196,12 +211,19 @@ class NumpyBackend:
             Pr_new = 2.0 * Pr - psi_r_prev_in[s] + dt2 * (lap_Pr - chi_sq * Pr)
             Pi_new = 2.0 * Pi - psi_i_prev_in[s] + dt2 * (lap_Pi - chi_sq * Pi)
 
+            # v15: cross-color coupling -eps_cc * chi^2 * (Psi_a - Psi_bar)
+            if epsilon_cc > 0:
+                Pr_new -= dt2 * epsilon_cc * chi_sq * (Pr - Pr_avg)
+                Pi_new -= dt2 * epsilon_cc * chi_sq * (Pi - Pi_avg)
+
             np.copyto(psi_r_out[s], Pr_new)
             np.copyto(psi_r_prev_out[s], Pr)
             np.copyto(psi_i_out[s], Pi_new)
             np.copyto(psi_i_prev_out[s], Pi)
 
-            psi_sq_total += Pr * Pr + Pi * Pi
+            ea = Pr * Pr + Pi * Pi
+            color_energy[a] = ea
+            psi_sq_total += ea
 
             # momentum density
             Pr3 = Pr.reshape(N, N, N)
@@ -217,10 +239,19 @@ class NumpyBackend:
             j_z = (Pr3 * dPi_dz - Pi3 * dPr_dz).ravel()
             j_total_acc += 0.5 * (j_x + j_y + j_z)
 
+        # v14: normalized color variance f_c
+        color_var_term = np.zeros(total, dtype=np.float32)
+        if kappa_c > 0:
+            sum_sq = np.sum(color_energy**2, axis=0)
+            total_sq = psi_sq_total * psi_sq_total
+            safe = total_sq > 1e-30
+            f_c = np.where(safe, sum_sq / total_sq - 1.0 / n_colors, 0.0)
+            color_var_term = kappa_c * f_c * psi_sq_total
+
         # GOV-02
         lap_chi = self._laplacian_3d(chi, N)
         chi_source = kappa * (psi_sq_total + epsilon_w * j_total_acc - e0_sq)
-        chi_accel = lap_chi - chi_source
+        chi_accel = lap_chi - chi_source - color_var_term
         if lambda_self > 0:
             chi_accel -= 4.0 * lambda_self * chi * (chi_sq - chi0 * chi0)
         chi_new = 2.0 * chi - chi_prev + dt2 * chi_accel

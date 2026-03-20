@@ -205,19 +205,31 @@ def _step_color(
     state: SimulationState, config: SimulationConfig,
     dt2: float, c2: float,
 ) -> None:
-    """Leapfrog step for 3-color complex field (all four forces)."""
+    """Leapfrog step for 3-color complex field (all four forces).
+
+    v14: Color variance term −κ_c·f_c·Σ|Ψₐ|² in GOV-02
+    v15: Cross-color coupling −ε_cc·χ²·(Ψₐ − Ψ̄) in GOV-01
+    """
     psi = state.psi  # shape: (n_colors, 2, N, N, N)
     psi_prev = state.psi_prev
     chi = state.chi
     chi_prev = state.chi_prev
     chi_sq = chi**2
 
+    n_colors = config.n_colors
     psi_next = np.empty_like(psi)
 
     # Energy density: colorblind sum Σₐ|Ψₐ|²
     energy_density = np.zeros_like(chi)
+    # Per-color energy for f_c computation (v14)
+    color_energy = np.zeros((n_colors,) + chi.shape, dtype=chi.dtype)
 
-    for a in range(config.n_colors):
+    # Pre-compute color average for cross-color coupling (v15)
+    if config.epsilon_cc > 0:
+        Pr_avg = np.mean(psi[:, 0], axis=0)  # (N,N,N)
+        Pi_avg = np.mean(psi[:, 1], axis=0)
+
+    for a in range(n_colors):
         Pr = psi[a, 0]
         Pi = psi[a, 1]
         Pr_prev = psi_prev[a, 0]
@@ -226,15 +238,36 @@ def _step_color(
         # GOV-01 per color
         lap_Pr = laplacian_19pt(Pr)
         lap_Pi = laplacian_19pt(Pi)
-        psi_next[a, 0] = 2.0 * Pr - Pr_prev + dt2 * (c2 * lap_Pr - chi_sq * Pr)
-        psi_next[a, 1] = 2.0 * Pi - Pi_prev + dt2 * (c2 * lap_Pi - chi_sq * Pi)
 
-        energy_density += Pr**2 + Pi**2
+        Pr_new = 2.0 * Pr - Pr_prev + dt2 * (c2 * lap_Pr - chi_sq * Pr)
+        Pi_new = 2.0 * Pi - Pi_prev + dt2 * (c2 * lap_Pi - chi_sq * Pi)
 
-    # GOV-02 with colorblind source
+        # v15: cross-color coupling −ε_cc·χ²·(Ψₐ − Ψ̄)
+        if config.epsilon_cc > 0:
+            Pr_new -= dt2 * config.epsilon_cc * chi_sq * (Pr - Pr_avg)
+            Pi_new -= dt2 * config.epsilon_cc * chi_sq * (Pi - Pi_avg)
+
+        psi_next[a, 0] = Pr_new
+        psi_next[a, 1] = Pi_new
+
+        ea = Pr**2 + Pi**2
+        color_energy[a] = ea
+        energy_density += ea
+
+    # v14: compute normalized color variance f_c
+    # f_c = [Σₐ|Ψₐ|⁴ / (Σₐ|Ψₐ|²)²] − 1/3
+    color_variance_term = np.zeros_like(chi)
+    if config.kappa_c > 0:
+        sum_sq = np.sum(color_energy**2, axis=0)  # Σₐ|Ψₐ|⁴
+        total_sq = energy_density**2  # (Σₐ|Ψₐ|²)²
+        safe = total_sq > 1e-30
+        f_c = np.where(safe, sum_sq / total_sq - 1.0 / n_colors, 0.0)
+        color_variance_term = config.kappa_c * f_c * energy_density
+
+    # GOV-02 with colorblind source + color variance
     lap_chi = laplacian_19pt(chi)
     chi_source = config.kappa * (energy_density - config.e0_sq)
-    chi_accel = c2 * lap_chi - chi_source
+    chi_accel = c2 * lap_chi - chi_source - color_variance_term
     if config.lambda_self > 0:
         chi_accel -= 4 * config.lambda_self * chi * (chi**2 - config.chi0**2)
 

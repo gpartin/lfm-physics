@@ -159,6 +159,8 @@ class CupyBackend:
         N: int, dt2: float, kappa: float,
         lambda_self: float, chi0: float, e0_sq: float,
         epsilon_w: float,
+        kappa_c: float = 0.0,
+        epsilon_cc: float = 0.0,
     ) -> None:
         total = N**3
         grid, block = _grid_block(total)
@@ -173,6 +175,7 @@ class CupyBackend:
             np.int32(N), np.float32(dt2), np.float32(kappa),
             np.float32(lambda_self), np.float32(chi0), np.float32(e0_sq),
             np.float32(epsilon_w),
+            np.float32(kappa_c), np.float32(epsilon_cc),
         ))
         cp.cuda.Stream.null.synchronize()
 

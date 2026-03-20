@@ -19,8 +19,10 @@ from lfm.constants import (
     DT_DEFAULT,
     E0_SQ_DEFAULT,
     E_AMPLITUDE_BY_GRID,
+    EPSILON_CC,
     EPSILON_W,
     KAPPA,
+    KAPPA_C,
     N_COLORS,
     OBSERVABLE_RADIUS_PLANCK,
 )
@@ -76,6 +78,16 @@ class SimulationConfig:
 
     epsilon_w: float = EPSILON_W
     """Weak/helicity coupling = 0.1. Only matters when j(x,t) is computed."""
+
+    kappa_c: float = 0.0
+    """Color variance coupling (v14). 0.0 = colorblind (v13 default).
+    Set to KAPPA_C (1/189) for color-aware χ deepening of non-singlet states.
+    Only active at FieldLevel.COLOR."""
+
+    epsilon_cc: float = 0.0
+    """Cross-color coupling (v15). 0.0 = independent colors (v14 default).
+    Set to EPSILON_CC (2/17) for dynamic f_c evolution.
+    Adds −ε_cc·χ²·(Ψₐ − Ψ̄) to GOV-01. Only active at FieldLevel.COLOR."""
 
     e0_sq: float = E0_SQ_DEFAULT
     """Background energy density. 0 = vacuum."""

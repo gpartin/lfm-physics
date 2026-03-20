@@ -1,5 +1,8 @@
 """Post-processing analysis: structure detection, energy, observables."""
 
+from lfm.analysis.color import (
+    color_variance,
+)
 from lfm.analysis.energy import (
     continuity_residual,
     energy_components,
@@ -50,4 +53,6 @@ __all__ = [
     "momentum_density",
     "weak_parity_asymmetry",
     "confinement_proxy",
+    # color
+    "color_variance",
 ]

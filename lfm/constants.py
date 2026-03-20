@@ -53,6 +53,18 @@ ALPHA_S: float = 2.0 / (CHI0 - 2)
 """Strong coupling at M_Z = 2/17 ≈ 0.1176. Numerator = rank(SU(3))."""
 
 # ============================================================
+# v14+ — Color variance and cross-color coupling
+# ============================================================
+
+KAPPA_C: float = KAPPA / N_COLORS
+"""Color variance coupling = κ/N_c = 1/189 ≈ 0.005291 (v14).
+Extra χ deepening for non-singlet color configurations."""
+
+EPSILON_CC: float = ALPHA_S
+"""Cross-color coupling = α_s = 2/17 ≈ 0.1176 (v15).
+Drives f_c dynamic: −ε_cc·χ²·(Ψₐ − Ψ̄) in GOV-01."""
+
+# ============================================================
 # NUMERICAL — Simulation defaults
 # ============================================================
 

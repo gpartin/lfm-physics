@@ -184,6 +184,7 @@ class Evolver:
                 r_out, rp_out, i_out, ip_out, c_out, cp_out,
                 self._N, self._dt2, cfg.kappa,
                 cfg.lambda_self, cfg.chi0, cfg.e0_sq, cfg.epsilon_w,
+                cfg.kappa_c, cfg.epsilon_cc,
             )
 
         self._use_buffer_A = not self._use_buffer_A
