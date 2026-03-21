@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.4.1] - 2026-03-20
+
+### Fixed
+- CI lint gate now catches formatting/import issues earlier via a dedicated quality job in `test.yml`
+- Workflow matrix stability improved by running quality checks before test matrix fan-out
+- GitHub Actions versions updated (`actions/checkout@v5`, `actions/setup-python@v6`) to address Node 20 deprecation warnings
+
+### Improved
+- Contributor workflow now installs and uses pre-commit by default (`pip install -e ".[dev]"` includes `pre-commit`)
+- Pre-commit guidance clarified in `CONTRIBUTING.md` (`pre-commit install`, `pre-commit run`)
+- Pre-commit hook scope narrowed to maintained library/test/workflow paths to avoid unrelated legacy formatting debt
+
 ## [0.4.0] - 2026-03-22
 
 ### Added
