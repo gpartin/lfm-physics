@@ -1,20 +1,29 @@
 # Pre-commit hooks for lfm-physics
 # Install: pip install pre-commit && pre-commit install
-# Run all: pre-commit run --all-files
+# Run staged files: pre-commit run
+# Run selected files: pre-commit run --files <path> [<path> ...]
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
       - id: trailing-whitespace
+        files: &repo_text_files ^(lfm/|tests/|\.github/workflows/|\.github/ISSUE_TEMPLATE/|\.github/PULL_REQUEST_TEMPLATE\.md$|pyproject\.toml$|\.pre-commit-config\.yaml$|README\.md$|CONTRIBUTING\.md$|SECURITY\.md$|CODE_OF_CONDUCT\.md$|CHANGELOG\.md$|\.gitignore$)
       - id: end-of-file-fixer
+        files: *repo_text_files
       - id: check-yaml
+        files: *repo_text_files
       - id: check-toml
+        files: *repo_text_files
       - id: check-merge-conflict
+        files: *repo_text_files
       - id: debug-statements
+        files: &python_files ^(lfm/|tests/).*\.py$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.4.8
     hooks:
       - id: ruff          # lint
         args: [--fix]
+        files: *python_files
       - id: ruff-format   # format
+        files: *python_files

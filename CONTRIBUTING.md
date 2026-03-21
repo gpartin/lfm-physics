@@ -8,6 +8,13 @@ Thanks for your interest! Here's how to get started.
 git clone https://github.com/gpartin/lfm-physics.git
 cd lfm-physics
 pip install -e ".[dev]"
+pre-commit install
+```
+
+Run the full local quality gate before pushing:
+
+```bash
+pre-commit run
 ```
 
 ## Running Tests
@@ -23,6 +30,8 @@ pytest -x                      # stop on first failure
 We use [Ruff](https://docs.astral.sh/ruff/) for linting:
 
 ```bash
+pre-commit run              # preferred: runs configured auto-fixes on staged files
+pre-commit run --files path/to/file.py
 ruff check lfm/ tests/
 ruff format lfm/ tests/     # auto-format
 ```
@@ -35,7 +44,7 @@ ruff format lfm/ tests/     # auto-format
 
 1. Fork the repo and create a feature branch
 2. Add tests for any new functionality
-3. Ensure `pytest` and `ruff check` pass
+3. Ensure `pre-commit run` and `pytest` pass
 4. Open a PR against `main`
 
 ## Physics Guidelines
