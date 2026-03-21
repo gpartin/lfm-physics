@@ -52,7 +52,8 @@ def color_variance(
     total_sq = np.sum(ea, axis=0)  # (total,)
     sum_sq = np.sum(ea ** 2, axis=0)
     safe = total_sq > 1e-30
-    f_c = np.where(safe, sum_sq / (total_sq ** 2) - 1.0 / n_colors, 0.0)
+    denom = np.where(safe, total_sq ** 2, 1.0)
+    f_c = np.where(safe, sum_sq / denom - 1.0 / n_colors, 0.0)
     f_c_3d = f_c.reshape(N, N, N)
 
     return {

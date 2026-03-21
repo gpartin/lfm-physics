@@ -1,5 +1,10 @@
 """Post-processing analysis: structure detection, energy, observables."""
 
+from lfm.analysis.angular_momentum import (
+    angular_momentum_density,
+    precession_rate,
+    total_angular_momentum,
+)
 from lfm.analysis.color import (
     color_variance,
 )
@@ -9,6 +14,13 @@ from lfm.analysis.energy import (
     energy_conservation_drift,
     fluid_fields,
     total_energy,
+)
+from lfm.analysis.metric import (
+    effective_metric_00,
+    gravitational_potential,
+    metric_perturbation,
+    schwarzschild_chi,
+    time_dilation_factor,
 )
 from lfm.analysis.metrics import compute_metrics
 from lfm.analysis.observables import (
@@ -20,6 +32,12 @@ from lfm.analysis.observables import (
     momentum_density,
     radial_profile,
     weak_parity_asymmetry,
+)
+from lfm.analysis.phase import (
+    charge_density,
+    coulomb_interaction_energy,
+    phase_coherence,
+    phase_field,
 )
 from lfm.analysis.spectrum import power_spectrum
 from lfm.analysis.structure import (
@@ -62,4 +80,19 @@ __all__ = [
     # tracker
     "track_peaks",
     "flatten_trajectories",
+    # metric (spacetime geometry)
+    "effective_metric_00",
+    "metric_perturbation",
+    "time_dilation_factor",
+    "gravitational_potential",
+    "schwarzschild_chi",
+    # phase (EM / charge)
+    "phase_field",
+    "charge_density",
+    "phase_coherence",
+    "coulomb_interaction_energy",
+    # angular momentum
+    "angular_momentum_density",
+    "total_angular_momentum",
+    "precession_rate",
 ]

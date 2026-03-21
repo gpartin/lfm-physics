@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.4.0] - 2026-03-22
+
+### Added
+- **Metric analysis** (`lfm.analysis.metric`): `effective_metric_00`, `metric_perturbation`, `time_dilation_factor`, `gravitational_potential`, `schwarzschild_chi` — extract spacetime geometry from χ field
+- **Phase/charge analysis** (`lfm.analysis.phase`): `phase_field`, `charge_density`, `phase_coherence`, `coulomb_interaction_energy` — electromagnetic observables from complex fields
+- **Angular momentum** (`lfm.analysis.angular_momentum`): `angular_momentum_density`, `total_angular_momentum`, `precession_rate` — orbital and spin analysis
+- **Boosted solitons** (`lfm.fields.boosted`): `boosted_soliton` — momentum-encoded solitons with phase gradient (complex) or time-derivative kick (real) for scattering experiments
+- **2D parameter sweeps** (`lfm.sweep`): `sweep_2d()` — run all (v1, v2) combinations and collect metrics
+- **GitHub governance**: issue/PR templates, SECURITY.md, CODE_OF_CONDUCT.md
+- **Pre-commit hooks**: `.pre-commit-config.yaml` with ruff linting and formatting
+- **Docs build**: `docs/Makefile` and `docs/make.bat` for local Sphinx builds
+- **Coverage config**: `pyproject.toml` [tool.coverage.*] sections (excluding viz/ and kernel_source.py)
+
+### Fixed
+- **GPU NaN bug**: CUDA color kernel threshold mismatch (`psi_sq_total > 1e-30f` → `total_sq > 1e-30f`) that caused FTZ underflow to 0/0=NaN
+- **GPU boundary masking**: Added missing Psi boundary masking in color CUDA kernel
+- **Color variance RuntimeWarning**: Safe denominator pattern to avoid division-by-zero warning on zero-field input
+- **Schwarzschild chi RuntimeWarning**: Compute `np.where(r > r_s, 1.0 - r_s/r, 0.0)` before `np.sqrt` to avoid invalid-value warning
+
+### Improved
+- Test suite: 202 → **307 tests** (all passing)
+- Coverage: 64% → **91%** (excluding viz/ and CUDA kernel strings)
+- Docs version: aligned at 0.4.0 across pyproject.toml, lfm/__init__.py, docs/conf.py
+
 ## [0.3.0] - 2026-03-21
 
 ### Added

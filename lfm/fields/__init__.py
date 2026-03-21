@@ -5,6 +5,7 @@ from lfm.fields.arrangements import (
     sparse_positions,
     tetrahedral_positions,
 )
+from lfm.fields.boosted import boosted_soliton
 from lfm.fields.equilibrium import (
     equilibrate_chi,
     equilibrate_from_fields,
@@ -17,6 +18,7 @@ __all__ = [
     "gaussian_soliton",
     "place_solitons",
     "wave_kick",
+    "boosted_soliton",
     "poisson_solve_fft",
     "equilibrate_chi",
     "equilibrate_from_fields",

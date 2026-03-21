@@ -15,27 +15,39 @@ Quick start::
     print(sim.metrics())
 """
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 from lfm.analysis import (
+    angular_momentum_density,
+    charge_density,
     chi_statistics,
     color_variance,
     compute_metrics,
     confinement_proxy,
     continuity_residual,
+    coulomb_interaction_energy,
     count_clusters,
+    effective_metric_00,
     energy_components,
     energy_conservation_drift,
     find_peaks,
     fit_power_law,
     flatten_trajectories,
     fluid_fields,
+    gravitational_potential,
     interior_mask,
     measure_force,
     measure_separation,
+    metric_perturbation,
     momentum_density,
+    phase_coherence,
+    phase_field,
     power_spectrum,
+    precession_rate,
     radial_profile,
+    schwarzschild_chi,
+    time_dilation_factor,
+    total_angular_momentum,
     total_energy,
     track_peaks,
     void_fraction,
@@ -71,6 +83,7 @@ from lfm.constants import (
 from lfm.core.backends import get_backend, gpu_available
 from lfm.core.evolver import Evolver
 from lfm.fields import (
+    boosted_soliton,
     equilibrate_chi,
     equilibrate_from_fields,
     gaussian_soliton,
@@ -84,7 +97,7 @@ from lfm.fields import (
     wave_kick,
 )
 from lfm.simulation import Simulation
-from lfm.sweep import sweep
+from lfm.sweep import sweep, sweep_2d
 from lfm.units import CosmicScale, PlanckScale
 
 __all__ = [
@@ -162,8 +175,26 @@ __all__ = [
     "power_spectrum",
     "track_peaks",
     "flatten_trajectories",
+    # Metric (spacetime geometry)
+    "effective_metric_00",
+    "metric_perturbation",
+    "time_dilation_factor",
+    "gravitational_potential",
+    "schwarzschild_chi",
+    # Phase (EM / charge)
+    "phase_field",
+    "charge_density",
+    "phase_coherence",
+    "coulomb_interaction_energy",
+    # Angular momentum
+    "angular_momentum_density",
+    "total_angular_momentum",
+    "precession_rate",
+    # Boosted soliton
+    "boosted_soliton",
     # Sweep
     "sweep",
+    "sweep_2d",
     # Units
     "CosmicScale",
     "PlanckScale",

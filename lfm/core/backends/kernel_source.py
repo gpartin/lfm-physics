@@ -82,6 +82,8 @@ void evolve_gov01_gov02(
 
     float chi_c = chi[idx];
     float chi_sq = chi_c * chi_c;
+    float mask = boundary_mask[idx];
+    float interior = 1.0f - mask;
 
     // Accumulate colorblind sources for GOV-02
     float psi_sq_total = 0.0f;
@@ -135,9 +137,10 @@ void evolve_gov01_gov02(
             Pi_new -= dt2 * eps_cc * chi_sq * (Pi_val - Pi_avg);
         }
 
-        Psi_r_next[aidx] = Pr_new;
+        // Frozen boundary: zero Psi on boundary cells
+        Psi_r_next[aidx] = Pr_new * interior;
         Psi_r_prev_next[aidx] = Pr;
-        Psi_i_next[aidx] = Pi_new;
+        Psi_i_next[aidx] = Pi_new * interior;
         Psi_i_prev_next[aidx] = Pi_val;
 
         // Per-color energy density
@@ -156,10 +159,13 @@ void evolve_gov01_gov02(
 
     // v14: normalized color variance f_c = [Sum_a |Psi_a|^4 / (Sum_a |Psi_a|^2)^2] - 1/3
     float color_var_term = 0.0f;
-    if (kappa_c > 0.0f && psi_sq_total > 1e-30f) {
-        float sum_sq = ea[0]*ea[0] + ea[1]*ea[1] + ea[2]*ea[2];
-        float f_c = sum_sq / (psi_sq_total * psi_sq_total) - (1.0f / 3.0f);
-        color_var_term = kappa_c * f_c * psi_sq_total;
+    if (kappa_c > 0.0f) {
+        float total_sq = psi_sq_total * psi_sq_total;
+        if (total_sq > 1e-30f) {
+            float sum_sq = ea[0]*ea[0] + ea[1]*ea[1] + ea[2]*ea[2];
+            float f_c = sum_sq / total_sq - (1.0f / 3.0f);
+            color_var_term = kappa_c * f_c * psi_sq_total;
+        }
     }
 
     // 19-point Laplacian for chi
@@ -181,8 +187,7 @@ void evolve_gov01_gov02(
     if (chi_new < -chi0) chi_new = -chi0;
 
     // Frozen boundary
-    float mask = boundary_mask[idx];
-    chi_new = mask * chi0 + (1.0f - mask) * chi_new;
+    chi_new = mask * chi0 + interior * chi_new;
 
     chi_next[idx] = chi_new;
     chi_prev_next[idx] = chi_c;
