@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 
 import lfm
-from lfm import Simulation, SimulationConfig, FieldLevel
-from lfm.io import save_checkpoint, load_checkpoint
+from lfm import FieldLevel, Simulation, SimulationConfig
+from lfm.io import load_checkpoint, save_checkpoint
 from lfm.sweep import sweep
 
 

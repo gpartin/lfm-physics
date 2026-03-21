@@ -9,7 +9,6 @@ from lfm.analysis.tracker import flatten_trajectories
 from lfm.config import BoundaryType, FieldLevel, SimulationConfig
 from lfm.simulation import Simulation
 
-
 # ── Config edge cases ────────────────────────────────────────────────
 
 class TestConfigEdgeCases:

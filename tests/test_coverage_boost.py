@@ -21,7 +21,6 @@ from lfm.analysis.observables import (
 )
 from lfm.units import CosmicScale, PlanckScale
 
-
 # ── Units: CosmicScale ──────────────────────────────────────────────
 
 

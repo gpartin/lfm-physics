@@ -25,7 +25,6 @@ from lfm.config import SimulationConfig
 from lfm.fields.boosted import boosted_soliton
 from lfm.sweep import sweep_2d
 
-
 # ── Metric ───────────────────────────────────────────────────────────
 
 
