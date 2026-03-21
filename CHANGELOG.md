@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.3.0] - 2026-03-21
+
+### Added
+- **Visualisation module** (`lfm.viz`): 10 plotting functions for rapid exploration
+  - `plot_slice`, `plot_three_slices`, `plot_chi_histogram` — 2D field slices
+  - `plot_evolution`, `plot_energy_components` — time-series dashboards
+  - `plot_radial_profile` — χ(r) with 1/r reference overlay
+  - `plot_isosurface` — 3D voxel rendering of χ wells/voids
+  - `plot_power_spectrum` — Fourier P(k) visualisation
+  - `plot_trajectories` — peak motion scatter plots
+  - `plot_sweep` — parameter sweep line plots
+- **Power spectrum analyser** (`lfm.analysis.spectrum`): `power_spectrum()` — radially-averaged FFT P(k) for any 3D field
+- **Particle tracker** (`lfm.analysis.tracker`): `track_peaks()` and `flatten_trajectories()` — follow energy-density maxima across timesteps
+- **Parameter sweep runner** (`lfm.sweep`): `sweep()` — run a batch of simulations varying one parameter, collect metrics
+- **Docs**: `docs/troubleshooting.md` — common errors (NaN, CFL, slow, imports) with fixes
+- **Docs**: `docs/primer.md` — "LFM in Five Minutes" physics primer
+
 ## [0.2.1] - 2026-03-20
 
 ### Added

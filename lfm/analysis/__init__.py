@@ -21,6 +21,7 @@ from lfm.analysis.observables import (
     radial_profile,
     weak_parity_asymmetry,
 )
+from lfm.analysis.spectrum import power_spectrum
 from lfm.analysis.structure import (
     chi_statistics,
     count_clusters,
@@ -28,6 +29,7 @@ from lfm.analysis.structure import (
     void_fraction,
     well_fraction,
 )
+from lfm.analysis.tracker import flatten_trajectories, track_peaks
 
 __all__ = [
     # energy
@@ -55,4 +57,9 @@ __all__ = [
     "confinement_proxy",
     # color
     "color_variance",
+    # spectrum
+    "power_spectrum",
+    # tracker
+    "track_peaks",
+    "flatten_trajectories",
 ]

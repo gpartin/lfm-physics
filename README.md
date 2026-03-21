@@ -172,6 +172,56 @@ fc = lfm.color_variance(psi_real_color, psi_imag_color)
 
 # Confinement proxy — χ line integral between peaks
 proxy = lfm.confinement_proxy(sim.chi, pos_a, pos_b)
+
+# Fourier power spectrum P(k) of any 3D field
+spec = lfm.power_spectrum(sim.chi, bins=50)
+# spec['k'], spec['power']
+
+# Track energy peaks across a run
+trajectories = lfm.track_peaks(sim, steps=5000, interval=200, n_peaks=3)
+```
+
+## Parameter Sweeps
+
+```python
+# Sweep amplitude from 2 to 10 and record chi_min at each value
+config = lfm.SimulationConfig(grid_size=32)
+results = lfm.sweep(config, param="amplitude", values=[2, 4, 6, 8, 10],
+                    steps=3000, metric_names=["chi_min", "well_fraction"])
+for r in results:
+    print(f"amp={r['amplitude']:.0f}  chi_min={r['chi_min']:.2f}")
+```
+
+## Visualisation *(New in 0.3.0)*
+
+Install with: `pip install "lfm-physics[viz]"`
+
+```python
+from lfm.viz import (
+    plot_slice,          # 2D slice through a 3D field
+    plot_three_slices,   # XY + XZ + YZ panels
+    plot_chi_histogram,  # distribution of χ values
+    plot_evolution,      # time-series of metrics
+    plot_energy_components,  # stacked kinetic / gradient / potential
+    plot_radial_profile, # χ(r) with 1/r reference overlay
+    plot_isosurface,     # 3D voxel rendering
+    plot_power_spectrum, # P(k) from Fourier analysis
+    plot_trajectories,   # peak motion in x-y / x-z / y-z
+    plot_sweep,          # sweep results line plot
+)
+
+# Example: slice through the chi field at z = 32
+fig, ax = plot_slice(sim.chi, axis=2, index=32, title="χ mid-plane")
+fig.savefig("chi_slice.png")
+
+# Three-panel overview
+fig = plot_three_slices(sim.chi, title="χ field")
+
+# Time evolution dashboard
+fig = plot_evolution(sim.history)
+
+# Radial profile with 1/r fit
+fig, ax = plot_radial_profile(sim.chi, center=(32,32,32))
 ```
 
 ## Checkpoints & Units

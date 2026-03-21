@@ -15,7 +15,7 @@ Quick start::
     print(sim.metrics())
 """
 
-__version__ = "0.2.2"
+__version__ = "0.3.0"
 
 from lfm.analysis import (
     chi_statistics,
@@ -28,13 +28,16 @@ from lfm.analysis import (
     energy_conservation_drift,
     find_peaks,
     fit_power_law,
+    flatten_trajectories,
     fluid_fields,
     interior_mask,
     measure_force,
     measure_separation,
     momentum_density,
+    power_spectrum,
     radial_profile,
     total_energy,
+    track_peaks,
     void_fraction,
     weak_parity_asymmetry,
     well_fraction,
@@ -81,6 +84,7 @@ from lfm.fields import (
     wave_kick,
 )
 from lfm.simulation import Simulation
+from lfm.sweep import sweep
 from lfm.units import CosmicScale, PlanckScale
 
 __all__ = [
@@ -154,6 +158,12 @@ __all__ = [
     "continuity_residual",
     # Color / Confinement
     "color_variance",
+    # Spectrum & Tracker
+    "power_spectrum",
+    "track_peaks",
+    "flatten_trajectories",
+    # Sweep
+    "sweep",
     # Units
     "CosmicScale",
     "PlanckScale",
