@@ -15,7 +15,7 @@ Quick start::
     print(sim.metrics())
 """
 
-__version__ = "0.4.1"
+__version__ = "0.5.0"
 
 from lfm.analysis import (
     angular_momentum_density,
