@@ -15,8 +15,9 @@ Quick start::
     print(sim.metrics())
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
+from lfm.experiment import Barrier, DetectorScreen, Slit
 from lfm.analysis import (
     angular_momentum_density,
     charge_density,
@@ -201,6 +202,10 @@ __all__ = [
     "disk_positions",
     "disk_velocities",
     "initialize_disk",
+    # Experiment components
+    "Barrier",
+    "Slit",
+    "DetectorScreen",
     # Planning
     "FeasibilityReport",
     "UseCaseName",

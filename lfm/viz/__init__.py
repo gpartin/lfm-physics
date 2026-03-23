@@ -25,6 +25,12 @@ from lfm.viz.evolution import plot_energy_components, plot_evolution
 from lfm.viz.fields import plot_isosurface
 from lfm.viz.galaxy import galaxy_summary_plot
 from lfm.viz.projection import plot_projection, project_field
+from lfm.viz.quantum import (
+    animate_double_slit,
+    plot_interference_pattern,
+    render_3d_volume,
+    volume_render_available,
+)
 from lfm.viz.radial import plot_radial_profile
 from lfm.viz.slices import plot_chi_histogram, plot_slice, plot_three_slices
 from lfm.viz.spacetime import spacetime_diagram
@@ -48,6 +54,11 @@ __all__ = [
     # evolution / energy
     "plot_evolution",
     "plot_energy_components",
+    # quantum / double-slit
+    "plot_interference_pattern",
+    "animate_double_slit",
+    "render_3d_volume",
+    "volume_render_available",
     # other
     "plot_radial_profile",
     "plot_isosurface",

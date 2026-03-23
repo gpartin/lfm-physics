@@ -20,7 +20,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
+
+if TYPE_CHECKING:
+    from lfm.experiment.barrier import Barrier
+    from lfm.experiment.detector import DetectorScreen
 
 import numpy as np
 from numpy.typing import NDArray
@@ -313,6 +317,88 @@ class Simulation:
             boundary_mask=bmask,
         )
         self._evolver.set_chi(chi)
+
+    def place_barrier(
+        self,
+        axis: int = 2,
+        position: int | None = None,
+        height: float | None = None,
+        thickness: int = 2,
+        slits=None,
+        slit_axis: int | None = None,
+        absorb: bool = True,
+    ) -> "Barrier":
+        """Place a χ-potential barrier with configurable slit openings.
+
+        Convenience method that creates and applies a
+        :class:`~lfm.experiment.Barrier` attached to this simulation.
+
+        Parameters
+        ----------
+        axis : int
+            Propagation axis perpendicular to the barrier (default 2 = z).
+        position : int or None
+            Grid index along *axis* for the barrier centre.
+        height : float or None
+            χ value inside solid barrier cells (default ``CHI0 + 50``).
+        thickness : int
+            Barrier depth in cells.
+        slits : list of :class:`~lfm.experiment.Slit` or None
+            Slit specifications.  Two symmetric slits by default.
+        slit_axis : int or None
+            Transverse axis along which slit centres are positioned.
+        absorb : bool
+            Also zero Ψ inside the solid barrier each step.
+
+        Returns
+        -------
+        barrier : :class:`~lfm.experiment.Barrier`
+            The barrier object (register its ``step_callback`` with
+            :meth:`run` or :meth:`run_with_snapshots`).
+        """
+        from lfm.experiment.barrier import Barrier
+
+        return Barrier(
+            self,
+            axis=axis,
+            position=position,
+            height=height,
+            thickness=thickness,
+            slits=slits,
+            slit_axis=slit_axis,
+            absorb=absorb,
+        )
+
+    def add_detector(
+        self,
+        axis: int = 2,
+        position: int | None = None,
+        field: str = "energy_density",
+    ) -> "DetectorScreen":
+        """Add a detector screen that records field intensity at a plane.
+
+        Creates a :class:`~lfm.experiment.DetectorScreen` attached to
+        this simulation.
+
+        Parameters
+        ----------
+        axis : int
+            Axis perpendicular to the detector plane (same as barrier axis).
+        position : int or None
+            Grid index along *axis*.  Defaults to 80 % of grid size.
+        field : str
+            Which field to record (``"energy_density"``, ``"psi_real"``,
+            etc.).
+
+        Returns
+        -------
+        screen : :class:`~lfm.experiment.DetectorScreen`
+            Record frames by calling ``screen.step_callback`` or
+            ``screen.record()`` at each step.
+        """
+        from lfm.experiment.detector import DetectorScreen
+
+        return DetectorScreen(self, axis=axis, position=position, field=field)
 
     # ── Evolution ─────────────────────────────────────────
 
