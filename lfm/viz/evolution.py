@@ -107,8 +107,7 @@ def plot_energy_components(
 
     data = np.array([[h.get(k, 0.0) for h in history] for k in present])
     colors = ["#3b82f6", "#22c55e", "#f59e0b"]
-    ax.stackplot(steps, *data, labels=present, colors=colors[:len(present)],
-                 alpha=0.8)
+    ax.stackplot(steps, *data, labels=present, colors=colors[: len(present)], alpha=0.8)
     ax.set_xlabel("Step")
     ax.set_ylabel("Energy")
     ax.set_title("Energy Components")

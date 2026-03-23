@@ -33,9 +33,9 @@ Run:
 import numpy as np
 import lfm
 
-N      = 48                # small grid — fluid runs fast
+N = 48  # small grid — fluid runs fast
 config = lfm.SimulationConfig(grid_size=N, field_level=lfm.FieldLevel.COMPLEX)
-rng    = np.random.default_rng(0)
+rng = np.random.default_rng(0)
 
 print("12 – Fluid Dynamics")
 print("=" * 60)
@@ -45,9 +45,9 @@ print()
 sim = lfm.Simulation(config)
 
 n_solitons = 40
-positions   = rng.integers(8, N - 8, size=(n_solitons, 3))
-phases      = rng.uniform(0, 2 * np.pi, size=n_solitons)
-amplitudes  = rng.uniform(0.5, 2.5, size=n_solitons)
+positions = rng.integers(8, N - 8, size=(n_solitons, 3))
+phases = rng.uniform(0, 2 * np.pi, size=n_solitons)
+amplitudes = rng.uniform(0.5, 2.5, size=n_solitons)
 
 for pos, phase, amp in zip(positions, phases, amplitudes):
     sim.place_soliton(tuple(pos), amplitude=float(amp), sigma=3.0, phase=float(phase))
@@ -64,8 +64,12 @@ print()
 # ─── Stress-energy tensor measurement ─────────────────────────────────────
 sim.run(steps=1)
 fluid_t0 = lfm.fluid_fields(
-    sim.psi_real, sim.psi_real_prev, sim.chi, config.dt,
-    psi_i=sim.psi_imag, psi_i_prev=sim.psi_imag_prev,
+    sim.psi_real,
+    sim.psi_real_prev,
+    sim.chi,
+    config.dt,
+    psi_i=sim.psi_imag,
+    psi_i_prev=sim.psi_imag_prev,
 )
 print("Fluid diagnostics — initial (stress-energy tensor):")
 print(f"  ε_mean  (energy density) = {fluid_t0['epsilon_mean']:.4f}")
@@ -75,7 +79,7 @@ print()
 
 # ─── Evolve ────────────────────────────────────────────────────────────────
 print(f"{'step':>7s}  {'ε_mean':>10s}  {'v_rms':>8s}  {'notes'}")
-print(f"{'------':>7s}  {'-'*10}  {'-'*8}  {'-----'}")
+print(f"{'------':>7s}  {'-' * 10}  {'-' * 8}  {'-----'}")
 
 f = fluid_t0
 print(f"{0:>7d}  {f['epsilon_mean']:>10.4f}  {f['v_rms']:>8.4f}  initial ensemble")
@@ -83,8 +87,12 @@ print(f"{0:>7d}  {f['epsilon_mean']:>10.4f}  {f['v_rms']:>8.4f}  initial ensembl
 for snap_step, nsteps in [(500, 499), (1000, 500), (2000, 1000), (4000, 2000)]:
     sim.run(steps=nsteps)
     f = lfm.fluid_fields(
-        sim.psi_real, sim.psi_real_prev, sim.chi, config.dt,
-        psi_i=sim.psi_imag, psi_i_prev=sim.psi_imag_prev,
+        sim.psi_real,
+        sim.psi_real_prev,
+        sim.chi,
+        config.dt,
+        psi_i=sim.psi_imag,
+        psi_i_prev=sim.psi_imag_prev,
     )
     note = {500: "early turbulence", 4000: "developed flow"}.get(snap_step, "")
     print(f"{snap_step:>7d}  {f['epsilon_mean']:>10.4f}  {f['v_rms']:>8.4f}  {note}")

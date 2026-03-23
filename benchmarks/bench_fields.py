@@ -23,6 +23,7 @@ from lfm.analysis import radial_profile, energy_components
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _base_sim(n: int) -> lfm.Simulation:
     config = lfm.SimulationConfig(grid_size=n)
     sim = lfm.Simulation(config, backend="cpu")
@@ -35,6 +36,7 @@ def _base_sim(n: int) -> lfm.Simulation:
 # ---------------------------------------------------------------------------
 # Equilibration benchmarks
 # ---------------------------------------------------------------------------
+
 
 def test_equilibrate_n32(benchmark: object) -> None:
     config = lfm.SimulationConfig(grid_size=32)
@@ -53,6 +55,7 @@ def test_equilibrate_n64(benchmark: object) -> None:
 # ---------------------------------------------------------------------------
 # Analysis benchmarks
 # ---------------------------------------------------------------------------
+
 
 def test_radial_profile_n32(benchmark: object) -> None:
     sim = _base_sim(32)

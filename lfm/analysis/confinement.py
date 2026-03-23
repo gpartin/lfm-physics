@@ -24,6 +24,7 @@ separation — flux-tube confinement.
 
 References: Paper 080 Session 143; LFM_CONFINEMENT_MECHANISM.md.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -33,6 +34,7 @@ from numpy.typing import NDArray
 # ---------------------------------------------------------------------------
 # Smoothed colour variance  (SCV)
 # ---------------------------------------------------------------------------
+
 
 def smoothed_color_variance(
     sa_fields: NDArray,
@@ -69,6 +71,7 @@ def smoothed_color_variance(
 # Colour-current variance  (CCV)
 # ---------------------------------------------------------------------------
 
+
 def color_current_variance(
     psi_r: NDArray,
     psi_i: NDArray,
@@ -102,7 +105,7 @@ def color_current_variance(
         raise ValueError("psi_r must have shape (3, N, N, N)")
 
     ccv = np.zeros(psi_r.shape[1:], dtype=np.float32)
-    axes = [1, 2, 3]   # x, y, z
+    axes = [1, 2, 3]  # x, y, z
     for d in axes:
         # Central-difference derivative for each colour
         j = np.empty_like(psi_r)  # j[a] = j_{a,d}
@@ -122,6 +125,7 @@ def color_current_variance(
 # ---------------------------------------------------------------------------
 # χ midpoint between two colour sources
 # ---------------------------------------------------------------------------
+
 
 def measure_chi_midpoint(
     chi: NDArray,
@@ -167,6 +171,7 @@ def measure_chi_midpoint(
 # Flux-tube radial profile
 # ---------------------------------------------------------------------------
 
+
 def flux_tube_profile(
     chi: NDArray,
     scv: NDArray,
@@ -204,9 +209,7 @@ def flux_tube_profile(
     N = chi.shape[0]
 
     # Axis unit vector
-    ax = np.array([pos_b[0] - pos_a[0],
-                   pos_b[1] - pos_a[1],
-                   pos_b[2] - pos_a[2]], dtype=float)
+    ax = np.array([pos_b[0] - pos_a[0], pos_b[1] - pos_a[1], pos_b[2] - pos_a[2]], dtype=float)
     length = np.linalg.norm(ax)
     if length < 1e-10:
         raise ValueError("pos_a and pos_b must be distinct.")
@@ -224,12 +227,12 @@ def flux_tube_profile(
     perp_x = rx - proj * ax[0]
     perp_y = ry - proj * ax[1]
     perp_z = rz - proj * ax[2]
-    r_perp = np.sqrt(perp_x ** 2 + perp_y ** 2 + perp_z ** 2)
+    r_perp = np.sqrt(perp_x**2 + perp_y**2 + perp_z**2)
 
     # Keep points that are (a) close to the axis and (b) between the sources
     inside = (r_perp <= tube_radius) & (proj >= 0) & (proj <= length)
 
-    r_vals   = r_perp[inside]
+    r_vals = r_perp[inside]
     chi_vals = chi[inside]
     scv_vals = scv[inside]
 
@@ -250,6 +253,7 @@ def flux_tube_profile(
 # ---------------------------------------------------------------------------
 # String tension extraction
 # ---------------------------------------------------------------------------
+
 
 def string_tension(
     separations: NDArray,
@@ -303,20 +307,22 @@ def string_tension(
     # Linear regression
     r_mean = r_fit.mean()
     d_mean = d_fit.mean()
-    slope = np.sum((r_fit - r_mean) * (d_fit - d_mean)) / (
-        np.sum((r_fit - r_mean) ** 2) + 1e-30
-    )
+    slope = np.sum((r_fit - r_mean) * (d_fit - d_mean)) / (np.sum((r_fit - r_mean) ** 2) + 1e-30)
     intercept = d_mean - slope * r_mean
 
     residuals = d_fit - (slope * r_fit + intercept)
-    ss_res = float((residuals ** 2).sum())
+    ss_res = float((residuals**2).sum())
     ss_tot = float(((d_fit - d_mean) ** 2).sum()) + 1e-30
     r2 = 1.0 - ss_res / ss_tot
 
-    return float(slope), float(intercept), {
-        "r2": r2,
-        "n_points": int(n),
-        "r_min": float(r_min),
-        "fit_separations": r_fit.tolist(),
-        "fit_dchi": d_fit.tolist(),
-    }
+    return (
+        float(slope),
+        float(intercept),
+        {
+            "r2": r2,
+            "n_points": int(n),
+            "r_min": float(r_min),
+            "fit_separations": r_fit.tolist(),
+            "fit_dchi": d_fit.tolist(),
+        },
+    )

@@ -307,8 +307,8 @@ class TestWeakStrongHelpers:
     def test_weak_parity_asymmetry_signed(self):
         n = 12
         chi = np.full((n, n, n), CHI0, dtype=np.float32)
-        chi[8, 6, 6] = CHI0 - 2.0   # +x side dip
-        chi[4, 6, 6] = CHI0 - 0.5   # -x side dip
+        chi[8, 6, 6] = CHI0 - 2.0  # +x side dip
+        chi[4, 6, 6] = CHI0 - 0.5  # -x side dip
         a = weak_parity_asymmetry(chi, axis=0)
         assert a["asymmetry"] > 0
 

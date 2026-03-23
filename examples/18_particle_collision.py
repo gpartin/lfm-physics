@@ -34,10 +34,10 @@ from lfm.analysis.energy import total_energy
 # ── Configuration ─────────────────────────────────────────────────────────────
 N = 64
 AMP = 6.0
-V = 0.10           # initial speed in lattice units (c = 1 → 10% of c)
+V = 0.10  # initial speed in lattice units (c = 1 → 10% of c)
 TRACK_INTERVAL = 100
 TOTAL_STEPS = 3_000
-MIN_SEP = 5.0      # grid cells — "approach" event threshold
+MIN_SEP = 5.0  # grid cells — "approach" event threshold
 
 cfg = lfm.SimulationConfig(
     grid_size=N,
@@ -57,15 +57,17 @@ print(f"Grid: {N}³   amplitude: {AMP}   speed: ±{V}c")
 cx = cy = cz = N // 2
 sep = 16  # initial separation from centre
 
-sim.place_soliton((cx - sep, cy, cz), amplitude=AMP, velocity=( V, 0.0, 0.0))
+sim.place_soliton((cx - sep, cy, cz), amplitude=AMP, velocity=(V, 0.0, 0.0))
 sim.place_soliton((cx + sep, cy, cz), amplitude=AMP, velocity=(-V, 0.0, 0.0))
 sim.equilibrate()
 
 # ── Energy before ─────────────────────────────────────────────────────────────
 energy_before = total_energy(
-    sim.psi_real, sim.psi_imag,
+    sim.psi_real,
+    sim.psi_imag,
     sim.chi,
-    dx=sim.config.dx, dt=sim.config.dt,
+    dx=sim.config.dx,
+    dt=sim.config.dt,
 )
 print(f"\nEnergy before: {energy_before:.4e}")
 
@@ -86,7 +88,7 @@ print(f"Peak count range:   {min(n_peaks_per_snap)} – {max(n_peaks_per_snap)}"
 # ── Detect events ─────────────────────────────────────────────────────────────
 events = detect_collision_events(trajectories, min_sep=MIN_SEP)
 approach_events = [e for e in events if e["type"] == "approach"]
-merge_events    = [e for e in events if e["type"] == "merge"]
+merge_events = [e for e in events if e["type"] == "merge"]
 
 print(f"\nCollision events detected:")
 print(f"  approach events: {len(approach_events)}")
@@ -104,9 +106,11 @@ if merge_events:
 
 # ── Energy after ──────────────────────────────────────────────────────────────
 energy_after = total_energy(
-    sim.psi_real, sim.psi_imag,
+    sim.psi_real,
+    sim.psi_imag,
     sim.chi,
-    dx=sim.config.dx, dt=sim.config.dt,
+    dx=sim.config.dx,
+    dt=sim.config.dt,
 )
 drift_pct = 100.0 * abs(energy_after - energy_before) / (abs(energy_before) + 1e-30)
 print(f"\nEnergy after:  {energy_after:.4e}")
@@ -122,13 +126,13 @@ if len(trajectories[0]) >= 2:
     # to get the two tracks separately.
     all_x = flat["x"]
     split = np.median(all_x)
-    mask_left  = flat["x"] < split
+    mask_left = flat["x"] < split
     mask_right = flat["x"] >= split
 
     def _sub(d: dict, mask: np.ndarray) -> dict:
         return {k: d[k][mask] for k in d}
 
-    traj_left  = _sub(flat, mask_left)
+    traj_left = _sub(flat, mask_left)
     traj_right = _sub(flat, mask_right)
 
     if len(traj_left["x"]) >= 2 and len(traj_right["x"]) >= 2:

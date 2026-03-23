@@ -33,11 +33,11 @@ sim_same.place_soliton((17, 24, 24), amplitude=5.0, sigma=3.5, phase=0.0)
 sim_same.place_soliton((31, 24, 24), amplitude=5.0, sigma=3.5, phase=0.0)
 sim_same.equilibrate()
 
-psi_sq = sim_same.psi_real ** 2 + sim_same.psi_imag ** 2
+psi_sq = sim_same.psi_real**2 + sim_same.psi_imag**2
 sep_same_0 = lfm.measure_separation(psi_sq)
 
 sim_same.run(steps=3000)
-psi_sq = sim_same.psi_real ** 2 + sim_same.psi_imag ** 2
+psi_sq = sim_same.psi_real**2 + sim_same.psi_imag**2
 sep_same_f = lfm.measure_separation(psi_sq)
 
 # --- Experiment B: Opposite phase (θ=0 and θ=π) → should ATTRACT ---
@@ -46,11 +46,11 @@ sim_opp.place_soliton((17, 24, 24), amplitude=5.0, sigma=3.5, phase=0.0)
 sim_opp.place_soliton((31, 24, 24), amplitude=5.0, sigma=3.5, phase=np.pi)
 sim_opp.equilibrate()
 
-psi_sq = sim_opp.psi_real ** 2 + sim_opp.psi_imag ** 2
+psi_sq = sim_opp.psi_real**2 + sim_opp.psi_imag**2
 sep_opp_0 = lfm.measure_separation(psi_sq)
 
 sim_opp.run(steps=3000)
-psi_sq = sim_opp.psi_real ** 2 + sim_opp.psi_imag ** 2
+psi_sq = sim_opp.psi_real**2 + sim_opp.psi_imag**2
 sep_opp_f = lfm.measure_separation(psi_sq)
 
 # --- Report ---

@@ -35,7 +35,7 @@ def effective_metric_00(
     g00 : ndarray
         Metric component, ≤ 0 everywhere. −1 at vacuum.
     """
-    return -(chi / chi0) ** 2
+    return -((chi / chi0) ** 2)
 
 
 def metric_perturbation(
@@ -152,6 +152,7 @@ def schwarzschild_chi(
 # Apparent horizon detection (v16 black-hole analysis)
 # ---------------------------------------------------------------------------
 
+
 def find_apparent_horizon(
     chi: NDArray,
     center: tuple[int, int, int] | None = None,
@@ -222,7 +223,7 @@ def find_apparent_horizon(
     cx, cy, cz = center
     idx = np.arange(N, dtype=np.float64)
     X, Y, Z = np.meshgrid(idx, idx, idx, indexing="ij")
-    R = np.sqrt((X - cx)**2 + (Y - cy)**2 + (Z - cz)**2)
+    R = np.sqrt((X - cx) ** 2 + (Y - cy) ** 2 + (Z - cz) ** 2)
     shell = (R >= r_horizon) & (R <= r_horizon + 2)
     if shell.sum() > 0:
         td = float(np.abs(chi_arr[shell]).mean() / chi0)

@@ -64,9 +64,7 @@ def compute_metrics(
         Flat dictionary with all metrics.
     """
     # Energy components
-    T, G, V = energy_components(
-        psi_r, psi_r_prev, chi, dt, c, psi_i, psi_i_prev
-    )
+    T, G, V = energy_components(psi_r, psi_r_prev, chi, dt, c, psi_i, psi_i_prev)
     e_kinetic = float(np.sum(T))
     e_gradient = float(np.sum(G))
     e_potential = float(np.sum(V))

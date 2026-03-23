@@ -23,7 +23,7 @@ print()
 
 m = sim.metrics()
 print(f"  chi_min = {m['chi_min']:.2f}  (gravity well depth)")
-print(f"  wells   = {m['well_fraction']*100:.1f}%")
+print(f"  wells   = {m['well_fraction'] * 100:.1f}%")
 print()
 
 # ── 2. 2D slice through the chi field ─────────────────────────────────
@@ -83,8 +83,9 @@ results = lfm.sweep(
     steps=2000,
     metric_names=["chi_min", "well_fraction"],
 )
-fig, ax = plot_sweep(results, x_param="amplitude", y_metric="chi_min",
-                     title="χ_min vs soliton amplitude")
+fig, ax = plot_sweep(
+    results, x_param="amplitude", y_metric="chi_min", title="χ_min vs soliton amplitude"
+)
 fig.savefig("tutorial_15_sweep.png", dpi=120, bbox_inches="tight")
 print("Saved: tutorial_15_sweep.png")
 

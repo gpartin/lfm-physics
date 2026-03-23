@@ -26,9 +26,9 @@ print("=" * 55)
 print()
 
 # Track how the separation changes over time.
-psi_sq = sim.psi_real ** 2
+psi_sq = sim.psi_real**2
 if sim.psi_imag is not None:
-    psi_sq = psi_sq + sim.psi_imag ** 2
+    psi_sq = psi_sq + sim.psi_imag**2
 initial_sep = lfm.measure_separation(psi_sq)
 print(f"Initial separation: {initial_sep:.1f} cells")
 print()
@@ -39,9 +39,9 @@ print(f"  {'------':>6s}  {'----------':>10s}  {'--------':>8s}")
 separations = []
 for i in range(10):
     sim.run(steps=500)
-    psi_sq = sim.psi_real ** 2
+    psi_sq = sim.psi_real**2
     if sim.psi_imag is not None:
-        psi_sq = psi_sq + sim.psi_imag ** 2
+        psi_sq = psi_sq + sim.psi_imag**2
     sep = lfm.measure_separation(psi_sq)
     m = sim.metrics()
     separations.append(sep)

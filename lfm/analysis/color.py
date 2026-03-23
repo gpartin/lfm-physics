@@ -45,14 +45,13 @@ def color_variance(
         ea = np.stack(ea, axis=0)  # (n_colors, total)
     else:
         N = psi_r.shape[1]
-        total = N ** 3
-        ea = (psi_r.reshape(n_colors, -1) ** 2
-              + psi_i.reshape(n_colors, -1) ** 2)
+        total = N**3
+        ea = psi_r.reshape(n_colors, -1) ** 2 + psi_i.reshape(n_colors, -1) ** 2
 
     total_sq = np.sum(ea, axis=0)  # (total,)
-    sum_sq = np.sum(ea ** 2, axis=0)
+    sum_sq = np.sum(ea**2, axis=0)
     safe = total_sq > 1e-30
-    denom = np.where(safe, total_sq ** 2, 1.0)
+    denom = np.where(safe, total_sq**2, 1.0)
     f_c = np.where(safe, sum_sq / denom - 1.0 / n_colors, 0.0)
     f_c_3d = f_c.reshape(N, N, N)
 

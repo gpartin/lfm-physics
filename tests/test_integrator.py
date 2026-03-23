@@ -28,7 +28,9 @@ class TestInitialState:
 
     def test_color_shape(self):
         cfg = SimulationConfig(
-            grid_size=16, field_level=FieldLevel.COLOR, e_amplitude=12.0,
+            grid_size=16,
+            field_level=FieldLevel.COLOR,
+            e_amplitude=12.0,
         )
         state = create_initial_state(cfg)
         assert state.psi.shape == (3, 2, 16, 16, 16)

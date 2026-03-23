@@ -58,7 +58,8 @@ def plot_trajectories(
         return fig, ax
 
     sc = ax.scatter(
-        flat[a], flat[b],
+        flat[a],
+        flat[b],
         c=steps,
         cmap="viridis",
         s=15,

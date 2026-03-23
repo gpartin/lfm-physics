@@ -75,8 +75,7 @@ def plot_radial_profile(
             d_fit = delta[mask]
             A = float(np.mean(d_fit * r_fit))
             ref_vals = chi0 - A / np.clip(r, 1, None)
-            ax.plot(r, ref_vals, "--", color="gray", lw=1, alpha=0.7,
-                    label=f"1/r fit (A={A:.2f})")
+            ax.plot(r, ref_vals, "--", color="gray", lw=1, alpha=0.7, label=f"1/r fit (A={A:.2f})")
 
     ax.set_xlabel("Radius (cells)")
     ax.set_ylabel("χ")

@@ -183,7 +183,8 @@ class SimulationConfig:
         self.sigma = self.grid_size / self.blob_sigma_factor
         if self.e_amplitude == 0.0:
             self.e_amplitude = E_AMPLITUDE_BY_GRID.get(
-                self.grid_size, 3.6  # default for unlisted grid sizes
+                self.grid_size,
+                3.6,  # default for unlisted grid sizes
             )
 
     def _validate(self) -> None:
@@ -204,9 +205,7 @@ class SimulationConfig:
         if self.lambda_self < 0:
             raise ValueError(f"lambda_self must be >= 0, got {self.lambda_self}")
         if not 0 < self.boundary_fraction < 1:
-            raise ValueError(
-                f"boundary_fraction must be in (0, 1), got {self.boundary_fraction}"
-            )
+            raise ValueError(f"boundary_fraction must be in (0, 1), got {self.boundary_fraction}")
         if self.field_level == FieldLevel.COLOR and self.n_colors < 1:
             raise ValueError(f"n_colors must be >= 1, got {self.n_colors}")
 
@@ -229,4 +228,5 @@ class SimulationConfig:
             # PlanckScale(N=256): 1 cell = 6.30e+58 Planck lengths, ...
         """
         from lfm.units import PlanckScale
+
         return PlanckScale(grid_size=self.grid_size, box_planck_radius=self.box_planck_radius)

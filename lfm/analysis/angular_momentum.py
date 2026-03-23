@@ -104,9 +104,7 @@ def total_angular_momentum(
     Lx, Ly, Lz : float
         Integrated angular momentum components.
     """
-    Lx, Ly, Lz = angular_momentum_density(
-        psi_r, psi_i, psi_r_prev, psi_i_prev, dt, center
-    )
+    Lx, Ly, Lz = angular_momentum_density(psi_r, psi_i, psi_r_prev, psi_i_prev, dt, center)
     if mask is not None:
         Lx = Lx[mask]
         Ly = Ly[mask]

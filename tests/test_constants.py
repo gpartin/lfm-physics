@@ -79,11 +79,7 @@ class TestNumerical:
 
     def test_stencil_weights_sum(self):
         """6 faces × 1/3 + 12 edges × 1/6 + center = 0 (conservation)."""
-        total = (
-            6 * C.STENCIL_FACE_WEIGHT
-            + 12 * C.STENCIL_EDGE_WEIGHT
-            + C.STENCIL_CENTER_WEIGHT
-        )
+        total = 6 * C.STENCIL_FACE_WEIGHT + 12 * C.STENCIL_EDGE_WEIGHT + C.STENCIL_CENTER_WEIGHT
         assert math.isclose(total, 0.0, abs_tol=1e-12)
 
     def test_mexican_hat_period(self):

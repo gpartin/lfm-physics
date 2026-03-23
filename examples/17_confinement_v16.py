@@ -38,10 +38,10 @@ from lfm.constants import CHI0, KAPPA, KAPPA_C, KAPPA_STRING, KAPPA_TUBE, LAMBDA
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 N = 64
-SEP = 20          # half-separation (solitons at N/2 ± SEP/2 along z)
-AMP = 8.0         # soliton amplitude
+SEP = 20  # half-separation (solitons at N/2 ± SEP/2 along z)
+AMP = 8.0  # soliton amplitude
 STEPS = 15_000
-KAPPA_TUBE_DEMO = 10.0 * KAPPA   # 10× default coupling (stronger signal on small grid)
+KAPPA_TUBE_DEMO = 10.0 * KAPPA  # 10× default coupling (stronger signal on small grid)
 
 cfg = lfm.SimulationConfig(
     grid_size=N,
@@ -75,9 +75,7 @@ print(f"S_a shape:       {sa.shape if sa is not None else 'N/A'}")
 print(f"S_a max (init):  {sa.max():.4e}" if sa is not None else "")
 
 # ── Measure before ─────────────────────────────────────────────────────────────
-chi_mid_before = lfm.measure_chi_midpoint(
-    sim.chi, (cx, cy, z1), (cx, cy, z2)
-)
+chi_mid_before = lfm.measure_chi_midpoint(sim.chi, (cx, cy, z1), (cx, cy, z2))
 chi_global_min_before = float(sim.chi.min())
 print(f"\nBEFORE run ({STEPS:,} steps):")
 print(f"  chi midpoint:        {chi_mid_before:.4f}")
@@ -88,9 +86,7 @@ sim.run(steps=STEPS, record_metrics=False)
 
 # ── Measure after ─────────────────────────────────────────────────────────────
 sa_after = sim.sa_fields
-chi_mid_after = lfm.measure_chi_midpoint(
-    sim.chi, (cx, cy, z1), (cx, cy, z2)
-)
+chi_mid_after = lfm.measure_chi_midpoint(sim.chi, (cx, cy, z1), (cx, cy, z2))
 chi_global_min_after = float(sim.chi.min())
 
 print(f"\nAFTER run:")
@@ -100,9 +96,7 @@ print(f"  chi midpoint change: {chi_mid_after - chi_mid_before:+.4f}")
 print(f"  S_a max (equilib):   {sa_after.max():.4e}" if sa_after is not None else "")
 
 # ── Flux tube profile ─────────────────────────────────────────────────────────
-profile = lfm.flux_tube_profile(
-    sim.chi, sim.sa_fields, (cx, cy, z1), (cx, cy, z2)
-)
+profile = lfm.flux_tube_profile(sim.chi, sim.sa_fields, (cx, cy, z1), (cx, cy, z2))
 print("\nFlux-tube profile along z axis (chi at each point):")
 chi_along_z = profile["chi_profile"]
 sa0_along_z = profile["sa_profile"][0] if "sa_profile" in profile else None
@@ -125,14 +119,16 @@ if sa_after is not None:
     print(f"  max  SCV: {scv.max():.4e}")
     print(f"  SCV near soliton 1 (z={z1}): {scv[cx, cy, z1]:.4e}")
     print(f"  SCV near soliton 2 (z={z2}): {scv[cx, cy, z2]:.4e}")
-    print(f"  SCV at midpoint (z={N//2}):   {scv[cx, cy, N//2]:.4e}")
+    print(f"  SCV at midpoint (z={N // 2}):   {scv[cx, cy, N // 2]:.4e}")
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 print("\n" + "=" * 62)
 deepened = chi_mid_after < chi_mid_before
 print(f"Flux tube formed:        {'YES' if deepened else 'NO (check amplitude)'}")
 print(f"Chi deepened at midpoint: {chi_mid_before:.3f} → {chi_mid_after:.3f}")
-print(f"SA diffusion active:     {'YES' if (sa_after is not None and sa_after.max() > 1e-8) else 'NO'}")
+print(
+    f"SA diffusion active:     {'YES' if (sa_after is not None and sa_after.max() > 1e-8) else 'NO'}"
+)
 print()
 print("Interpretation:")
 print("  The S_a fields diffuse from the coloured soliton cores and their")

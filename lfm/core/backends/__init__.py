@@ -55,9 +55,7 @@ def get_backend(preference: str = "auto") -> NumpyBackend:
 
     if preference == "gpu":
         if not CUPY_AVAILABLE or CupyBackend is None:
-            raise ImportError(
-                "CuPy not available. Install with: pip install lfm-physics[gpu]"
-            )
+            raise ImportError("CuPy not available. Install with: pip install lfm-physics[gpu]")
         return CupyBackend()  # type: ignore[return-value]
 
     if preference == "auto":
@@ -65,9 +63,7 @@ def get_backend(preference: str = "auto") -> NumpyBackend:
             return CupyBackend()  # type: ignore[return-value]
         return NumpyBackend()
 
-    raise ValueError(
-        f"Unknown backend preference '{preference}'. Use 'auto', 'cpu', or 'gpu'."
-    )
+    raise ValueError(f"Unknown backend preference '{preference}'. Use 'auto', 'cpu', or 'gpu'.")
 
 
 def gpu_available() -> bool:

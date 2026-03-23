@@ -130,9 +130,7 @@ def total_energy(
     float
         Scalar total energy (sum over all grid points).
     """
-    T, G, V = energy_components(
-        psi_r, psi_r_prev, chi, dt, c, psi_i, psi_i_prev
-    )
+    T, G, V = energy_components(psi_r, psi_r_prev, chi, dt, c, psi_i, psi_i_prev)
     return float(np.sum(T + G + V))
 
 
@@ -209,7 +207,7 @@ def fluid_fields(
     psi_r64 = psi_r.astype(np.float64)
     psi_r_prev64 = psi_r_prev.astype(np.float64)
     chi64 = chi.astype(np.float64)
-    c2 = c ** 2
+    c2 = c**2
 
     dpsr_dt = (psi_r64 - psi_r_prev64) / dt
 
@@ -226,11 +224,11 @@ def fluid_fields(
         return (np.roll(f, -1, ax) - np.roll(f, 1, ax)) / 2.0
 
     # Energy density
-    ke = 0.5 * (dpsr_dt ** 2 + dpsi_dt ** 2)
+    ke = 0.5 * (dpsr_dt**2 + dpsi_dt**2)
     grad_sq = sum(_grad(psi_r64, ax) ** 2 + _grad(psi_i64, ax) ** 2 for ax in range(3))
     ge = 0.5 * c2 * grad_sq
-    psi_sq = psi_r64 ** 2 + psi_i64 ** 2
-    pot = 0.5 * chi64 ** 2 * psi_sq
+    psi_sq = psi_r64**2 + psi_i64**2
+    pot = 0.5 * chi64**2 * psi_sq
     epsilon = ke + ge + pot
 
     # Energy flux
@@ -255,7 +253,7 @@ def fluid_fields(
         "pressure": ge,
         "epsilon_mean": float(np.mean(epsilon)),
         "pressure_mean": float(np.mean(ge)),
-        "v_rms": float(np.sqrt(np.mean(vx ** 2 + vy ** 2 + vz ** 2))),
+        "v_rms": float(np.sqrt(np.mean(vx**2 + vy**2 + vz**2))),
     }
 
 
@@ -301,7 +299,7 @@ def continuity_residual(
     # Normalise by RMS(|∂ε/∂t|) — the natural scale of energy fluctuations.
     # Result ≈ 0 means Euler equation is satisfied; ≈ 1 means it isn't.
     # (Dividing by mean ε would explode in turbulent systems.)
-    rms_deps_dt = float(np.sqrt(np.mean(deps_dt ** 2)))
+    rms_deps_dt = float(np.sqrt(np.mean(deps_dt**2)))
     if rms_deps_dt < 1e-30:
         return float("nan")
-    return float(np.sqrt(np.mean(residual ** 2)) / rms_deps_dt)
+    return float(np.sqrt(np.mean(residual**2)) / rms_deps_dt)

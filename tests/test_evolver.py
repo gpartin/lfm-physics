@@ -33,7 +33,9 @@ class TestEvolverInit:
 
     def test_complex_has_imag(self):
         cfg = SimulationConfig(
-            grid_size=16, e_amplitude=12.0, field_level=FieldLevel.COMPLEX,
+            grid_size=16,
+            e_amplitude=12.0,
+            field_level=FieldLevel.COMPLEX,
         )
         ev = Evolver(cfg, backend="cpu")
         pi = ev.get_psi_imag()
@@ -42,7 +44,9 @@ class TestEvolverInit:
 
     def test_color_shapes(self):
         cfg = SimulationConfig(
-            grid_size=16, e_amplitude=12.0, field_level=FieldLevel.COLOR,
+            grid_size=16,
+            e_amplitude=12.0,
+            field_level=FieldLevel.COLOR,
         )
         ev = Evolver(cfg, backend="cpu")
         pr = ev.get_psi_real()
@@ -102,7 +106,9 @@ class TestEvolverComplex:
     @pytest.fixture
     def evolver(self):
         cfg = SimulationConfig(
-            grid_size=16, e_amplitude=12.0, field_level=FieldLevel.COMPLEX,
+            grid_size=16,
+            e_amplitude=12.0,
+            field_level=FieldLevel.COMPLEX,
         )
         return Evolver(cfg, backend="cpu")
 
@@ -135,7 +141,9 @@ class TestEvolverComplex:
 class TestEvolverColor:
     def test_color_evolves(self):
         cfg = SimulationConfig(
-            grid_size=16, e_amplitude=12.0, field_level=FieldLevel.COLOR,
+            grid_size=16,
+            e_amplitude=12.0,
+            field_level=FieldLevel.COLOR,
         )
         ev = Evolver(cfg, backend="cpu")
         ev.evolve(5)

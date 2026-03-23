@@ -33,13 +33,13 @@ import lfm
 from lfm.analysis.observables import rotation_curve
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-N = 128           # 128³ for a realistic rotation curve; use 64 for quick tests
-N_DISK = 50       # number of disk solitons (test particles)
+N = 128  # 128³ for a realistic rotation curve; use 64 for quick tests
+N_DISK = 50  # number of disk solitons (test particles)
 AMP_CENTRAL = 12.0
-AMP_DISK = 4.0    # much lighter than central mass
-V_SCALE = 0.05    # velocity scale for circular orbits
-STEPS = 10_000    # enough for χ to settle
-R_INNER = 8.0     # inner disk radius (avoid chi-well singularity)
+AMP_DISK = 4.0  # much lighter than central mass
+V_SCALE = 0.05  # velocity scale for circular orbits
+STEPS = 10_000  # enough for χ to settle
+R_INNER = 8.0  # inner disk radius (avoid chi-well singularity)
 R_OUTER = N // 2 - 6  # outer disk radius
 
 cfg = lfm.SimulationConfig(
@@ -73,7 +73,7 @@ positions = lfm.initialize_disk(
     r_inner=R_INNER,
     r_outer=R_OUTER,
     amplitude=AMP_DISK,
-    plane_axis=2,      # disk normal along z
+    plane_axis=2,  # disk normal along z
     add_velocities=True,
     v_scale=V_SCALE,
     seed=42,
@@ -101,11 +101,11 @@ rc_after = rotation_curve(
     plane_axis=2,
 )
 
-r       = rc_after["r"]
-v_chi   = rc_after["v_chi"]
-v_enc   = rc_after["v_enc"]
-v_kep   = rc_after["v_keplerian"]
-chi_r   = rc_after["chi_profile"]
+r = rc_after["r"]
+v_chi = rc_after["v_chi"]
+v_enc = rc_after["v_enc"]
+v_kep = rc_after["v_keplerian"]
+chi_r = rc_after["chi_profile"]
 
 print("\nRotation curve (after evolution):")
 print(f"  {'r':>6}  {'χ(r)':>8}  {'v_chi':>8}  {'v_enc':>8}  {'v_Kep':>8}")

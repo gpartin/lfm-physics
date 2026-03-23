@@ -29,7 +29,7 @@ rng = np.random.default_rng(42)
 noise = rng.normal(0, 1e-15, (N, N, N)).astype(np.float32)
 sim.psi_real = noise
 
-initial_energy = float(np.sum(sim.psi_real ** 2))
+initial_energy = float(np.sum(sim.psi_real**2))
 print(f"Initial |Ψ|² total = {initial_energy:.2e}  (essentially zero)")
 print()
 
@@ -37,7 +37,7 @@ print()
 # We update χ every 10 steps (a full oscillation = 8 steps at dt=0.02,
 # so this stays close to resonance even with coarse updates).
 omega = 2 * lfm.CHI0  # resonance frequency = 38
-amplitude = 3.0       # driving amplitude (χ₀ ± 3)
+amplitude = 3.0  # driving amplitude (χ₀ ± 3)
 dt = config.dt
 report_every = 500
 total_steps = 5000
@@ -58,7 +58,7 @@ for step in range(0, total_steps, report_every):
         sim.chi = chi_field
         sim.run(steps=update_every)
 
-    e = float(np.sum(sim.psi_real ** 2))
+    e = float(np.sum(sim.psi_real**2))
     energies.append(e)
     growth = e / initial_energy if initial_energy > 0 else float("inf")
     print(f"  Step {sim.step:5d}: |Ψ|² = {e:.4e}  (×{growth:.2e} from initial)")

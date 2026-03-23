@@ -42,7 +42,7 @@ sim.psi_real = np.zeros_like(sim.psi_real)
 if sim.psi_imag is not None:
     sim.psi_imag = np.zeros_like(sim.psi_imag)
 
-psi_sq = sim.psi_real ** 2
+psi_sq = sim.psi_real**2
 print(f"Phase 2 — Matter removed:")
 print(f"  |Ψ|² total  = {psi_sq.sum():.2e}  (zero)")
 print(f"  χ at center = {sim.chi[24, 24, 24]:.2f}  (well still there!)")
@@ -55,7 +55,9 @@ for step in range(1, 6):
     chi_c = sim.chi[24, 24, 24]
     chi_min = sim.chi.min()
     depth = lfm.CHI0 - chi_min
-    print(f"  Step {step*1000:5d}: χ_center = {chi_c:.2f}, χ_min = {chi_min:.2f}, depth = {depth:.2f}")
+    print(
+        f"  Step {step * 1000:5d}: χ_center = {chi_c:.2f}, χ_min = {chi_min:.2f}, depth = {depth:.2f}"
+    )
 
 chi_min_final = sim.chi.min()
 final_depth = lfm.CHI0 - chi_min_final

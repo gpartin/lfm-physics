@@ -85,9 +85,12 @@ def create_initial_state(config: SimulationConfig) -> SimulationState:
         mask = _spherical_boundary_mask(N, config.boundary_fraction)
 
     return SimulationState(
-        psi=psi, psi_prev=psi_prev,
-        chi=chi, chi_prev=chi_prev,
-        boundary_mask=mask, step=0,
+        psi=psi,
+        psi_prev=psi_prev,
+        chi=chi,
+        chi_prev=chi_prev,
+        boundary_mask=mask,
+        step=0,
     )
 
 
@@ -117,8 +120,10 @@ def step_leapfrog(state: SimulationState, config: SimulationConfig) -> None:
 
 
 def _step_real(
-    state: SimulationState, config: SimulationConfig,
-    dt2: float, c2: float,
+    state: SimulationState,
+    config: SimulationConfig,
+    dt2: float,
+    c2: float,
 ) -> None:
     """Leapfrog step for real scalar field (gravity only)."""
     E = state.psi
@@ -156,8 +161,10 @@ def _step_real(
 
 
 def _step_complex(
-    state: SimulationState, config: SimulationConfig,
-    dt2: float, c2: float,
+    state: SimulationState,
+    config: SimulationConfig,
+    dt2: float,
+    c2: float,
 ) -> None:
     """Leapfrog step for complex scalar field (gravity + EM)."""
     Pr = state.psi[0]  # Real part
@@ -202,8 +209,10 @@ def _step_complex(
 
 
 def _step_color(
-    state: SimulationState, config: SimulationConfig,
-    dt2: float, c2: float,
+    state: SimulationState,
+    config: SimulationConfig,
+    dt2: float,
+    c2: float,
 ) -> None:
     """Leapfrog step for 3-color complex field (all four forces).
 
@@ -286,7 +295,8 @@ def _step_color(
 
 
 def _spherical_boundary_mask(
-    N: int, boundary_fraction: float,
+    N: int,
+    boundary_fraction: float,
 ) -> NDArray[np.bool_]:
     """Create a spherical frozen boundary mask.
 

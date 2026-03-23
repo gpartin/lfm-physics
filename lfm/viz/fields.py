@@ -63,8 +63,7 @@ def plot_isosurface(
     step = max(1, N // 64)
     small = mask[::step, ::step, ::step]
 
-    ax.voxels(small, facecolors=color, edgecolor=color, alpha=alpha,
-              linewidth=0.1)
+    ax.voxels(small, facecolors=color, edgecolor=color, alpha=alpha, linewidth=0.1)
 
     ax.set_xlabel("X")
     ax.set_ylabel("Y")

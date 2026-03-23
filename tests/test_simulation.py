@@ -113,9 +113,7 @@ class TestSolitonPlacement:
     def test_place_soliton_with_phase_complex(self):
         sim = Simulation(_small_config(field_level=FieldLevel.COMPLEX))
         # Phase = pi → psi_real negative, psi_imag ≈ 0
-        sim.place_soliton(
-            (N // 2, N // 2, N // 2), amplitude=3.0, sigma=2.0, phase=np.pi
-        )
+        sim.place_soliton((N // 2, N // 2, N // 2), amplitude=3.0, sigma=2.0, phase=np.pi)
         pr = sim.get_psi_real()
         assert pr.min() < -1.0
 
@@ -265,9 +263,7 @@ class TestInteriorMask:
 class TestFieldLevels:
     def test_complex_simulation(self):
         sim = Simulation(_small_config(field_level=FieldLevel.COMPLEX))
-        sim.place_soliton(
-            (N // 2, N // 2, N // 2), amplitude=3.0, sigma=2.0, phase=0.5
-        )
+        sim.place_soliton((N // 2, N // 2, N // 2), amplitude=3.0, sigma=2.0, phase=0.5)
         sim.equilibrate()
         sim.run(10, record_metrics=False)
         assert sim.step == 10
@@ -343,7 +339,9 @@ class TestCheckpoint:
         sim.save_checkpoint(path)
         loaded = Simulation.load_checkpoint(path)
         np.testing.assert_allclose(
-            loaded.get_psi_real(), sim.get_psi_real(), atol=1e-6,
+            loaded.get_psi_real(),
+            sim.get_psi_real(),
+            atol=1e-6,
         )
 
     def test_round_trip_preserves_config(self, tmp_path):
@@ -372,7 +370,10 @@ class TestCheckpoint:
         cfg = _small_config(field_level=FieldLevel.COMPLEX)
         sim = Simulation(cfg)
         sim.place_soliton(
-            (N // 2, N // 2, N // 2), amplitude=3.0, sigma=2.0, phase=0.5,
+            (N // 2, N // 2, N // 2),
+            amplitude=3.0,
+            sigma=2.0,
+            phase=0.5,
         )
         sim.equilibrate()
         sim.run(10, record_metrics=False)
@@ -382,5 +383,7 @@ class TestCheckpoint:
         loaded = Simulation.load_checkpoint(path)
         assert loaded.config.field_level == FieldLevel.COMPLEX
         np.testing.assert_allclose(
-            loaded.get_psi_imag(), sim.get_psi_imag(), atol=1e-6,
+            loaded.get_psi_imag(),
+            sim.get_psi_imag(),
+            atol=1e-6,
         )

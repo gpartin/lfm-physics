@@ -84,4 +84,3 @@ def load_checkpoint(path: str | Path, backend: str = "auto") -> "Simulation":
 
 
 __all__ = ["save_checkpoint", "load_checkpoint"]
-

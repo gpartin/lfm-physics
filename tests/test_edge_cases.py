@@ -11,6 +11,7 @@ from lfm.simulation import Simulation
 
 # ── Config edge cases ────────────────────────────────────────────────
 
+
 class TestConfigEdgeCases:
     def test_kappa_c_without_color_level(self):
         """kappa_c > 0 at REAL level should still construct (config doesn't block)."""
@@ -32,6 +33,7 @@ class TestConfigEdgeCases:
 
 
 # ── Simulation edge cases ────────────────────────────────────────────
+
 
 class TestSimulationEdgeCases:
     def test_zero_step_run(self):
@@ -82,6 +84,7 @@ class TestSimulationEdgeCases:
 
 # ── Power spectrum edge cases ────────────────────────────────────────
 
+
 class TestPowerSpectrumEdgeCases:
     def test_uniform_field(self):
         """Uniform field → all power at k=0 (DC excluded from bins)."""
@@ -103,6 +106,7 @@ class TestPowerSpectrumEdgeCases:
 
 
 # ── Color variance edge cases ───────────────────────────────────────
+
 
 class TestColorVarianceEdgeCases:
     def test_zero_field(self):
@@ -131,7 +135,7 @@ class TestColorVarianceEdgeCases:
     def test_flat_input(self):
         """1-D flat layout should work too (matches GPU flatten convention)."""
         N = 8
-        total = N ** 3
+        total = N**3
         psi_r = np.zeros(3 * total)
         psi_r[:total] = 1.0  # color 0 only
         psi_i = np.zeros_like(psi_r)
@@ -140,6 +144,7 @@ class TestColorVarianceEdgeCases:
 
 
 # ── Tracker edge cases ──────────────────────────────────────────────
+
 
 class TestFlattenTrajectories:
     def test_empty(self):

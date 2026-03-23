@@ -84,11 +84,18 @@ class TestNumpyStepReal:
         chi_prev_B = np.full(total, chi0, dtype=np.float32)
 
         return {
-            "backend": backend, "N": N, "mask": mask, "chi0": chi0,
-            "E_A": E_A, "E_prev_A": E_prev_A,
-            "chi_A": chi_A, "chi_prev_A": chi_prev_A,
-            "E_B": E_B, "E_prev_B": E_prev_B,
-            "chi_B": chi_B, "chi_prev_B": chi_prev_B,
+            "backend": backend,
+            "N": N,
+            "mask": mask,
+            "chi0": chi0,
+            "E_A": E_A,
+            "E_prev_A": E_prev_A,
+            "chi_A": chi_A,
+            "chi_prev_A": chi_prev_A,
+            "E_B": E_B,
+            "E_prev_B": E_prev_B,
+            "chi_B": chi_B,
+            "chi_prev_B": chi_prev_B,
         }
 
     def test_empty_universe_stable(self, setup):
@@ -97,10 +104,21 @@ class TestNumpyStepReal:
         dt2 = 0.02**2
         for _ in range(10):
             s["backend"].step_real(
-                s["E_A"], s["E_prev_A"], s["chi_A"], s["chi_prev_A"],
+                s["E_A"],
+                s["E_prev_A"],
+                s["chi_A"],
+                s["chi_prev_A"],
                 s["mask"],
-                s["E_B"], s["E_prev_B"], s["chi_B"], s["chi_prev_B"],
-                s["N"], dt2, 1/63, 0.0, s["chi0"], 0.0,
+                s["E_B"],
+                s["E_prev_B"],
+                s["chi_B"],
+                s["chi_prev_B"],
+                s["N"],
+                dt2,
+                1 / 63,
+                0.0,
+                s["chi0"],
+                0.0,
             )
             # Swap A <-> B
             for k in ("E", "E_prev", "chi", "chi_prev"):
@@ -123,10 +141,21 @@ class TestNumpyStepReal:
         dt2 = 0.02**2
         for _ in range(50):
             s["backend"].step_real(
-                s["E_A"], s["E_prev_A"], s["chi_A"], s["chi_prev_A"],
+                s["E_A"],
+                s["E_prev_A"],
+                s["chi_A"],
+                s["chi_prev_A"],
                 s["mask"],
-                s["E_B"], s["E_prev_B"], s["chi_B"], s["chi_prev_B"],
-                s["N"], dt2, 1/63, 0.0, s["chi0"], 0.0,
+                s["E_B"],
+                s["E_prev_B"],
+                s["chi_B"],
+                s["chi_prev_B"],
+                s["N"],
+                dt2,
+                1 / 63,
+                0.0,
+                s["chi0"],
+                0.0,
             )
             s["E_A"], s["E_B"] = s["E_B"], s["E_A"]
             s["E_prev_A"], s["E_prev_B"] = s["E_prev_B"], s["E_prev_A"]
@@ -159,10 +188,26 @@ class TestNumpyStepComplex:
 
         for _ in range(10):
             backend.step_complex(
-                Pr_A, Pr_prev_A, Pi_A, Pi_prev_A, chi_A, chi_prev_A,
+                Pr_A,
+                Pr_prev_A,
+                Pi_A,
+                Pi_prev_A,
+                chi_A,
+                chi_prev_A,
                 mask,
-                Pr_B, Pr_prev_B, Pi_B, Pi_prev_B, chi_B, chi_prev_B,
-                N, dt2, 1/63, 0.0, chi0, 0.0, 0.1,
+                Pr_B,
+                Pr_prev_B,
+                Pi_B,
+                Pi_prev_B,
+                chi_B,
+                chi_prev_B,
+                N,
+                dt2,
+                1 / 63,
+                0.0,
+                chi0,
+                0.0,
+                0.1,
             )
             Pr_A, Pr_B = Pr_B, Pr_A
             Pr_prev_A, Pr_prev_B = Pr_prev_B, Pr_prev_A
@@ -199,10 +244,26 @@ class TestNumpyStepColor:
 
         for _ in range(10):
             backend.step_color(
-                Pr_A, Pr_prev_A, Pi_A, Pi_prev_A, chi_A, chi_prev_A,
+                Pr_A,
+                Pr_prev_A,
+                Pi_A,
+                Pi_prev_A,
+                chi_A,
+                chi_prev_A,
                 mask,
-                Pr_B, Pr_prev_B, Pi_B, Pi_prev_B, chi_B, chi_prev_B,
-                N, dt2, 1/63, 0.0, chi0, 0.0, 0.1,
+                Pr_B,
+                Pr_prev_B,
+                Pi_B,
+                Pi_prev_B,
+                chi_B,
+                chi_prev_B,
+                N,
+                dt2,
+                1 / 63,
+                0.0,
+                chi0,
+                0.0,
+                0.1,
             )
             Pr_A, Pr_B = Pr_B, Pr_A
             Pr_prev_A, Pr_prev_B = Pr_prev_B, Pr_prev_A

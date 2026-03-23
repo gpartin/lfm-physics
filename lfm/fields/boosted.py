@@ -69,7 +69,7 @@ def boosted_soliton(
     Ensure amplitude is large enough that the χ-well depth exceeds f_mom.
     """
     vx, vy, vz = velocity
-    speed = np.sqrt(vx ** 2 + vy ** 2 + vz ** 2)
+    speed = np.sqrt(vx**2 + vy**2 + vz**2)
 
     # Build static soliton
     psi_r, psi_i = gaussian_soliton(N, position, amplitude, sigma, phase=phase)

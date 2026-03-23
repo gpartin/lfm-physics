@@ -15,5 +15,7 @@ def small_config():
 def small_complex_config():
     """Complex field config for EM tests (N=16)."""
     return SimulationConfig(
-        grid_size=16, e_amplitude=12.0, field_level=FieldLevel.COMPLEX,
+        grid_size=16,
+        e_amplitude=12.0,
+        field_level=FieldLevel.COMPLEX,
     )

@@ -46,7 +46,9 @@ for _ in range(200):  # try up to 200 placements
         int(rng.integers(sigma * 2, N - sigma * 2)),
         int(rng.integers(sigma * 2, N - sigma * 2)),
     )
-    if all(abs(pos[0]-p[0]) + abs(pos[1]-p[1]) + abs(pos[2]-p[2]) >= min_sep for p in positions):
+    if all(
+        abs(pos[0] - p[0]) + abs(pos[1] - p[1]) + abs(pos[2] - p[2]) >= min_sep for p in positions
+    ):
         positions.append(pos)
     if len(positions) == n_particles:
         break
@@ -56,7 +58,7 @@ for pos in positions:
     sim.place_soliton(pos, amplitude=amplitude, sigma=sigma)
 
 # Poisson-equilibrate χ to match the initial energy distribution
-psi_sq = sim.psi_real ** 2
+psi_sq = sim.psi_real**2
 kappa = lfm.KAPPA
 chi0 = lfm.CHI0
 rho_hat = np.fft.fftn(kappa * psi_sq)
@@ -76,8 +78,8 @@ print()
 # --- Milestones to track ---
 total_steps = 50_000
 snapshot_interval = 10_000
-well_threshold = 18.0   # χ below this = gravitational well
-void_threshold = 18.8   # χ above this = expanding void
+well_threshold = 18.0  # χ below this = gravitational well
+void_threshold = 18.8  # χ above this = expanding void
 
 print(f"Running {total_steps:,} steps...")
 print()
@@ -100,7 +102,9 @@ def report(label: str) -> None:
 
     e = float(np.sum(psi_sq))
 
-    print(f"{label:>12s}  {chi_min:6.2f}  {wells_pct:6.1f}%  {voids_pct:6.1f}%  {n_clusters:8d}  {e:10.2f}")
+    print(
+        f"{label:>12s}  {chi_min:6.2f}  {wells_pct:6.1f}%  {voids_pct:6.1f}%  {n_clusters:8d}  {e:10.2f}"
+    )
 
 
 report(scale.format_cosmic_time(0))

@@ -17,6 +17,7 @@ from numpy.typing import NDArray
 
 try:
     import cupy as cp
+
     CUPY_AVAILABLE = True
 except ImportError:
     cp = None
@@ -49,24 +50,28 @@ class CupyBackend:
     def __init__(self) -> None:
         if not CUPY_AVAILABLE:
             raise ImportError(
-                "CuPy is required for GPU backend. "
-                "Install with: pip install lfm-physics[gpu]"
+                "CuPy is required for GPU backend. Install with: pip install lfm-physics[gpu]"
             )
         # Compile kernels (cached by CuPy after first call)
         self._kernel_real = cp.RawKernel(
-            EVOLUTION_REAL_KERNEL_SRC, "evolve_real",
+            EVOLUTION_REAL_KERNEL_SRC,
+            "evolve_real",
         )
         self._kernel_complex = cp.RawKernel(
-            EVOLUTION_COMPLEX_KERNEL_SRC, "evolve_complex",
+            EVOLUTION_COMPLEX_KERNEL_SRC,
+            "evolve_complex",
         )
         self._kernel_color = cp.RawKernel(
-            EVOLUTION_KERNEL_SRC, "evolve_gov01_gov02",
+            EVOLUTION_KERNEL_SRC,
+            "evolve_gov01_gov02",
         )
         self._kernel_phase1 = cp.RawKernel(
-            PHASE1_KERNEL_SRC, "phase1_parametric",
+            PHASE1_KERNEL_SRC,
+            "phase1_parametric",
         )
         self._kernel_sa_diffusion = cp.RawKernel(
-            SA_DIFFUSION_KERNEL_SRC, "evolve_sa_diffusion",
+            SA_DIFFUSION_KERNEL_SRC,
+            "evolve_sa_diffusion",
         )
 
     @property
@@ -74,21 +79,30 @@ class CupyBackend:
         return "cupy"
 
     def allocate(
-        self, N: int, n_psi_arrays: int, chi0: float,
+        self,
+        N: int,
+        n_psi_arrays: int,
+        chi0: float,
     ) -> dict[str, cp.ndarray]:
         total = N**3
         psi_size = n_psi_arrays * total
         zero_psi = cp.zeros(psi_size, dtype=cp.float32)
         chi_init = cp.full(total, chi0, dtype=cp.float32)
         return {
-            "psi_A": zero_psi.copy(), "psi_prev_A": zero_psi.copy(),
-            "chi_A": chi_init.copy(), "chi_prev_A": chi_init.copy(),
-            "psi_B": zero_psi.copy(), "psi_prev_B": zero_psi.copy(),
-            "chi_B": chi_init.copy(), "chi_prev_B": chi_init.copy(),
+            "psi_A": zero_psi.copy(),
+            "psi_prev_A": zero_psi.copy(),
+            "chi_A": chi_init.copy(),
+            "chi_prev_A": chi_init.copy(),
+            "psi_B": zero_psi.copy(),
+            "psi_prev_B": zero_psi.copy(),
+            "chi_B": chi_init.copy(),
+            "chi_prev_B": chi_init.copy(),
         }
 
     def create_boundary_mask(
-        self, N: int, boundary_fraction: float,
+        self,
+        N: int,
+        boundary_fraction: float,
     ) -> cp.ndarray:
         center = N / 2.0
         r_max = N / 2.0
@@ -101,67 +115,121 @@ class CupyBackend:
 
     def step_real(
         self,
-        psi_in, psi_prev_in,
-        chi_in, chi_prev_in,
+        psi_in,
+        psi_prev_in,
+        chi_in,
+        chi_prev_in,
         boundary_mask,
-        psi_out, psi_prev_out,
-        chi_out, chi_prev_out,
-        N: int, dt2: float, kappa: float,
-        lambda_self: float, chi0: float, e0_sq: float,
+        psi_out,
+        psi_prev_out,
+        chi_out,
+        chi_prev_out,
+        N: int,
+        dt2: float,
+        kappa: float,
+        lambda_self: float,
+        chi0: float,
+        e0_sq: float,
     ) -> None:
         total = N**3
         grid, block = _grid_block(total)
-        self._kernel_real(grid, block, (
-            psi_in, psi_prev_in,
-            chi_in, chi_prev_in,
-            boundary_mask,
-            psi_out, psi_prev_out,
-            chi_out, chi_prev_out,
-            np.int32(N), np.float32(dt2), np.float32(kappa),
-            np.float32(lambda_self), np.float32(chi0), np.float32(e0_sq),
-        ))
+        self._kernel_real(
+            grid,
+            block,
+            (
+                psi_in,
+                psi_prev_in,
+                chi_in,
+                chi_prev_in,
+                boundary_mask,
+                psi_out,
+                psi_prev_out,
+                chi_out,
+                chi_prev_out,
+                np.int32(N),
+                np.float32(dt2),
+                np.float32(kappa),
+                np.float32(lambda_self),
+                np.float32(chi0),
+                np.float32(e0_sq),
+            ),
+        )
         cp.cuda.Stream.null.synchronize()
 
     def step_complex(
         self,
-        psi_r_in, psi_r_prev_in,
-        psi_i_in, psi_i_prev_in,
-        chi_in, chi_prev_in,
+        psi_r_in,
+        psi_r_prev_in,
+        psi_i_in,
+        psi_i_prev_in,
+        chi_in,
+        chi_prev_in,
         boundary_mask,
-        psi_r_out, psi_r_prev_out,
-        psi_i_out, psi_i_prev_out,
-        chi_out, chi_prev_out,
-        N: int, dt2: float, kappa: float,
-        lambda_self: float, chi0: float, e0_sq: float,
+        psi_r_out,
+        psi_r_prev_out,
+        psi_i_out,
+        psi_i_prev_out,
+        chi_out,
+        chi_prev_out,
+        N: int,
+        dt2: float,
+        kappa: float,
+        lambda_self: float,
+        chi0: float,
+        e0_sq: float,
         epsilon_w: float,
     ) -> None:
         total = N**3
         grid, block = _grid_block(total)
-        self._kernel_complex(grid, block, (
-            psi_r_in, psi_r_prev_in,
-            psi_i_in, psi_i_prev_in,
-            chi_in, chi_prev_in,
-            boundary_mask,
-            psi_r_out, psi_r_prev_out,
-            psi_i_out, psi_i_prev_out,
-            chi_out, chi_prev_out,
-            np.int32(N), np.float32(dt2), np.float32(kappa),
-            np.float32(lambda_self), np.float32(chi0), np.float32(e0_sq),
-            np.float32(epsilon_w),
-        ))
+        self._kernel_complex(
+            grid,
+            block,
+            (
+                psi_r_in,
+                psi_r_prev_in,
+                psi_i_in,
+                psi_i_prev_in,
+                chi_in,
+                chi_prev_in,
+                boundary_mask,
+                psi_r_out,
+                psi_r_prev_out,
+                psi_i_out,
+                psi_i_prev_out,
+                chi_out,
+                chi_prev_out,
+                np.int32(N),
+                np.float32(dt2),
+                np.float32(kappa),
+                np.float32(lambda_self),
+                np.float32(chi0),
+                np.float32(e0_sq),
+                np.float32(epsilon_w),
+            ),
+        )
         cp.cuda.Stream.null.synchronize()
 
     def step_color(
         self,
-        psi_r_in, psi_r_prev_in,
-        psi_i_in, psi_i_prev_in,
-        chi_in, chi_prev_in,
+        psi_r_in,
+        psi_r_prev_in,
+        psi_i_in,
+        psi_i_prev_in,
+        chi_in,
+        chi_prev_in,
         boundary_mask,
-        psi_r_out, psi_r_prev_out,
-        psi_i_out, psi_i_prev_out,
-        chi_out, chi_prev_out,
-        N: int, dt2: float, kappa: float,
-        lambda_self: float, chi0: float, e0_sq: float,
+        psi_r_out,
+        psi_r_prev_out,
+        psi_i_out,
+        psi_i_prev_out,
+        chi_out,
+        chi_prev_out,
+        N: int,
+        dt2: float,
+        kappa: float,
+        lambda_self: float,
+        chi0: float,
+        e0_sq: float,
         epsilon_w: float,
         kappa_c: float = 0.0,
         epsilon_cc: float = 0.0,
@@ -180,51 +248,92 @@ class CupyBackend:
         # S_a: need a valid device pointer even when SA is disabled
         _sa_in = sa_fields_in if sa_fields_in is not None else cp.zeros(3 * total, dtype=cp.float32)
 
-        self._kernel_color(grid, block, (
-            psi_r_in, psi_r_prev_in,
-            psi_i_in, psi_i_prev_in,
-            chi_in, chi_prev_in,
-            boundary_mask,
-            psi_r_out, psi_r_prev_out,
-            psi_i_out, psi_i_prev_out,
-            chi_out, chi_prev_out,
-            np.int32(N), np.float32(dt2), np.float32(kappa),
-            np.float32(lambda_self), np.float32(chi0), np.float32(e0_sq),
-            np.float32(epsilon_w),
-            np.float32(kappa_c), np.float32(epsilon_cc),
-            _sa_in, np.float32(kappa_string), np.float32(kappa_tube),
-        ))
+        self._kernel_color(
+            grid,
+            block,
+            (
+                psi_r_in,
+                psi_r_prev_in,
+                psi_i_in,
+                psi_i_prev_in,
+                chi_in,
+                chi_prev_in,
+                boundary_mask,
+                psi_r_out,
+                psi_r_prev_out,
+                psi_i_out,
+                psi_i_prev_out,
+                chi_out,
+                chi_prev_out,
+                np.int32(N),
+                np.float32(dt2),
+                np.float32(kappa),
+                np.float32(lambda_self),
+                np.float32(chi0),
+                np.float32(e0_sq),
+                np.float32(epsilon_w),
+                np.float32(kappa_c),
+                np.float32(epsilon_cc),
+                _sa_in,
+                np.float32(kappa_string),
+                np.float32(kappa_tube),
+            ),
+        )
 
         # S_a diffusion step (v16 flux-tube confinement)
         if kappa_tube > 0.0 and sa_fields_in is not None and sa_fields_out is not None:
             # |Ψ_a|² per color, computed from just-updated output fields
             psi_sq_colors = psi_r_out * psi_r_out + psi_i_out * psi_i_out
-            self._kernel_sa_diffusion(grid, block, (
-                sa_fields_in, psi_sq_colors, sa_fields_out,
-                np.int32(N), np.float32(dt),
-                np.float32(sa_d), np.float32(sa_gamma),
-            ))
+            self._kernel_sa_diffusion(
+                grid,
+                block,
+                (
+                    sa_fields_in,
+                    psi_sq_colors,
+                    sa_fields_out,
+                    np.int32(N),
+                    np.float32(dt),
+                    np.float32(sa_d),
+                    np.float32(sa_gamma),
+                ),
+            )
 
         cp.cuda.Stream.null.synchronize()
 
     def step_phase1(
         self,
-        psi_r_in, psi_r_prev_in,
-        psi_i_in, psi_i_prev_in,
-        psi_r_out, psi_r_prev_out,
-        psi_i_out, psi_i_prev_out,
-        N: int, dt2: float, chi_sq: float,
+        psi_r_in,
+        psi_r_prev_in,
+        psi_i_in,
+        psi_i_prev_in,
+        psi_r_out,
+        psi_r_prev_out,
+        psi_i_out,
+        psi_i_prev_out,
+        N: int,
+        dt2: float,
+        chi_sq: float,
     ) -> None:
         """Phase 1 parametric resonance step (uniform oscillating χ)."""
         total = N**3
         grid, block = _grid_block(total)
-        self._kernel_phase1(grid, block, (
-            psi_r_in, psi_r_prev_in,
-            psi_i_in, psi_i_prev_in,
-            psi_r_out, psi_r_prev_out,
-            psi_i_out, psi_i_prev_out,
-            np.int32(N), np.float32(dt2), np.float32(chi_sq),
-        ))
+        self._kernel_phase1(
+            grid,
+            block,
+            (
+                psi_r_in,
+                psi_r_prev_in,
+                psi_i_in,
+                psi_i_prev_in,
+                psi_r_out,
+                psi_r_prev_out,
+                psi_i_out,
+                psi_i_prev_out,
+                np.int32(N),
+                np.float32(dt2),
+                np.float32(chi_sq),
+            ),
+        )
         cp.cuda.Stream.null.synchronize()
 
     def to_numpy(self, arr) -> NDArray[np.float32]:

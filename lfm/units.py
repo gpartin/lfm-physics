@@ -272,6 +272,6 @@ class PlanckScale:
         mpc = self.box_size_mpc
         return (
             f"PlanckScale(N={self.grid_size}): "
-            f"1 cell = {cpp:.2e} Planck lengths (~{mpc/self.grid_size:.1f} Mpc), "
+            f"1 cell = {cpp:.2e} Planck lengths (~{mpc / self.grid_size:.1f} Mpc), "
             f"1 step = {gps:.2e} Gyr"
         )

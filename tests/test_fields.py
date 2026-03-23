@@ -73,9 +73,7 @@ class TestPlaceSolitons:
 
     def test_mixed_phases(self):
         positions = [(4, 4, 4), (12, 12, 12)]
-        pr, pi = place_solitons(
-            16, positions, 5.0, 2.0, phases=[0.0, np.pi], colors=[0, 0]
-        )
+        pr, pi = place_solitons(16, positions, 5.0, 2.0, phases=[0.0, np.pi], colors=[0, 0])
         # Opposite-charge solitons on same color
         assert pr[0, 4, 4, 4] > 0
         assert pr[0, 12, 12, 12] < 0

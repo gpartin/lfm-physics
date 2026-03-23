@@ -15,7 +15,7 @@ Three kernels:
 # ---------------------------------------------------------------------------
 # Full 3-color complex evolution kernel (Level 2 — all four forces)
 # ---------------------------------------------------------------------------
-EVOLUTION_KERNEL_SRC = r'''
+EVOLUTION_KERNEL_SRC = r"""
 extern "C" __global__
 void evolve_gov01_gov02(
     // Input arrays -- 3-color complex Psi_a, packed [3*N^3]
@@ -232,12 +232,12 @@ void evolve_gov01_gov02(
     chi_next[idx] = chi_new;
     chi_prev_next[idx] = chi_c;
 }
-'''
+"""
 
 # ---------------------------------------------------------------------------
 # Parametric resonance kernel (Phase 1 — matter creation via Mathieu eq.)
 # ---------------------------------------------------------------------------
-PHASE1_KERNEL_SRC = r'''
+PHASE1_KERNEL_SRC = r"""
 extern "C" __global__
 void phase1_parametric(
     const float* __restrict__ Psi_r,
@@ -315,12 +315,12 @@ void phase1_parametric(
         Psi_i_prev_next[aidx] = Pi_val;
     }
 }
-'''
+"""
 
 # ---------------------------------------------------------------------------
 # Real-E gravity-only kernel (Level 0 — cosmology, structure formation)
 # ---------------------------------------------------------------------------
-EVOLUTION_REAL_KERNEL_SRC = r'''
+EVOLUTION_REAL_KERNEL_SRC = r"""
 extern "C" __global__
 void evolve_real(
     const float* __restrict__ E,
@@ -415,12 +415,12 @@ void evolve_real(
     chi_next[idx] = chi_new;
     chi_prev_next[idx] = chi_c;
 }
-'''
+"""
 
 # ---------------------------------------------------------------------------
 # Complex single-component kernel (Level 1 — gravity + EM)
 # ---------------------------------------------------------------------------
-EVOLUTION_COMPLEX_KERNEL_SRC = r'''
+EVOLUTION_COMPLEX_KERNEL_SRC = r"""
 extern "C" __global__
 void evolve_complex(
     const float* __restrict__ Psi_r,
@@ -535,12 +535,12 @@ void evolve_complex(
     chi_next[idx] = chi_new;
     chi_prev_next[idx] = chi_c;
 }
-'''
+"""
 
 # ---------------------------------------------------------------------------
 # S_a auxiliary field diffusion kernel (v16 — confinement flux tube)
 # ---------------------------------------------------------------------------
-SA_DIFFUSION_KERNEL_SRC = r'''
+SA_DIFFUSION_KERNEL_SRC = r"""
 extern "C" __global__
 void evolve_sa_diffusion(
     // Input: S_a fields, packed [3*N^3]
@@ -593,4 +593,4 @@ void evolve_sa_diffusion(
         Sa_out[off + idx] = sa_new;
     }
 }
-'''
+"""

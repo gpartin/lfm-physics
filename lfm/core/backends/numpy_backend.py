@@ -22,21 +22,30 @@ class NumpyBackend:
         return "numpy"
 
     def allocate(
-        self, N: int, n_psi_arrays: int, chi0: float,
+        self,
+        N: int,
+        n_psi_arrays: int,
+        chi0: float,
     ) -> dict[str, NDArray[np.float32]]:
         total = N**3
         psi_size = n_psi_arrays * total
         zero_psi = np.zeros(psi_size, dtype=np.float32)
         chi_init = np.full(total, chi0, dtype=np.float32)
         return {
-            "psi_A": zero_psi.copy(), "psi_prev_A": zero_psi.copy(),
-            "chi_A": chi_init.copy(), "chi_prev_A": chi_init.copy(),
-            "psi_B": zero_psi.copy(), "psi_prev_B": zero_psi.copy(),
-            "chi_B": chi_init.copy(), "chi_prev_B": chi_init.copy(),
+            "psi_A": zero_psi.copy(),
+            "psi_prev_A": zero_psi.copy(),
+            "chi_A": chi_init.copy(),
+            "chi_prev_A": chi_init.copy(),
+            "psi_B": zero_psi.copy(),
+            "psi_prev_B": zero_psi.copy(),
+            "chi_B": chi_init.copy(),
+            "chi_prev_B": chi_init.copy(),
         }
 
     def create_boundary_mask(
-        self, N: int, boundary_fraction: float,
+        self,
+        N: int,
+        boundary_fraction: float,
     ) -> NDArray[np.float32]:
         center = N / 2.0
         r_max = N / 2.0
@@ -58,13 +67,21 @@ class NumpyBackend:
 
     def step_real(
         self,
-        psi_in: NDArray, psi_prev_in: NDArray,
-        chi_in: NDArray, chi_prev_in: NDArray,
+        psi_in: NDArray,
+        psi_prev_in: NDArray,
+        chi_in: NDArray,
+        chi_prev_in: NDArray,
         boundary_mask: NDArray,
-        psi_out: NDArray, psi_prev_out: NDArray,
-        chi_out: NDArray, chi_prev_out: NDArray,
-        N: int, dt2: float, kappa: float,
-        lambda_self: float, chi0: float, e0_sq: float,
+        psi_out: NDArray,
+        psi_prev_out: NDArray,
+        chi_out: NDArray,
+        chi_prev_out: NDArray,
+        N: int,
+        dt2: float,
+        kappa: float,
+        lambda_self: float,
+        chi0: float,
+        e0_sq: float,
     ) -> None:
         E = psi_in
         E_prev = psi_prev_in
@@ -89,7 +106,7 @@ class NumpyBackend:
         np.clip(chi_new, -chi0, None, out=chi_new)
 
         # Frozen boundary
-        E_new *= (1.0 - boundary_mask)
+        E_new *= 1.0 - boundary_mask
         chi_new = boundary_mask * chi0 + (1.0 - boundary_mask) * chi_new
 
         # Write to output buffers (double-buffer swap)
@@ -100,15 +117,25 @@ class NumpyBackend:
 
     def step_complex(
         self,
-        psi_r_in: NDArray, psi_r_prev_in: NDArray,
-        psi_i_in: NDArray, psi_i_prev_in: NDArray,
-        chi_in: NDArray, chi_prev_in: NDArray,
+        psi_r_in: NDArray,
+        psi_r_prev_in: NDArray,
+        psi_i_in: NDArray,
+        psi_i_prev_in: NDArray,
+        chi_in: NDArray,
+        chi_prev_in: NDArray,
         boundary_mask: NDArray,
-        psi_r_out: NDArray, psi_r_prev_out: NDArray,
-        psi_i_out: NDArray, psi_i_prev_out: NDArray,
-        chi_out: NDArray, chi_prev_out: NDArray,
-        N: int, dt2: float, kappa: float,
-        lambda_self: float, chi0: float, e0_sq: float,
+        psi_r_out: NDArray,
+        psi_r_prev_out: NDArray,
+        psi_i_out: NDArray,
+        psi_i_prev_out: NDArray,
+        chi_out: NDArray,
+        chi_prev_out: NDArray,
+        N: int,
+        dt2: float,
+        kappa: float,
+        lambda_self: float,
+        chi0: float,
+        e0_sq: float,
         epsilon_w: float,
     ) -> None:
         Pr, Pi = psi_r_in, psi_i_in
@@ -151,8 +178,8 @@ class NumpyBackend:
         np.clip(chi_new, -chi0, None, out=chi_new)
 
         # Frozen boundary
-        Pr_new *= (1.0 - boundary_mask)
-        Pi_new *= (1.0 - boundary_mask)
+        Pr_new *= 1.0 - boundary_mask
+        Pi_new *= 1.0 - boundary_mask
         chi_new = boundary_mask * chi0 + (1.0 - boundary_mask) * chi_new
 
         np.copyto(psi_r_out, Pr_new)
@@ -164,15 +191,25 @@ class NumpyBackend:
 
     def step_color(
         self,
-        psi_r_in: NDArray, psi_r_prev_in: NDArray,
-        psi_i_in: NDArray, psi_i_prev_in: NDArray,
-        chi_in: NDArray, chi_prev_in: NDArray,
+        psi_r_in: NDArray,
+        psi_r_prev_in: NDArray,
+        psi_i_in: NDArray,
+        psi_i_prev_in: NDArray,
+        chi_in: NDArray,
+        chi_prev_in: NDArray,
         boundary_mask: NDArray,
-        psi_r_out: NDArray, psi_r_prev_out: NDArray,
-        psi_i_out: NDArray, psi_i_prev_out: NDArray,
-        chi_out: NDArray, chi_prev_out: NDArray,
-        N: int, dt2: float, kappa: float,
-        lambda_self: float, chi0: float, e0_sq: float,
+        psi_r_out: NDArray,
+        psi_r_prev_out: NDArray,
+        psi_i_out: NDArray,
+        psi_i_prev_out: NDArray,
+        chi_out: NDArray,
+        chi_prev_out: NDArray,
+        N: int,
+        dt2: float,
+        kappa: float,
+        lambda_self: float,
+        chi0: float,
+        e0_sq: float,
         epsilon_w: float,
         kappa_c: float = 0.0,
         epsilon_cc: float = 0.0,
@@ -262,8 +299,13 @@ class NumpyBackend:
             sum_sq = np.sum(color_energy**2, axis=0)
             total_sq = psi_sq_total * psi_sq_total
             safe = total_sq > 1e-30
-            ratio = np.where(safe, np.divide(sum_sq, total_sq, where=safe,
-                                             out=np.zeros_like(sum_sq, dtype=np.float64)), 0.0)
+            ratio = np.where(
+                safe,
+                np.divide(
+                    sum_sq, total_sq, where=safe, out=np.zeros_like(sum_sq, dtype=np.float64)
+                ),
+                0.0,
+            )
             f_c = (ratio - 1.0 / n_colors) * safe
             color_var_term = kappa_c * f_c * psi_sq_total
 
@@ -272,7 +314,7 @@ class NumpyBackend:
         ccv_term = np.zeros(total, dtype=np.float32)
         if need_ccv:
             for d in range(3):
-                j_d = j_per_color[:, d, :]   # shape (n_colors, total)
+                j_d = j_per_color[:, d, :]  # shape (n_colors, total)
                 sum_j_sq = np.sum(j_d**2, axis=0)
                 sum_j = np.sum(j_d, axis=0)
                 ccv_term += sum_j_sq - (1.0 / n_colors) * sum_j**2
@@ -284,7 +326,7 @@ class NumpyBackend:
             sa_sum = np.zeros(total, dtype=np.float32)
             sa_sq_sum = np.zeros(total, dtype=np.float32)
             for a in range(n_colors):
-                s_a = sa_fields_in[a * total: (a + 1) * total]
+                s_a = sa_fields_in[a * total : (a + 1) * total]
                 sa_sum += s_a
                 sa_sq_sum += s_a * s_a
             scv_term = sa_sq_sum - (1.0 / n_colors) * sa_sum**2
@@ -293,11 +335,7 @@ class NumpyBackend:
         lap_chi = self._laplacian_3d(chi, N)
         chi_source = kappa * (psi_sq_total + epsilon_w * j_total_acc - e0_sq)
         chi_accel = (
-            lap_chi
-            - chi_source
-            - color_var_term
-            - kappa_string * ccv_term
-            - kappa_tube * scv_term
+            lap_chi - chi_source - color_var_term - kappa_string * ccv_term - kappa_tube * scv_term
         )
         if lambda_self > 0:
             chi_accel -= 4.0 * lambda_self * chi * (chi_sq - chi0 * chi0)
@@ -309,16 +347,16 @@ class NumpyBackend:
         # dS_a/dt = D·∇²S_a + γ(|Ψ_a|² − S_a)   [γ-normalized source: equilibrium S_a → |Ψ_a|²]
         if kappa_tube > 0 and sa_fields_in is not None and sa_fields_out is not None:
             for a in range(n_colors):
-                s_a = sa_fields_in[a * total: (a + 1) * total]
+                s_a = sa_fields_in[a * total : (a + 1) * total]
                 psi_sq_a = color_energy[a]
                 lap_sa = self._laplacian_3d(s_a, N)
                 sa_new = s_a + dt * (sa_d * lap_sa + sa_gamma * (psi_sq_a - s_a))
                 np.clip(sa_new, 0.0, None, out=sa_new)
-                np.copyto(sa_fields_out[a * total: (a + 1) * total], sa_new)
+                np.copyto(sa_fields_out[a * total : (a + 1) * total], sa_new)
 
         # Frozen boundary
-        psi_r_out *= (1.0 - np.tile(boundary_mask, 3))
-        psi_i_out *= (1.0 - np.tile(boundary_mask, 3))
+        psi_r_out *= 1.0 - np.tile(boundary_mask, 3)
+        psi_i_out *= 1.0 - np.tile(boundary_mask, 3)
         chi_new = boundary_mask * chi0 + (1.0 - boundary_mask) * chi_new
 
         np.copyto(chi_out, chi_new)

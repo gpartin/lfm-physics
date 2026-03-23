@@ -97,6 +97,7 @@ c_eff_sq, chi_eff_sq = coef[0], coef[1]
 
 print(f"Dispersion fit: omega^2 ~= {c_eff_sq:.4f} k^2 + {chi_eff_sq:.4f}")
 
+
 # -------------------------------------------------------------------------
 # 3) Stencil anisotropy: compare phase speed along axis vs face-diagonal
 #    vs body-diagonal using the analytical Fourier eigenvalue of the
@@ -114,18 +115,16 @@ def stencil_laplacian_eigenvalue(kx: float, ky: float, kz: float) -> float:
 
 
 k_test = 0.30
-L_axis  = stencil_laplacian_eigenvalue(k_test, 0.0, 0.0)
+L_axis = stencil_laplacian_eigenvalue(k_test, 0.0, 0.0)
 L_fdiag = stencil_laplacian_eigenvalue(k_test / np.sqrt(2), k_test / np.sqrt(2), 0.0)
 L_bdiag = stencil_laplacian_eigenvalue(
     k_test / np.sqrt(3), k_test / np.sqrt(3), k_test / np.sqrt(3)
 )
 
-c_axis  = np.sqrt(-L_axis  / k_test**2)
+c_axis = np.sqrt(-L_axis / k_test**2)
 c_fdiag = np.sqrt(-L_fdiag / k_test**2)
 c_bdiag = np.sqrt(-L_bdiag / k_test**2)
-stencil_anis_pct = (
-    max(c_axis, c_fdiag, c_bdiag) - min(c_axis, c_fdiag, c_bdiag)
-) * 100.0
+stencil_anis_pct = (max(c_axis, c_fdiag, c_bdiag) - min(c_axis, c_fdiag, c_bdiag)) * 100.0
 
 print(f"Stencil phase-speed anisotropy at k={k_test}: {stencil_anis_pct:.4f}%")
 print(f"  axis={c_axis:.6f}  face-diag={c_fdiag:.6f}  body-diag={c_bdiag:.6f}")

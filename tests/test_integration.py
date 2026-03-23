@@ -15,6 +15,7 @@ from lfm.sweep import sweep
 def _cupy_available() -> bool:
     try:
         import cupy  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -24,14 +25,18 @@ def _cupy_available() -> bool:
 # sweep()
 # --------------------------------------------------------------------------
 
+
 class TestSweep:
     """Test parameter sweep functionality."""
 
     def test_sweep_returns_list(self):
         cfg = SimulationConfig(grid_size=8)
         results = sweep(
-            cfg, param="kappa", values=[0.01, 0.02],
-            steps=5, equilibrate=False,
+            cfg,
+            param="kappa",
+            values=[0.01, 0.02],
+            steps=5,
+            equilibrate=False,
         )
         assert isinstance(results, list)
         assert len(results) == 2
@@ -39,8 +44,11 @@ class TestSweep:
     def test_sweep_includes_param_value(self):
         cfg = SimulationConfig(grid_size=8)
         results = sweep(
-            cfg, param="kappa", values=[0.01, 0.02],
-            steps=5, equilibrate=False,
+            cfg,
+            param="kappa",
+            values=[0.01, 0.02],
+            steps=5,
+            equilibrate=False,
         )
         assert results[0]["kappa"] == 0.01
         assert results[1]["kappa"] == 0.02
@@ -48,8 +56,11 @@ class TestSweep:
     def test_sweep_has_metrics(self):
         cfg = SimulationConfig(grid_size=8)
         results = sweep(
-            cfg, param="kappa", values=[0.016],
-            steps=5, equilibrate=False,
+            cfg,
+            param="kappa",
+            values=[0.016],
+            steps=5,
+            equilibrate=False,
         )
         assert "chi_min" in results[0]
         assert "energy_total" in results[0]
@@ -57,8 +68,11 @@ class TestSweep:
     def test_sweep_metric_filter(self):
         cfg = SimulationConfig(grid_size=8)
         results = sweep(
-            cfg, param="kappa", values=[0.016],
-            steps=5, metric_names=["chi_min"],
+            cfg,
+            param="kappa",
+            values=[0.016],
+            steps=5,
+            metric_names=["chi_min"],
             equilibrate=False,
         )
         assert "chi_min" in results[0]
@@ -67,7 +81,9 @@ class TestSweep:
     def test_sweep_with_soliton(self):
         cfg = SimulationConfig(grid_size=16)
         results = sweep(
-            cfg, param="kappa", values=[1 / 63],
+            cfg,
+            param="kappa",
+            values=[1 / 63],
             steps=5,
             soliton={"amplitude": 3.0},
             equilibrate=False,
@@ -79,7 +95,9 @@ class TestSweep:
     def test_sweep_with_equilibrate(self):
         cfg = SimulationConfig(grid_size=16)
         results = sweep(
-            cfg, param="kappa", values=[1 / 63],
+            cfg,
+            param="kappa",
+            values=[1 / 63],
             steps=5,
             soliton={"amplitude": 3.0},
             equilibrate=True,
@@ -90,6 +108,7 @@ class TestSweep:
 # --------------------------------------------------------------------------
 # io: save_checkpoint / load_checkpoint
 # --------------------------------------------------------------------------
+
 
 class TestIO:
     """Test checkpoint save/load via the io module."""
@@ -149,6 +168,7 @@ class TestIO:
 # run_driven (parametric resonance interface)
 # --------------------------------------------------------------------------
 
+
 class TestRunDriven:
     """Test driven evolution with external chi forcing."""
 
@@ -186,6 +206,7 @@ class TestRunDriven:
 # --------------------------------------------------------------------------
 # GPU COLOR (v14 kappa_c) regression
 # --------------------------------------------------------------------------
+
 
 class TestGPUColor:
     """Regression test for GPU COLOR with kappa_c > 0."""

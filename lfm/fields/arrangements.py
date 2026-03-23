@@ -147,6 +147,7 @@ def grid_positions(
 # Galactic disk initializers (P011)
 # ---------------------------------------------------------------------------
 
+
 def disk_positions(
     N: int,
     n_solitons: int,
@@ -260,7 +261,7 @@ def disk_velocities(
             continue
         # Tangential direction: (-dy, dx) / r  (counter-clockwise)
         velocities[i, a0] = -v_flat * dy / r
-        velocities[i, a1] =  v_flat * dx / r
+        velocities[i, a1] = v_flat * dx / r
     return velocities
 
 

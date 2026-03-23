@@ -218,9 +218,8 @@ class Simulation:
             X, Y, Z = np.meshgrid(x, x, x, indexing="ij")
             px, py, pz = position
             r2 = (X - px) ** 2 + (Y - py) ** 2 + (Z - pz) ** 2
-            envelope = (amp * np.exp(-r2 / (2.0 * sig ** 2))).astype(np.float32)
-            phase_grid = (phase + kx * (X - px) + ky * (Y - py) + kz * (Z - pz))\
-                .astype(np.float32)
+            envelope = (amp * np.exp(-r2 / (2.0 * sig**2))).astype(np.float32)
+            phase_grid = (phase + kx * (X - px) + ky * (Y - py) + kz * (Z - pz)).astype(np.float32)
             pr = (envelope * np.cos(phase_grid)).astype(np.float32)
             pi = (envelope * np.sin(phase_grid)).astype(np.float32)
         else:
@@ -264,8 +263,12 @@ class Simulation:
 
         if self.config.field_level == FieldLevel.COLOR:
             pr, pi = place_solitons(
-                N, positions, amp, sig,
-                phases=phases, colors=colors,
+                N,
+                positions,
+                amp,
+                sig,
+                phases=phases,
+                colors=colors,
                 n_colors=self.config.n_colors,
             )
         else:
@@ -299,12 +302,11 @@ class Simulation:
         # Build boundary mask if frozen
         bmask = None
         if self.config.boundary_type == BoundaryType.FROZEN:
-            bmask = ~make_interior_mask(
-                self.config.grid_size, self.config.boundary_fraction
-            )
+            bmask = ~make_interior_mask(self.config.grid_size, self.config.boundary_fraction)
 
         chi = equilibrate_from_fields(
-            pr, pi,
+            pr,
+            pi,
             chi0=self.config.chi0,
             kappa=self.config.kappa,
             e0_sq=self.config.e0_sq,
@@ -404,9 +406,7 @@ class Simulation:
             self._psi_r_prev = evolver.get_psi_real().copy()
             pi = evolver.get_psi_imag()
             self._psi_i_prev = pi.copy() if pi is not None else None
-            if record_metrics and (
-                (base_step + s + 1) % self.config.report_interval == 0
-            ):
+            if record_metrics and ((base_step + s + 1) % self.config.report_interval == 0):
                 m = self.metrics()
                 m["step"] = float(base_step + s + 1)
                 self._history.append(m)
@@ -457,10 +457,13 @@ class Simulation:
         pi_prev = self._psi_i_prev if self._psi_i_prev is not None else pi
 
         return total_energy(
-            pr, pr_prev,
+            pr,
+            pr_prev,
             self._evolver.get_chi(),
-            self.config.dt, self.config.c,
-            pi, pi_prev,
+            self.config.dt,
+            self.config.c,
+            pi,
+            pi_prev,
         )
 
     # ── Checkpoint / Resume ───────────────────────────────
@@ -497,10 +500,7 @@ class Simulation:
             data["sa_fields"] = sa
 
         # Serialize config + history as JSON strings
-        cfg_dict = {
-            k: v for k, v in vars(self.config).items()
-            if not k.startswith("_")
-        }
+        cfg_dict = {k: v for k, v in vars(self.config).items() if not k.startswith("_")}
         # Convert enums to their values
         for k, v in cfg_dict.items():
             if hasattr(v, "value"):

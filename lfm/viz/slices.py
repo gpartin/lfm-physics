@@ -111,8 +111,7 @@ def plot_three_slices(
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 4.5))
     for axis, ax in enumerate(axes):
-        plot_slice(field, axis=axis, cmap=cmap, vmin=vmin, vmax=vmax,
-                   colorbar=True, ax=ax)
+        plot_slice(field, axis=axis, cmap=cmap, vmin=vmin, vmax=vmax, colorbar=True, ax=ax)
     if title:
         fig.suptitle(title, fontsize=14, y=1.02)
     fig.tight_layout()

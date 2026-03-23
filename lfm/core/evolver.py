@@ -173,37 +173,75 @@ class Evolver:
 
         if cfg.field_level == FieldLevel.REAL:
             self.backend.step_real(
-                r_in, rp_in, c_in, cp_in, self.boundary_mask,
-                r_out, rp_out, c_out, cp_out,
-                self._N, self._dt2, cfg.kappa,
-                cfg.lambda_self, cfg.chi0, cfg.e0_sq,
+                r_in,
+                rp_in,
+                c_in,
+                cp_in,
+                self.boundary_mask,
+                r_out,
+                rp_out,
+                c_out,
+                cp_out,
+                self._N,
+                self._dt2,
+                cfg.kappa,
+                cfg.lambda_self,
+                cfg.chi0,
+                cfg.e0_sq,
             )
         elif cfg.field_level == FieldLevel.COMPLEX:
             self.backend.step_complex(
-                r_in, rp_in, i_in, ip_in, c_in, cp_in,
+                r_in,
+                rp_in,
+                i_in,
+                ip_in,
+                c_in,
+                cp_in,
                 self.boundary_mask,
-                r_out, rp_out, i_out, ip_out, c_out, cp_out,
-                self._N, self._dt2, cfg.kappa,
-                cfg.lambda_self, cfg.chi0, cfg.e0_sq, cfg.epsilon_w,
+                r_out,
+                rp_out,
+                i_out,
+                ip_out,
+                c_out,
+                cp_out,
+                self._N,
+                self._dt2,
+                cfg.kappa,
+                cfg.lambda_self,
+                cfg.chi0,
+                cfg.e0_sq,
+                cfg.epsilon_w,
             )
         else:  # COLOR
             sa_in = (
-                (self.sa_A if self._use_buffer_A else self.sa_B)
-                if self.sa_A is not None
-                else None
+                (self.sa_A if self._use_buffer_A else self.sa_B) if self.sa_A is not None else None
             )
             sa_out = (
-                (self.sa_B if self._use_buffer_A else self.sa_A)
-                if self.sa_A is not None
-                else None
+                (self.sa_B if self._use_buffer_A else self.sa_A) if self.sa_A is not None else None
             )
             self.backend.step_color(
-                r_in, rp_in, i_in, ip_in, c_in, cp_in,
+                r_in,
+                rp_in,
+                i_in,
+                ip_in,
+                c_in,
+                cp_in,
                 self.boundary_mask,
-                r_out, rp_out, i_out, ip_out, c_out, cp_out,
-                self._N, self._dt2, cfg.kappa,
-                cfg.lambda_self, cfg.chi0, cfg.e0_sq, cfg.epsilon_w,
-                cfg.kappa_c, cfg.epsilon_cc,
+                r_out,
+                rp_out,
+                i_out,
+                ip_out,
+                c_out,
+                cp_out,
+                self._N,
+                self._dt2,
+                cfg.kappa,
+                cfg.lambda_self,
+                cfg.chi0,
+                cfg.e0_sq,
+                cfg.epsilon_w,
+                cfg.kappa_c,
+                cfg.epsilon_cc,
                 kappa_string=cfg.kappa_string,
                 kappa_tube=cfg.kappa_tube,
                 sa_fields_in=sa_in,
@@ -277,12 +315,12 @@ class Evolver:
         data = self.backend.from_numpy(flat)
         # Set on current buffer (both current and prev for clean start)
         for buf in [self.psi_r_A, self.psi_r_B]:
-            if hasattr(buf, 'copy_'):
+            if hasattr(buf, "copy_"):
                 buf[:] = data  # CuPy
             else:
                 np.copyto(buf, data)  # NumPy
         for buf in [self.psi_r_prev_A, self.psi_r_prev_B]:
-            if hasattr(buf, 'copy_'):
+            if hasattr(buf, "copy_"):
                 buf[:] = data
             else:
                 np.copyto(buf, data)
@@ -294,12 +332,12 @@ class Evolver:
         flat = arr.astype(np.float32).ravel()
         data = self.backend.from_numpy(flat)
         for buf in [self.psi_i_A, self.psi_i_B]:
-            if hasattr(buf, 'copy_'):
+            if hasattr(buf, "copy_"):
                 buf[:] = data
             else:
                 np.copyto(buf, data)
         for buf in [self.psi_i_prev_A, self.psi_i_prev_B]:
-            if hasattr(buf, 'copy_'):
+            if hasattr(buf, "copy_"):
                 buf[:] = data
             else:
                 np.copyto(buf, data)
@@ -309,12 +347,12 @@ class Evolver:
         flat = arr.astype(np.float32).ravel()
         data = self.backend.from_numpy(flat)
         for buf in [self.chi_A, self.chi_B]:
-            if hasattr(buf, 'copy_'):
+            if hasattr(buf, "copy_"):
                 buf[:] = data
             else:
                 np.copyto(buf, data)
         for buf in [self.chi_prev_A, self.chi_prev_B]:
-            if hasattr(buf, 'copy_'):
+            if hasattr(buf, "copy_"):
                 buf[:] = data
             else:
                 np.copyto(buf, data)
@@ -345,7 +383,7 @@ class Evolver:
         flat = arr.astype(np.float32).ravel()
         data = self.backend.from_numpy(flat)
         for buf in [self.sa_A, self.sa_B]:
-            if hasattr(buf, 'copy_'):
+            if hasattr(buf, "copy_"):
                 buf[:] = data
             else:
                 np.copyto(buf, data)

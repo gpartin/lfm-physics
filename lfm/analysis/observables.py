@@ -335,11 +335,16 @@ def measure_force(
     cx, cy, cz = center
 
     # Central difference gradient at the center
-    grad = np.array([
-        chi_mid[cx + 1, cy, cz] - chi_mid[cx - 1, cy, cz],
-        chi_mid[cx, cy + 1, cz] - chi_mid[cx, cy - 1, cz],
-        chi_mid[cx, cy, cz + 1] - chi_mid[cx, cy, cz - 1],
-    ]) / 2.0
+    grad = (
+        np.array(
+            [
+                chi_mid[cx + 1, cy, cz] - chi_mid[cx - 1, cy, cz],
+                chi_mid[cx, cy + 1, cz] - chi_mid[cx, cy - 1, cz],
+                chi_mid[cx, cy, cz + 1] - chi_mid[cx, cy, cz - 1],
+            ]
+        )
+        / 2.0
+    )
 
     # Force = -∇χ (particles move toward lower χ)
     return -grad
@@ -404,7 +409,7 @@ def rotation_curve(
         ``chi_profile``  — mean χ vs r (for plotting)
     """
     chi_arr = np.asarray(chi, dtype=np.float64)
-    e_arr   = np.asarray(energy_density, dtype=np.float64)
+    e_arr = np.asarray(energy_density, dtype=np.float64)
     N = chi_arr.shape[0]
     if center is None:
         center = (N // 2, N // 2, N // 2)
@@ -425,17 +430,17 @@ def rotation_curve(
     r_edges = np.linspace(0.0, max_radius, n_bins + 1)
     r_centres = 0.5 * (r_edges[:-1] + r_edges[1:])
 
-    chi_profile   = np.zeros(n_bins)
+    chi_profile = np.zeros(n_bins)
     m_enclosed_all = np.zeros(n_bins)  # cumulative mass up to bin i
 
     # chi radial derivative via finite diff on binned profile
-    chi_r_mean   = np.full(n_bins, chi0)  # fallback: vacuum
-    r_int        = (R / (max_radius / n_bins)).astype(int)
-    r_int        = np.clip(r_int, 0, n_bins - 1)
+    chi_r_mean = np.full(n_bins, chi0)  # fallback: vacuum
+    r_int = (R / (max_radius / n_bins)).astype(int)
+    r_int = np.clip(r_int, 0, n_bins - 1)
 
     counts = np.bincount(r_int.ravel(), minlength=n_bins)
     chi_sum = np.bincount(r_int.ravel(), weights=chi_arr.ravel(), minlength=n_bins)
-    e_sum   = np.bincount(r_int.ravel(), weights=e_arr.ravel(), minlength=n_bins)
+    e_sum = np.bincount(r_int.ravel(), weights=e_arr.ravel(), minlength=n_bins)
 
     for b in range(n_bins):
         if counts[b] > 0:
@@ -467,11 +472,11 @@ def rotation_curve(
     v_keplerian = np.sqrt(v_kep_sq)
 
     return {
-        "r":           r_centres.astype(np.float32),
-        "v_chi":       v_chi.astype(np.float32),
-        "v_enc":       v_enc.astype(np.float32),
+        "r": r_centres.astype(np.float32),
+        "v_chi": v_chi.astype(np.float32),
+        "v_enc": v_enc.astype(np.float32),
         "v_keplerian": v_keplerian.astype(np.float32),
-        "m_enclosed":  m_enclosed_all.astype(np.float32),
+        "m_enclosed": m_enclosed_all.astype(np.float32),
         "chi_profile": chi_profile.astype(np.float32),
     }
 

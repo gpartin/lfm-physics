@@ -54,35 +54,55 @@ class Backend(Protocol):
         ...
 
     def create_boundary_mask(
-        self, N: int, boundary_fraction: float,
+        self,
+        N: int,
+        boundary_fraction: float,
     ) -> object:
         """Create spherical frozen boundary mask (flattened N³ float32)."""
         ...
 
     def step_real(
         self,
-        psi_in: object, psi_prev_in: object,
-        chi_in: object, chi_prev_in: object,
+        psi_in: object,
+        psi_prev_in: object,
+        chi_in: object,
+        chi_prev_in: object,
         boundary_mask: object,
-        psi_out: object, psi_prev_out: object,
-        chi_out: object, chi_prev_out: object,
-        N: int, dt2: float, kappa: float,
-        lambda_self: float, chi0: float, e0_sq: float,
+        psi_out: object,
+        psi_prev_out: object,
+        chi_out: object,
+        chi_prev_out: object,
+        N: int,
+        dt2: float,
+        kappa: float,
+        lambda_self: float,
+        chi0: float,
+        e0_sq: float,
     ) -> None:
         """One leapfrog step for real E field (Level 0)."""
         ...
 
     def step_complex(
         self,
-        psi_r_in: object, psi_r_prev_in: object,
-        psi_i_in: object, psi_i_prev_in: object,
-        chi_in: object, chi_prev_in: object,
+        psi_r_in: object,
+        psi_r_prev_in: object,
+        psi_i_in: object,
+        psi_i_prev_in: object,
+        chi_in: object,
+        chi_prev_in: object,
         boundary_mask: object,
-        psi_r_out: object, psi_r_prev_out: object,
-        psi_i_out: object, psi_i_prev_out: object,
-        chi_out: object, chi_prev_out: object,
-        N: int, dt2: float, kappa: float,
-        lambda_self: float, chi0: float, e0_sq: float,
+        psi_r_out: object,
+        psi_r_prev_out: object,
+        psi_i_out: object,
+        psi_i_prev_out: object,
+        chi_out: object,
+        chi_prev_out: object,
+        N: int,
+        dt2: float,
+        kappa: float,
+        lambda_self: float,
+        chi0: float,
+        e0_sq: float,
         epsilon_w: float,
     ) -> None:
         """One leapfrog step for complex Ψ field (Level 1)."""
@@ -90,15 +110,25 @@ class Backend(Protocol):
 
     def step_color(
         self,
-        psi_r_in: object, psi_r_prev_in: object,
-        psi_i_in: object, psi_i_prev_in: object,
-        chi_in: object, chi_prev_in: object,
+        psi_r_in: object,
+        psi_r_prev_in: object,
+        psi_i_in: object,
+        psi_i_prev_in: object,
+        chi_in: object,
+        chi_prev_in: object,
         boundary_mask: object,
-        psi_r_out: object, psi_r_prev_out: object,
-        psi_i_out: object, psi_i_prev_out: object,
-        chi_out: object, chi_prev_out: object,
-        N: int, dt2: float, kappa: float,
-        lambda_self: float, chi0: float, e0_sq: float,
+        psi_r_out: object,
+        psi_r_prev_out: object,
+        psi_i_out: object,
+        psi_i_prev_out: object,
+        chi_out: object,
+        chi_prev_out: object,
+        N: int,
+        dt2: float,
+        kappa: float,
+        lambda_self: float,
+        chi0: float,
+        e0_sq: float,
         epsilon_w: float,
     ) -> None:
         """One leapfrog step for 3-color complex Ψₐ (Level 2)."""

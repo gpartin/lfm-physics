@@ -64,11 +64,7 @@ def laplacian_19pt(field: NDArray[np.floating]) -> NDArray[np.floating]:
         + np.roll(np.roll(field, -1, axis=1), -1, axis=2)
     )
 
-    return (
-        STENCIL_FACE_WEIGHT * faces
-        + STENCIL_EDGE_WEIGHT * edges
-        + STENCIL_CENTER_WEIGHT * field
-    )
+    return STENCIL_FACE_WEIGHT * faces + STENCIL_EDGE_WEIGHT * edges + STENCIL_CENTER_WEIGHT * field
 
 
 def laplacian_7pt(field: NDArray[np.floating]) -> NDArray[np.floating]:

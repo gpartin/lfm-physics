@@ -175,20 +175,23 @@ class TestChiDeepening:
         """With kappa_tube > 0, chi should deepen more than without."""
         from lfm.simulation import Simulation
 
-        common = dict(field_level=FieldLevel.COLOR, kappa_c=KAPPA_C,
-                      grid_size=N, boundary_type=BoundaryType.FROZEN,
-                      dt=0.02, report_interval=9999)
+        common = dict(
+            field_level=FieldLevel.COLOR,
+            kappa_c=KAPPA_C,
+            grid_size=N,
+            boundary_type=BoundaryType.FROZEN,
+            dt=0.02,
+            report_interval=9999,
+        )
 
         amp = 10.0
         pos = (N // 2, N // 2, N // 2)
 
-        sim_on = Simulation(SimulationConfig(kappa_tube=10.0 * KAPPA, **common),
-                             backend="cpu")
+        sim_on = Simulation(SimulationConfig(kappa_tube=10.0 * KAPPA, **common), backend="cpu")
         sim_on.place_soliton(pos, amplitude=amp)
         sim_on.run(steps=100, record_metrics=False)
 
-        sim_off = Simulation(SimulationConfig(kappa_tube=0.0, **common),
-                              backend="cpu")
+        sim_off = Simulation(SimulationConfig(kappa_tube=0.0, **common), backend="cpu")
         sim_off.place_soliton(pos, amplitude=amp)
         sim_off.run(steps=100, record_metrics=False)
 
@@ -304,8 +307,7 @@ class TestFindApparentHorizon:
         """find_apparent_horizon should detect a deep-chi region."""
         from lfm.analysis.metric import find_apparent_horizon, schwarzschild_chi
 
-        chi = schwarzschild_chi(N, center=(N // 2, N // 2, N // 2),
-                                r_s=4.0, chi0=CHI0)
+        chi = schwarzschild_chi(N, center=(N // 2, N // 2, N // 2), r_s=4.0, chi0=CHI0)
         result = find_apparent_horizon(chi, center=(N // 2, N // 2, N // 2))
         assert result["found"] is True
         assert result["r_horizon"] > 0
@@ -329,8 +331,7 @@ class TestDiskPositions:
         from lfm.fields.arrangements import disk_positions
 
         r_inner, r_outer = 3.0, 6.0
-        positions = disk_positions(N, n_solitons=20, r_inner=r_inner,
-                                   r_outer=r_outer, seed=42)
+        positions = disk_positions(N, n_solitons=20, r_inner=r_inner, r_outer=r_outer, seed=42)
         center = N / 2.0
         r = np.linalg.norm(positions[:, :2] - center, axis=1)
         assert np.all(r >= r_inner - 0.1)
@@ -363,8 +364,8 @@ class TestDetectCollisionEvents:
         for step in range(0, 200, 20):
             sep = 10.0 - step * 0.05 if approaching else 10.0
             snap = [
-                {"step": float(step), "x": 0.0, "y": 0.0, "z": 0.0,  "amplitude": 1.0},
-                {"step": float(step), "x": sep, "y": 0.0, "z": 0.0,  "amplitude": 1.0},
+                {"step": float(step), "x": 0.0, "y": 0.0, "z": 0.0, "amplitude": 1.0},
+                {"step": float(step), "x": sep, "y": 0.0, "z": 0.0, "amplitude": 1.0},
             ]
             snaps.append(snap)
         return snaps

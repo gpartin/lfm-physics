@@ -53,13 +53,15 @@ def track_peaks(
         peaks = find_peaks(ed, n=n_peaks, min_separation=min_separation)
         snap: list[dict[str, float]] = []
         for pk in peaks:
-            snap.append({
-                "step": float(sim.step),
-                "x": float(pk[0]),
-                "y": float(pk[1]),
-                "z": float(pk[2]),
-                "amplitude": float(ed[pk[0], pk[1], pk[2]]),
-            })
+            snap.append(
+                {
+                    "step": float(sim.step),
+                    "x": float(pk[0]),
+                    "y": float(pk[1]),
+                    "z": float(pk[2]),
+                    "amplitude": float(ed[pk[0], pk[1], pk[2]]),
+                }
+            )
         trajectories.append(snap)
 
     return trajectories
@@ -72,17 +74,14 @@ def flatten_trajectories(
     all_entries = [e for snap in trajectories for e in snap]
     if not all_entries:
         empty = np.empty(0)
-        return {"step": empty, "x": empty, "y": empty, "z": empty,
-                "amplitude": empty}
-    return {
-        k: np.array([e[k] for e in all_entries])
-        for k in ("step", "x", "y", "z", "amplitude")
-    }
+        return {"step": empty, "x": empty, "y": empty, "z": empty, "amplitude": empty}
+    return {k: np.array([e[k] for e in all_entries]) for k in ("step", "x", "y", "z", "amplitude")}
 
 
 # ---------------------------------------------------------------------------
 # Collision event detection (P012)
 # ---------------------------------------------------------------------------
+
 
 def detect_collision_events(
     trajectories: list[list[dict[str, float]]],
@@ -137,13 +136,15 @@ def detect_collision_events(
                     key = (i, j)
                     if key not in approached:
                         approached.add(key)
-                        events.append({
-                            "type": "approach",
-                            "step": snap[i]["step"],
-                            "i": i,
-                            "j": j,
-                            "sep": sep,
-                        })
+                        events.append(
+                            {
+                                "type": "approach",
+                                "step": snap[i]["step"],
+                                "i": i,
+                                "j": j,
+                                "sep": sep,
+                            }
+                        )
 
     # Merge detection: peak in snap k has no match in snap k+1
     for snap_idx in range(n_snaps - 1):
@@ -153,25 +154,27 @@ def detect_collision_events(
             pos = _pos(pk)
             if not snap_next:
                 # All peaks vanished
-                events.append({
-                    "type": "merge",
-                    "step": pk["step"],
-                    "i": i,
-                    "j": -1,
-                    "sep": float("nan"),
-                })
+                events.append(
+                    {
+                        "type": "merge",
+                        "step": pk["step"],
+                        "i": i,
+                        "j": -1,
+                        "sep": float("nan"),
+                    }
+                )
                 continue
-            min_dist = min(
-                float(np.linalg.norm(pos - _pos(q))) for q in snap_next
-            )
+            min_dist = min(float(np.linalg.norm(pos - _pos(q))) for q in snap_next)
             if min_dist > min_sep:
-                events.append({
-                    "type": "merge",
-                    "step": pk["step"],
-                    "i": i,
-                    "j": -1,
-                    "sep": min_dist,
-                })
+                events.append(
+                    {
+                        "type": "merge",
+                        "step": pk["step"],
+                        "i": i,
+                        "j": -1,
+                        "sep": min_dist,
+                    }
+                )
 
     return events
 
@@ -201,6 +204,7 @@ def compute_impact_parameter(
         Impact parameter (grid cells).  Returns ``nan`` if either trajectory
         has fewer than 2 points.
     """
+
     def _fit_line(traj: dict[str, NDArray]):
         pts = np.column_stack([traj["x"], traj["y"], traj["z"]])
         if len(pts) < 2:

@@ -103,12 +103,12 @@ def phase_coherence(
         pr = psi_r.ravel()
         pi = psi_i.ravel()
 
-    modulus_mean = np.mean(np.sqrt(pr ** 2 + pi ** 2))
+    modulus_mean = np.mean(np.sqrt(pr**2 + pi**2))
     if modulus_mean < 1e-30:
         return 0.0
     avg_r = np.mean(pr)
     avg_i = np.mean(pi)
-    return float(np.sqrt(avg_r ** 2 + avg_i ** 2) / modulus_mean)
+    return float(np.sqrt(avg_r**2 + avg_i**2) / modulus_mean)
 
 
 def coulomb_interaction_energy(

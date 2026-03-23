@@ -23,6 +23,7 @@ import lfm
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_sim(n: int, backend: str = "cpu") -> lfm.Simulation:
     config = lfm.SimulationConfig(grid_size=n)
     sim = lfm.Simulation(config, backend=backend)
@@ -41,6 +42,7 @@ def _steps_per_second(sim: lfm.Simulation, steps: int = 200) -> float:
 # ---------------------------------------------------------------------------
 # pytest-benchmark fixtures (used when running under pytest)
 # ---------------------------------------------------------------------------
+
 
 def test_evolver_n32_cpu(benchmark: object) -> None:  # type: ignore[type-arg]
     sim = _make_sim(32, "cpu")
@@ -67,7 +69,7 @@ if __name__ == "__main__":
     for n in (32, 48, 64, 96, 128):
         sim = _make_sim(n, "cpu")
         sps = _steps_per_second(sim)
-        cells = n ** 3
+        cells = n**3
         print(f"  N={n:3d}  ({cells:>10,} cells)  {sps:>10,.0f} steps/sec")
 
     if lfm.gpu_available():
@@ -77,7 +79,7 @@ if __name__ == "__main__":
         for n in (64, 128, 256):
             sim = _make_sim(n, "gpu")
             sps = _steps_per_second(sim)
-            cells = n ** 3
+            cells = n**3
             print(f"  N={n:3d}  ({cells:>10,} cells)  {sps:>10,.0f} steps/sec")
     else:
         print("\n(No GPU detected — skipping GPU benchmarks)")

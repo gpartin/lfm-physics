@@ -107,10 +107,9 @@ class TestPhase:
         psi_r = np.ones((8, 8, 8))
         psi_i = np.zeros((8, 8, 8))
         # Imaginary part was zero, now 0.1 → dpsi_i/dt = 0.1/0.02 = 5
-        rho = charge_density(psi_r, 0.1 * np.ones((8, 8, 8)),
-                             dt=0.02,
-                             psi_r_prev=psi_r,
-                             psi_i_prev=psi_i)
+        rho = charge_density(
+            psi_r, 0.1 * np.ones((8, 8, 8)), dt=0.02, psi_r_prev=psi_r, psi_i_prev=psi_i
+        )
         # ρ = psi_r * dpsi_i_dt = 1 * 5 = 5
         np.testing.assert_allclose(rho, 5.0)
 
@@ -156,9 +155,7 @@ class TestAngularMomentum:
         """No time variation → zero angular momentum."""
         psi_r = np.ones((8, 8, 8), dtype=np.float64) * 0.5
         psi_i = np.zeros((8, 8, 8), dtype=np.float64)
-        Lx, Ly, Lz = total_angular_momentum(
-            psi_r, psi_i, psi_r, psi_i, dt=0.02
-        )
+        Lx, Ly, Lz = total_angular_momentum(psi_r, psi_i, psi_r, psi_i, dt=0.02)
         assert abs(Lx) < 1e-10
         assert abs(Ly) < 1e-10
         assert abs(Lz) < 1e-10
@@ -182,8 +179,7 @@ class TestAngularMomentum:
     def test_precession_rate_rotating(self):
         """L rotating at known rate."""
         omega0 = 0.1  # rad per unit time
-        L_history = [(np.cos(omega0 * t), np.sin(omega0 * t), 0.0)
-                     for t in range(20)]
+        L_history = [(np.cos(omega0 * t), np.sin(omega0 * t), 0.0) for t in range(20)]
         omega = precession_rate(L_history, 1.0)
         assert omega == pytest.approx(omega0, rel=0.01)
 
@@ -194,9 +190,7 @@ class TestAngularMomentum:
 class TestBoostedSoliton:
     def test_static_soliton(self):
         """Zero velocity → e_dot = 0, same as gaussian_soliton."""
-        psi_r, psi_i, e_dot = boosted_soliton(
-            16, (8, 8, 8), amplitude=3.0, sigma=2.5
-        )
+        psi_r, psi_i, e_dot = boosted_soliton(16, (8, 8, 8), amplitude=3.0, sigma=2.5)
         assert psi_r.shape == (16, 16, 16)
         np.testing.assert_allclose(e_dot, 0.0)
         assert psi_r.max() == pytest.approx(3.0, rel=0.01)
@@ -204,7 +198,10 @@ class TestBoostedSoliton:
     def test_boosted_real_has_edot(self):
         """Real soliton with velocity → non-zero e_dot."""
         psi_r, psi_i, e_dot = boosted_soliton(
-            16, (8, 8, 8), amplitude=3.0, sigma=2.5,
+            16,
+            (8, 8, 8),
+            amplitude=3.0,
+            sigma=2.5,
             velocity=(0.1, 0.0, 0.0),
         )
         assert np.max(np.abs(e_dot)) > 0
@@ -212,7 +209,10 @@ class TestBoostedSoliton:
     def test_boosted_complex_phase_gradient(self):
         """Complex soliton with velocity → phase varies along boost axis."""
         psi_r, psi_i, e_dot = boosted_soliton(
-            16, (8, 8, 8), amplitude=3.0, sigma=2.5,
+            16,
+            (8, 8, 8),
+            amplitude=3.0,
+            sigma=2.5,
             phase=0.5,
             velocity=(0.05, 0.0, 0.0),
         )
@@ -227,12 +227,11 @@ class TestBoostedSoliton:
         """Boost should preserve peak amplitude."""
         pr_s, _, _ = boosted_soliton(16, (8, 8, 8), 3.0, 2.5)
         pr_b, pi_b, _ = boosted_soliton(
-            16, (8, 8, 8), 3.0, 2.5,
-            phase=0.5, velocity=(0.02, 0.0, 0.0)
+            16, (8, 8, 8), 3.0, 2.5, phase=0.5, velocity=(0.02, 0.0, 0.0)
         )
         # |Ψ| should have same peak
         mod_static = pr_s.max()
-        mod_boosted = np.sqrt(pr_b ** 2 + pi_b ** 2).max()
+        mod_boosted = np.sqrt(pr_b**2 + pi_b**2).max()
         assert mod_boosted == pytest.approx(mod_static, rel=0.01)
 
 
