@@ -319,6 +319,42 @@ Script structure:
 | P016 | `examples/17_confinement_v16.py` | Flux tube demo | DONE | HIGH |
 | P017 | `examples/18_particle_collision.py` | Collision demo | DONE | MEDIUM |
 | P018 | `examples/19_rotating_galaxy.py` | Galaxy rotation curve | DONE | MEDIUM |
+| P019 | `paper_experiments/collider_lhc_style.py` | LHC-style 3×3 collision event sweep | DONE | LOW |
+| P020 | `paper_experiments/sparc_rotation_curve_comparison.py` | SPARC 175-galaxy chi-memory analysis | DONE | LOW |
+| P021 | Website tutorial 17 | `17-string-tension-confinement/page.tsx` | DONE | LOW |
+| P022 | Website tutorial 18 | `18-particle-collision/page.tsx` | DONE | LOW |
+| P023 | Website tutorial 19 | `19-rotating-galaxy/page.tsx` | DONE | LOW |
+| P024 | Website tutorials index | Add entries 17/18/19, "Nineteen scripts", badge update | DONE | LOW |
+| P025 | Website tutorial 16 nav | Update right-nav link to → tutorial 17 | DONE | LOW |
+
+---
+
+## Website Tutorial Status (as of P021–P025)
+
+All 19 tutorials exist at `src/app/tutorials/NN-slug/page.tsx` in the LFM website repo.
+
+| # | Slug | Level | Status |
+|---|------|-------|--------|
+| 01–16 | various | Beginner/Intermediate/Advanced | pre-existing |
+| 17 | `17-string-tension-confinement` | Advanced | ADDED P021 |
+| 18 | `18-particle-collision` | Advanced | ADDED P022 |
+| 19 | `19-rotating-galaxy` | Advanced | ADDED P023 |
+
+Navigation chain: 01 ↔ 02 ↔ … ↔ 16 ↔ 17 ↔ 18 ↔ 19 → All tutorials
+
+---
+
+## Potential Future Features (P026+)
+
+Identified during P019–P025 implementation:
+
+| ID | Feature | Notes |
+|----|---------|-------|
+| P026 | `lfm.rotation_curve_fit(sparc_row)` | Auto-fit tau to match one SPARC galaxy |
+| P027 | `lfm.collider_event_display(result)` | Rich ASCII event display with peak trajectory art |
+| P028 | `lfm.galaxy_summary_plot(sim, sparc_gid)` | Side-by-side LFM vs SPARC v(r) figure |
+| P029 | `lfm.sparc_load(path)` | Official SPARC loader in lfm.analysis |
+| P030 | `initialize_disk` polar offset parameter | Add `b_cells` to place solitons with non-zero ecliptic inclination |
 
 ---
 
