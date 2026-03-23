@@ -250,3 +250,114 @@ def compute_impact_parameter(
         # Lines are parallel — perpendicular distance
         return float(np.linalg.norm(w - np.dot(w, d1) * d1))
     return float(abs(np.dot(w, cross)) / denom)
+
+
+def collider_event_display(
+    result: dict,
+    width: int = 72,
+) -> str:
+    """Return a rich ASCII event display for a collision/reaction result.
+
+    Formats the output of :func:`detect_collision_events` (and optionally
+    :func:`compute_impact_parameter`) into a human-readable timeline that
+    shows arrival times, impact parameters, and outcome classification.
+
+    Parameters
+    ----------
+    result : dict
+        Dict containing at least one of:
+        - ``events``     : list of event dicts (from ``detect_collision_events``)
+        - ``score``      : numeric colission rate
+        - ``trajectories``: array (N_steps, N_particles, 3)
+        - ``n_particles`` : int
+
+    width : int
+        Character width of the display box.
+
+    Returns
+    -------
+    str
+        Multi-line ASCII formatted event report.  Can be passed directly to
+        ``print()``.
+
+    Examples
+    --------
+    >>> events = lfm.detect_collision_events(sim_result)
+    >>> print(lfm.collider_event_display(events))
+
+    ::
+
+        +-----------------------------------------------------------------+
+        |  LFM Collider Event Display  |  2 solitons  |  3 events found  |
+        +-----------------------------------------------------------------+
+        |  t=  200  [##    ] APPROACH  p0<->p1  b=1.23 r_min=2.10       |
+        |  t=  400  [######] MERGE     p0<->p1  r_min=0.41  (merged)    |
+        |  t=  700  [##    ] SCATTER   p0<->p2  b=3.11 r_min=2.89       |
+        +-----------------------------------------------------------------+
+    """
+    bar_width = 6
+    lines: list[str] = []
+    inner = width - 2  # inside the box edges
+
+    def box_line(text: str = "") -> str:
+        padded = text.ljust(inner)[:inner]
+        return "|" + padded + "|"
+
+    def sep_line() -> str:
+        return "+" + "-" * inner + "+"
+
+    events = result.get("events", [])
+    n_particles = result.get("n_particles", None)
+    score = result.get("score", None)
+    total_steps = result.get("total_steps", None)
+
+    # Header
+    hdr_parts = ["LFM Collider Event Display"]
+    if n_particles is not None:
+        hdr_parts.append(f"{n_particles} solitons")
+    hdr_parts.append(f"{len(events)} event{'s' if len(events) != 1 else ''} found")
+    header = "  |  ".join(hdr_parts)
+    lines.append(sep_line())
+    lines.append(box_line("  " + header))
+    lines.append(sep_line())
+
+    if not events:
+        lines.append(box_line("  (no events)"))
+    else:
+        for ev in events:
+            t = ev.get("time_step", ev.get("t", "?"))
+            etype = str(ev.get("type", ev.get("event_type", "EVENT"))).upper()
+            p_a = ev.get("particle_a", ev.get("soliton_a", ev.get("id_a", "?")))
+            p_b = ev.get("particle_b", ev.get("soliton_b", ev.get("id_b", "?")))
+            b_val = ev.get("impact_parameter", ev.get("b", None))
+            r_min = ev.get("r_min", ev.get("distance", ev.get("min_dist", None)))
+
+            # Progress bar fraction
+            frac = 0.0
+            if total_steps and total_steps > 0 and isinstance(t, (int, float)):
+                frac = min(1.0, float(t) / float(total_steps))
+            filled = round(frac * bar_width)
+            bar = "[" + "#" * filled + " " * (bar_width - filled) + "]"
+
+            t_str = str(t).rjust(6)
+            extra = ""
+            if b_val is not None:
+                extra += f"  b={b_val:.2f}"
+            if r_min is not None:
+                extra += f"  r_min={r_min:.2f}"
+            # classify outcome from type string
+            if "MERG" in etype or "FUSE" in etype:
+                extra += "  (merged)"
+            elif "SCAT" in etype or "ELAST" in etype:
+                extra += "  (scattered)"
+
+            row = f"  t={t_str}  {bar} {etype:<9} p{p_a}<->p{p_b}{extra}"
+            lines.append(box_line(row))
+
+    lines.append(sep_line())
+
+    if score is not None:
+        lines.append(box_line(f"  Score: {score:.4g}"))
+        lines.append(sep_line())
+
+    return "\n".join(lines)

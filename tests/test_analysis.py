@@ -1,6 +1,7 @@
 """Tests for lfm.analysis subpackage."""
 
 import numpy as np
+import pytest
 
 from lfm.analysis import (
     chi_statistics,
@@ -320,3 +321,179 @@ class TestWeakStrongHelpers:
         short = confinement_proxy(chi, (6, 10, 10), (10, 10, 10), samples=32)
         long = confinement_proxy(chi, (6, 10, 10), (16, 10, 10), samples=64)
         assert long["line_integral"] > short["line_integral"]
+
+
+# ---------------------------------------------------------------------------
+# P026: rotation_curve_fit
+# ---------------------------------------------------------------------------
+
+
+class TestRotationCurveFit:
+    def test_returns_required_keys(self):
+        import numpy as np
+
+        from lfm.analysis.observables import rotation_curve_fit
+
+        row = {"r_kpc": np.linspace(1, 10, 8), "v_obs_kms": np.full(8, 100.0)}
+        r = np.linspace(1, 20, 15)
+        v = np.ones(15) * 50.0
+        result = rotation_curve_fit(row, r, v)
+        for k in ("tau_best", "chi2", "tau_grid", "chi2_grid", "r_kpc", "v_obs", "v_sim_best"):
+            assert k in result, f"missing key {k!r}"
+
+    def test_best_chi2_is_minimum(self):
+        import numpy as np
+
+        from lfm.analysis.observables import rotation_curve_fit
+
+        row = {"r_kpc": np.linspace(1, 10, 8), "v_obs_kms": np.ones(8) * 80.0}
+        r = np.linspace(1, 20, 15)
+        v = np.ones(15)
+        result = rotation_curve_fit(row, r, v, n_tau=10)
+        assert result["chi2"] == pytest.approx(float(result["chi2_grid"].min()), rel=1e-4)
+
+    def test_raises_on_zero_radii(self):
+        import numpy as np
+
+        from lfm.analysis.observables import rotation_curve_fit
+
+        row = {"r_kpc": np.zeros(5), "v_obs_kms": np.ones(5)}
+        with pytest.raises(ValueError):
+            rotation_curve_fit(row, np.ones(5), np.ones(5))
+
+
+# ---------------------------------------------------------------------------
+# P027: collider_event_display
+# ---------------------------------------------------------------------------
+
+
+class TestColliderEventDisplay:
+    def test_returns_string(self):
+        from lfm.analysis.tracker import collider_event_display
+
+        result = collider_event_display({"events": []})
+        assert isinstance(result, str)
+
+    def test_empty_events(self):
+        from lfm.analysis.tracker import collider_event_display
+
+        result = collider_event_display({"events": []})
+        assert "no events" in result
+
+    def test_event_in_output(self):
+        from lfm.analysis.tracker import collider_event_display
+
+        events = [
+            {"time_step": 100, "type": "MERGE", "particle_a": 0, "particle_b": 1, "r_min": 0.5}
+        ]
+        result = collider_event_display({"events": events, "n_particles": 2, "total_steps": 500})
+        assert "MERGE" in result
+        assert "p0<->p1" in result
+
+    def test_score_shown(self):
+        from lfm.analysis.tracker import collider_event_display
+
+        result = collider_event_display({"events": [], "score": 3.14})
+        assert "3.14" in result
+
+    def test_width_respected(self):
+        from lfm.analysis.tracker import collider_event_display
+
+        result = collider_event_display({"events": []}, width=50)
+        for line in result.splitlines():
+            assert len(line) <= 52  # allow slight overflow for box chars
+
+
+# ---------------------------------------------------------------------------
+# P029: sparc_load + list_sparc_galaxies
+# ---------------------------------------------------------------------------
+
+
+class TestSparcLoad:
+    def test_no_arg_returns_five_galaxies(self):
+        from lfm.analysis.sparc import sparc_load
+
+        data = sparc_load()
+        assert len(data) == 5
+
+    def test_known_names(self):
+        from lfm.analysis.sparc import list_sparc_galaxies
+
+        names = list_sparc_galaxies()
+        assert set(names) == {"NGC6503", "NGC3198", "DDO154", "IC2574", "UGC2885"}
+
+    def test_single_name_lookup(self):
+        from lfm.analysis.sparc import sparc_load
+
+        data = sparc_load("NGC6503")
+        assert "NGC6503" in data
+        row = data["NGC6503"]
+        assert "r_kpc" in row and "v_obs_kms" in row and "v_err_kms" in row
+
+    def test_data_shapes_consistent(self):
+        from lfm.analysis.sparc import sparc_load
+
+        for name, row in sparc_load().items():
+            assert (
+                len(row["r_kpc"]) == len(row["v_obs_kms"]) == len(row["v_err_kms"])
+            ), f"{name}: inconsistent array lengths"
+
+    def test_missing_dir_raises(self, tmp_path):
+        from lfm.analysis.sparc import sparc_load
+
+        with pytest.raises(FileNotFoundError):
+            sparc_load(tmp_path / "nonexistent")
+
+    def test_empty_dir_returns_empty(self, tmp_path):
+        from lfm.analysis.sparc import sparc_load
+
+        result = sparc_load(tmp_path)
+        assert result == {}
+
+    def test_list_sparc_sorted(self):
+        from lfm.analysis.sparc import list_sparc_galaxies
+
+        names = list_sparc_galaxies()
+        assert names == sorted(names)
+
+
+# ---------------------------------------------------------------------------
+# P030: disk_positions + initialize_disk b_cells
+# ---------------------------------------------------------------------------
+
+
+class TestBCells:
+    def test_disk_positions_default_b_cells_zero(self):
+        import numpy as np
+
+        from lfm.fields.arrangements import disk_positions
+
+        pos = disk_positions(64, 10, seed=0)
+        center = 32.0
+        assert np.allclose(pos[:, 2], center)  # plane_axis=2 default
+
+    def test_b_cells_shifts_plane_axis(self):
+        import numpy as np
+
+        from lfm.fields.arrangements import disk_positions
+
+        shift = 5.0
+        pos = disk_positions(64, 10, seed=0, b_cells=shift)
+        center = 32.0
+        assert np.allclose(pos[:, 2], center + shift)
+
+    def test_b_cells_negative(self):
+        import numpy as np
+
+        from lfm.fields.arrangements import disk_positions
+
+        pos = disk_positions(64, 10, seed=0, b_cells=-3.0)
+        assert np.allclose(pos[:, 2], 32.0 - 3.0)
+
+    def test_b_cells_plane_axis_0(self):
+        import numpy as np
+
+        from lfm.fields.arrangements import disk_positions
+
+        pos = disk_positions(64, 10, plane_axis=0, seed=0, b_cells=4.0)
+        assert np.allclose(pos[:, 0], 32.0 + 4.0)

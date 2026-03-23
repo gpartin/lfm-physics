@@ -22,6 +22,7 @@ Quick usage::
 
 from lfm.viz.evolution import plot_energy_components, plot_evolution
 from lfm.viz.fields import plot_isosurface
+from lfm.viz.galaxy import galaxy_summary_plot
 from lfm.viz.radial import plot_radial_profile
 from lfm.viz.slices import plot_chi_histogram, plot_slice, plot_three_slices
 from lfm.viz.spectrum import plot_power_spectrum
@@ -39,4 +40,5 @@ __all__ = [
     "plot_power_spectrum",
     "plot_trajectories",
     "plot_sweep",
+    "galaxy_summary_plot",
 ]

@@ -155,6 +155,7 @@ def disk_positions(
     r_outer: float | None = None,
     plane_axis: int = 2,
     seed: int | None = None,
+    b_cells: float = 0.0,
 ) -> NDArray[np.float64]:
     """Positions uniformly distributed (by area) in a galactic disk.
 
@@ -173,6 +174,10 @@ def disk_positions(
         in the plane perpendicular to this axis through the grid center.
     seed : int or None
         Random seed for reproducibility.
+    b_cells : float
+        Constant offset added to every soliton position along *plane_axis*
+        (ecliptic inclination in grid cells).  A non-zero value tilts the
+        disk out of the centre plane.  Default 0 (centred).
 
     Returns
     -------
@@ -197,6 +202,7 @@ def disk_positions(
     positions = np.full((n_solitons, 3), center, dtype=np.float64)
     positions[:, a0] = center + r * np.cos(theta)
     positions[:, a1] = center + r * np.sin(theta)
+    positions[:, plane_axis] = center + b_cells
     return positions
 
 
@@ -276,6 +282,7 @@ def initialize_disk(
     add_velocities: bool = True,
     v_scale: float = 0.05,
     seed: int | None = None,
+    b_cells: float = 0.0,
 ) -> NDArray[np.float64]:
     """Place a rotating galactic disk of solitons into *sim*.
 
@@ -308,6 +315,9 @@ def initialize_disk(
         :func:`disk_velocities`).
     seed : int or None
         Random seed for position placement.
+    b_cells : float
+        Ecliptic inclination offset in grid cells along *plane_axis*.
+        Passed directly to :func:`disk_positions`.
 
     Returns
     -------
@@ -317,7 +327,7 @@ def initialize_disk(
     N = sim.config.grid_size
     center = (N / 2.0, N / 2.0, N / 2.0)
 
-    positions = disk_positions(N, n_solitons, r_inner, r_outer, plane_axis, seed)
+    positions = disk_positions(N, n_solitons, r_inner, r_outer, plane_axis, seed, b_cells=b_cells)
     velocities: NDArray | None = None
     if add_velocities:
         velocities = disk_velocities(

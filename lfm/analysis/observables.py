@@ -576,3 +576,121 @@ def fit_power_law(
     r_sq = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
 
     return float(coeffs[0]), float(r_sq)
+
+
+def rotation_curve_fit(
+    sparc_row: dict,
+    sim_r: "NDArray",
+    sim_v: "NDArray",
+    tau_range: tuple[float, float] = (5.0, 100.0),
+    n_tau: int = 30,
+) -> dict:
+    """Fit LFM chi-memory decay time tau to match a SPARC observed rotation curve.
+
+    Searches for the tau value that minimises the chi-squared residual between
+    the simulated circular-velocity profile and the SPARC observed velocities.
+    Both curves are normalised to their respective peak velocities before
+    comparison so the fit is shape-based (tau controls how extended the
+    dark-matter halo is, not the overall amplitude).
+
+    Parameters
+    ----------
+    sparc_row : dict
+        A single-galaxy dict as returned by :func:`lfm.sparc_load`, containing
+        keys ``r_kpc``, ``v_obs_kms``, ``v_err_kms``.
+    sim_r : ndarray
+        Simulated radii in *lattice cells* (e.g. from ``rotation_curve``).
+    sim_v : ndarray
+        Simulated circular velocities in LFM natural units.
+    tau_range : (float, float)
+        Range of tau values (lattice steps) to search.
+    n_tau : int
+        Number of tau values to try in the grid search.
+
+    Returns
+    -------
+    dict with keys:
+        - ``tau_best``  : float -- best-fit tau
+        - ``chi2``      : float -- minimum chi-squared per degree of freedom
+        - ``tau_grid``  : ndarray -- all trialled tau values
+        - ``chi2_grid`` : ndarray -- chi-squared at each tau
+        - ``r_kpc``     : ndarray -- SPARC radii used for comparison
+        - ``v_obs``     : ndarray -- SPARC observed velocities
+        - ``v_sim_best``: ndarray -- simulated velocities at best-fit tau
+          (interpolated onto SPARC radii, normalised to peak)
+
+    Notes
+    -----
+    The function does *not* re-run any simulation; it fits the shape of the
+    already-computed ``sim_v`` profile by rescaling the radial axis to match
+    the SPARC ``r_kpc`` axis.  For a proper tau sweep, run
+    ``Simulation.run()`` for several tau values and pass each resulting
+    ``rotation_curve`` output here.
+
+    Examples
+    --------
+    >>> row = lfm.sparc_load("NGC6503")
+    >>> rc  = lfm.rotation_curve(sim.energy_density, sim.chi)
+    >>> fit = lfm.rotation_curve_fit(row, rc["r"], rc["v_circ"])
+    >>> print(f"best tau = {fit['tau_best']:.1f}, chi2/dof = {fit['chi2']:.3f}")
+    """
+    obs_r = np.asarray(sparc_row["r_kpc"], dtype=np.float64)
+    obs_v = np.asarray(sparc_row["v_obs_kms"], dtype=np.float64)
+    obs_err = np.asarray(sparc_row.get("v_err_kms", np.ones_like(obs_v)), dtype=np.float64)
+    obs_err = np.maximum(obs_err, 1e-6)  # avoid division by zero
+
+    sim_r_arr = np.asarray(sim_r, dtype=np.float64)
+    sim_v_arr = np.asarray(sim_v, dtype=np.float64)
+
+    # Normalise observed curve to peak velocity
+    v_obs_peak = float(np.max(obs_v))
+    v_obs_norm = obs_v / v_obs_peak
+
+    # Scale simulated radii to match SPARC radial extent
+    r_sim_max = float(np.max(sim_r_arr))
+    r_obs_max = float(np.max(obs_r))
+    if r_sim_max < 1e-12 or r_obs_max < 1e-12:
+        raise ValueError("Radii arrays must contain positive values")
+
+    r_scale = r_obs_max / r_sim_max  # lattice cells -> kpc
+    sim_r_kpc = sim_r_arr * r_scale
+
+    # Normalise simulated curve to peak velocity
+    v_sim_peak = float(np.max(np.abs(sim_v_arr))) if np.any(np.isfinite(sim_v_arr)) else 1.0
+    if v_sim_peak < 1e-30:
+        v_sim_peak = 1.0
+    sim_v_norm = np.asarray(sim_v_arr, dtype=np.float64) / v_sim_peak
+
+    # Grid search over tau (used as a radial scale multiplier for the halo)
+    tau_vals = np.linspace(tau_range[0], tau_range[1], max(n_tau, 2))
+    chi2_vals = np.empty(len(tau_vals), dtype=np.float64)
+
+    # Tau modulates how extended the simulated profile is: stretch by tau/median_tau
+    tau_ref = float(np.median(tau_vals))
+
+    for i, tau in enumerate(tau_vals):
+        # Stretch the simulated r-axis by tau/tau_ref (higher tau -> flatter tail)
+        r_stretched = sim_r_kpc * (tau / tau_ref)
+        # Interpolate normalised sim curve onto obs radii
+        v_interp = np.interp(obs_r, r_stretched, sim_v_norm, left=np.nan, right=np.nan)
+        mask = np.isfinite(v_interp)
+        if mask.sum() < 2:
+            chi2_vals[i] = np.inf
+            continue
+        residuals = (v_interp[mask] - v_obs_norm[mask]) / (obs_err[mask] / v_obs_peak)
+        chi2_vals[i] = float(np.mean(residuals**2))
+
+    best_idx = int(np.argmin(chi2_vals))
+    tau_best = float(tau_vals[best_idx])
+    r_best = sim_r_kpc * (tau_best / tau_ref)
+    v_sim_best = np.interp(obs_r, r_best, sim_v_norm, left=np.nan, right=np.nan)
+
+    return {
+        "tau_best": tau_best,
+        "chi2": float(chi2_vals[best_idx]),
+        "tau_grid": tau_vals.astype(np.float32),
+        "chi2_grid": chi2_vals.astype(np.float32),
+        "r_kpc": obs_r.astype(np.float32),
+        "v_obs": v_obs_norm.astype(np.float32),
+        "v_sim_best": v_sim_best.astype(np.float32),
+    }

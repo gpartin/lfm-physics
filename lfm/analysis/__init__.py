@@ -42,6 +42,7 @@ from lfm.analysis.observables import (
     momentum_density,
     radial_profile,
     rotation_curve,
+    rotation_curve_fit,
     weak_parity_asymmetry,
 )
 from lfm.analysis.phase import (
@@ -50,6 +51,7 @@ from lfm.analysis.phase import (
     phase_coherence,
     phase_field,
 )
+from lfm.analysis.sparc import list_sparc_galaxies, sparc_load
 from lfm.analysis.spectrum import power_spectrum
 from lfm.analysis.structure import (
     chi_statistics,
@@ -59,6 +61,7 @@ from lfm.analysis.structure import (
     well_fraction,
 )
 from lfm.analysis.tracker import (
+    collider_event_display,
     compute_impact_parameter,
     detect_collision_events,
     flatten_trajectories,
@@ -89,8 +92,12 @@ __all__ = [
     "measure_force",
     "momentum_density",
     "rotation_curve",
+    "rotation_curve_fit",
     "weak_parity_asymmetry",
     "confinement_proxy",
+    # sparc
+    "sparc_load",
+    "list_sparc_galaxies",
     # color
     "color_variance",
     # confinement (v16 S_a)
@@ -106,6 +113,7 @@ __all__ = [
     "flatten_trajectories",
     "detect_collision_events",
     "compute_impact_parameter",
+    "collider_event_display",
     # metric (spacetime geometry)
     "effective_metric_00",
     "metric_perturbation",
