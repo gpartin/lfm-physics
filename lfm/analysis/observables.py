@@ -442,7 +442,6 @@ def rotation_curve(
             chi_r_mean[b] = chi_sum[b] / counts[b]
 
     # Enclosed mass: sum of |Ψ|² in shells out to r (discrete cumsum)
-    dr = max_radius / n_bins
     shell_mass = e_sum  # each element ≈ sum of |Ψ|² in the bin
     m_enclosed_all = np.cumsum(shell_mass)
 

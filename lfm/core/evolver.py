@@ -187,8 +187,16 @@ class Evolver:
                 cfg.lambda_self, cfg.chi0, cfg.e0_sq, cfg.epsilon_w,
             )
         else:  # COLOR
-            sa_in  = (self.sa_A if self._use_buffer_A else self.sa_B)  if self.sa_A is not None else None
-            sa_out = (self.sa_B if self._use_buffer_A else self.sa_A)  if self.sa_A is not None else None
+            sa_in = (
+                (self.sa_A if self._use_buffer_A else self.sa_B)
+                if self.sa_A is not None
+                else None
+            )
+            sa_out = (
+                (self.sa_B if self._use_buffer_A else self.sa_A)
+                if self.sa_A is not None
+                else None
+            )
             self.backend.step_color(
                 r_in, rp_in, i_in, ip_in, c_in, cp_in,
                 self.boundary_mask,
@@ -331,7 +339,8 @@ class Evolver:
         """
         if self.sa_A is None:
             raise ValueError(
-                "SA fields not allocated — set kappa_tube > 0 in SimulationConfig before creating the Evolver."
+                "SA fields not allocated — set kappa_tube > 0 in SimulationConfig"
+                " before creating the Evolver."
             )
         flat = arr.astype(np.float32).ravel()
         data = self.backend.from_numpy(flat)
