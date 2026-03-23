@@ -27,9 +27,10 @@ Expected output (depends on grid and amplitude):
 from __future__ import annotations
 
 import numpy as np
+
 import lfm
-from lfm.analysis.tracker import detect_collision_events, track_peaks
 from lfm.analysis.energy import total_energy
+from lfm.analysis.tracker import detect_collision_events, track_peaks
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 N = 64
@@ -90,13 +91,13 @@ events = detect_collision_events(trajectories, min_sep=MIN_SEP)
 approach_events = [e for e in events if e["type"] == "approach"]
 merge_events = [e for e in events if e["type"] == "merge"]
 
-print(f"\nCollision events detected:")
+print("\nCollision events detected:")
 print(f"  approach events: {len(approach_events)}")
 print(f"  merge    events: {len(merge_events)}")
 
 if approach_events:
     first = approach_events[0]
-    print(f"\nFirst approach event:")
+    print("\nFirst approach event:")
     print(f"  step = {first['step']:.0f},  sep = {first['sep']:.2f} cells")
     print(f"  peaks i={first['i']}, j={first['j']}")
 

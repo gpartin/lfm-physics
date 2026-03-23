@@ -33,8 +33,9 @@ Expected output (varies with grid and amplitude):
 from __future__ import annotations
 
 import numpy as np
+
 import lfm
-from lfm.constants import CHI0, KAPPA, KAPPA_C, KAPPA_STRING, KAPPA_TUBE, LAMBDA_H
+from lfm.constants import KAPPA, KAPPA_C, KAPPA_STRING, LAMBDA_H
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 N = 64
@@ -89,7 +90,7 @@ sa_after = sim.sa_fields
 chi_mid_after = lfm.measure_chi_midpoint(sim.chi, (cx, cy, z1), (cx, cy, z2))
 chi_global_min_after = float(sim.chi.min())
 
-print(f"\nAFTER run:")
+print("\nAFTER run:")
 print(f"  chi midpoint:        {chi_mid_after:.4f}")
 print(f"  chi global min:      {chi_global_min_after:.4f}")
 print(f"  chi midpoint change: {chi_mid_after - chi_mid_before:+.4f}")
@@ -109,12 +110,12 @@ if sa0_along_z is not None:
 # ── String-tension proxy ──────────────────────────────────────────────────────
 tension = lfm.string_tension(sim)
 print(f"\nString-tension proxy:  {tension:.6f}")
-print(f"(non-zero ⟹ chi gradient between sources)")
+print("(non-zero ⟹ chi gradient between sources)")
 
 # ── SCV statistics ────────────────────────────────────────────────────────────
 if sa_after is not None:
     scv = lfm.smoothed_color_variance(sa_after)
-    print(f"\nSCV statistics:")
+    print("\nSCV statistics:")
     print(f"  mean SCV: {scv.mean():.4e}")
     print(f"  max  SCV: {scv.max():.4e}")
     print(f"  SCV near soliton 1 (z={z1}): {scv[cx, cy, z1]:.4e}")
@@ -126,9 +127,8 @@ print("\n" + "=" * 62)
 deepened = chi_mid_after < chi_mid_before
 print(f"Flux tube formed:        {'YES' if deepened else 'NO (check amplitude)'}")
 print(f"Chi deepened at midpoint: {chi_mid_before:.3f} → {chi_mid_after:.3f}")
-print(
-    f"SA diffusion active:     {'YES' if (sa_after is not None and sa_after.max() > 1e-8) else 'NO'}"
-)
+sa_active = sa_after is not None and sa_after.max() > 1e-8
+print(f"SA diffusion active:     {'YES' if sa_active else 'NO'}")
 print()
 print("Interpretation:")
 print("  The S_a fields diffuse from the coloured soliton cores and their")

@@ -13,11 +13,8 @@ from __future__ import annotations
 
 import time
 
-import numpy as np
-
 import lfm
-from lfm.analysis import radial_profile, energy_components
-
+from lfm.analysis import energy_components, radial_profile
 
 # ---------------------------------------------------------------------------
 # Helpers

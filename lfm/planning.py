@@ -12,8 +12,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from lfm.config import BoundaryType, FieldLevel, SimulationConfig
-from lfm.constants import KAPPA, KAPPA_C, KAPPA_STRING, KAPPA_TUBE, LAMBDA_H
-
+from lfm.constants import KAPPA, KAPPA_C, KAPPA_STRING, LAMBDA_H
 
 UseCaseName = Literal[
     "intro_gravity",

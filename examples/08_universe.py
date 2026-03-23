@@ -28,7 +28,7 @@ print("=" * 55)
 print()
 print(f"Grid:   {N}³ = {N**3:,} cells")
 print(f"Scale:  {scale.cell_to_mpc():.2f} Mpc/cell")
-print(f"Box:    100 Mpc across")
+print("Box:    100 Mpc across")
 print()
 
 # --- Seed with Poisson-equilibrated solitons (like primordial matter) ---
@@ -83,7 +83,10 @@ void_threshold = 18.8  # χ above this = expanding void
 
 print(f"Running {total_steps:,} steps...")
 print()
-header = f"{'Time':>12s}  {'χ_min':>6s}  {'Wells%':>7s}  {'Voids%':>7s}  {'Clusters':>8s}  {'Energy':>10s}"
+header = (
+    f"{'Time':>12s}  {'χ_min':>6s}  {'Wells%':>7s}"
+    f"  {'Voids%':>7s}  {'Clusters':>8s}  {'Energy':>10s}"
+)
 print(header)
 print("-" * len(header))
 
@@ -103,7 +106,8 @@ def report(label: str) -> None:
     e = float(np.sum(psi_sq))
 
     print(
-        f"{label:>12s}  {chi_min:6.2f}  {wells_pct:6.1f}%  {voids_pct:6.1f}%  {n_clusters:8d}  {e:10.2f}"
+        f"{label:>12s}  {chi_min:6.2f}  {wells_pct:6.1f}%"
+        f"  {voids_pct:6.1f}%  {n_clusters:8d}  {e:10.2f}"
     )
 
 

@@ -36,7 +36,7 @@ print()
 # Evolve for a bit — nothing should change.
 sim.run(steps=500)
 m = sim.metrics()
-print(f"After 500 steps of evolution:")
+print("After 500 steps of evolution:")
 print(f"  chi mean  = {m['chi_mean']:.4f}")
 print(f"  chi std   = {m['chi_std']:.6f}")
 print(f"  wells     = {m['well_fraction'] * 100:.1f}%")

@@ -19,7 +19,6 @@ Run:
     python examples/09_hydrogen_atom.py
 """
 
-import numpy as np
 import lfm
 
 N = 64
@@ -53,7 +52,7 @@ d8 = chi0 - prof["profile"][8]
 d16 = chi0 - prof["profile"][16]
 ratio_816 = d8 / d16 if d16 > 0.001 else float("inf")
 print(f"Potential ratio  Δχ(r=8)/Δχ(r=16) = {ratio_816:.2f}  (1/r predicts 2.00)")
-print(f"  Both points outside the proton soliton source (σ=2.5).")
+print("  Both points outside the proton soliton source (σ=2.5).")
 print()
 
 # ─── Step 2: Electron in n=1 shell ──────────────────────────────────────────
@@ -62,14 +61,14 @@ e_pos = (N // 2 + electron_r, N // 2, N // 2)
 sim.place_soliton(e_pos, amplitude=0.8, sigma=1.5)
 
 chi_before = chi0 - prof["profile"][electron_r]
-print(f"── Electron binding (n=1 orbital) ──")
+print("── Electron binding (n=1 orbital) ──")
 print(f"  Electron placed at r={electron_r}")
 print(f"  χ-well depth at r={electron_r}:  Δχ = {chi_before:.3f}  (from GOV-01 + GOV-02 only)")
 print()
 
 sim.run(steps=4000)
 m_after = sim.metrics()
-print(f"  After 4000 steps of evolution:")
+print("  After 4000 steps of evolution:")
 print(f"    χ_min         = {m_after['chi_min']:.3f}  (deeper → stronger binding)")
 print(f"    wells (χ<17)  = {m_after['well_fraction'] * 100:.1f}%")
 print(f"    energy total  = {m_after['energy_total']:.2e}")

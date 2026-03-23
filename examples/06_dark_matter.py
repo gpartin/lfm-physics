@@ -32,7 +32,7 @@ sim.run(steps=2000)
 
 m1 = sim.metrics()
 chi_center_before = sim.chi[24, 24, 24]
-print(f"Phase 1 — Particle present:")
+print("Phase 1 — Particle present:")
 print(f"  χ at center = {chi_center_before:.2f}  (well depth: {lfm.CHI0 - chi_center_before:.2f})")
 print(f"  χ_min       = {m1['chi_min']:.2f}")
 print()
@@ -43,20 +43,21 @@ if sim.psi_imag is not None:
     sim.psi_imag = np.zeros_like(sim.psi_imag)
 
 psi_sq = sim.psi_real**2
-print(f"Phase 2 — Matter removed:")
+print("Phase 2 — Matter removed:")
 print(f"  |Ψ|² total  = {psi_sq.sum():.2e}  (zero)")
 print(f"  χ at center = {sim.chi[24, 24, 24]:.2f}  (well still there!)")
 print()
 
 # --- Phase 3: Evolve with no matter — does the well persist? ---
-print(f"Phase 3 — Evolution with no matter:")
+print("Phase 3 — Evolution with no matter:")
 for step in range(1, 6):
     sim.run(steps=1000)
     chi_c = sim.chi[24, 24, 24]
     chi_min = sim.chi.min()
     depth = lfm.CHI0 - chi_min
     print(
-        f"  Step {step * 1000:5d}: χ_center = {chi_c:.2f}, χ_min = {chi_min:.2f}, depth = {depth:.2f}"
+        f"  Step {step * 1000:5d}: χ_center = {chi_c:.2f},"
+        f" χ_min = {chi_min:.2f}, depth = {depth:.2f}"
     )
 
 chi_min_final = sim.chi.min()

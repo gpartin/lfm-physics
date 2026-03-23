@@ -16,6 +16,7 @@ can't skip cells.  That IS causality.
 """
 
 import numpy as np
+
 import lfm
 
 print("WHY IS c WHAT IT IS?")
@@ -139,9 +140,8 @@ alpha_lfm = 11.0 / (480.0 * np.pi)
 alpha_measured = 1.0 / 137.036
 print(f"  Step 2 (derived):  α = 11/(480π)  = {alpha_lfm:.6f}")
 print(f"                     α measured     = {alpha_measured:.6f}")
-print(
-    f"                     error           = {abs(alpha_lfm - alpha_measured) / alpha_measured * 100:.4f}%"
-)
+pct_err = abs(alpha_lfm - alpha_measured) / alpha_measured * 100
+print(f"                     error           = {pct_err:.4f}%")
 
 print()
 print("  α sets atomic energy scales → Cs-133 hyperfine → defines the second.")

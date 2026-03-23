@@ -28,7 +28,7 @@ print()
 
 # ── 2. 2D slice through the chi field ─────────────────────────────────
 
-from lfm.viz import plot_slice, plot_three_slices
+from lfm.viz import plot_slice, plot_three_slices  # noqa: E402
 
 fig, ax = plot_slice(sim.chi, axis=2, index=16, title="χ mid-plane (z=16)")
 fig.savefig("tutorial_15_slice.png", dpi=120, bbox_inches="tight")
@@ -41,7 +41,7 @@ print("Saved: tutorial_15_three_slices.png")
 
 # ── 3. Radial profile with 1/r reference ──────────────────────────────
 
-from lfm.viz import plot_radial_profile
+from lfm.viz import plot_radial_profile  # noqa: E402
 
 fig, ax = plot_radial_profile(sim.chi, center=(16, 16, 16), max_radius=12)
 fig.savefig("tutorial_15_radial.png", dpi=120, bbox_inches="tight")
@@ -49,7 +49,7 @@ print("Saved: tutorial_15_radial.png")
 
 # ── 4. Chi histogram ──────────────────────────────────────────────────
 
-from lfm.viz import plot_chi_histogram
+from lfm.viz import plot_chi_histogram  # noqa: E402
 
 fig, ax = plot_chi_histogram(sim.chi, title="χ distribution after 3000 steps")
 fig.savefig("tutorial_15_histogram.png", dpi=120, bbox_inches="tight")
@@ -57,7 +57,7 @@ print("Saved: tutorial_15_histogram.png")
 
 # ── 5. Time-evolution dashboard ───────────────────────────────────────
 
-from lfm.viz import plot_evolution
+from lfm.viz import plot_evolution  # noqa: E402
 
 fig = plot_evolution(sim.history, title="Metric evolution")
 fig.savefig("tutorial_15_evolution.png", dpi=120, bbox_inches="tight")
@@ -65,7 +65,7 @@ print("Saved: tutorial_15_evolution.png")
 
 # ── 6. Fourier power spectrum ─────────────────────────────────────────
 
-from lfm.viz import plot_power_spectrum
+from lfm.viz import plot_power_spectrum  # noqa: E402
 
 fig, ax = plot_power_spectrum(sim.chi, title="P(k) of χ field")
 fig.savefig("tutorial_15_spectrum.png", dpi=120, bbox_inches="tight")
@@ -73,7 +73,7 @@ print("Saved: tutorial_15_spectrum.png")
 
 # ── 7. Parameter sweep ───────────────────────────────────────────────
 
-from lfm.viz import plot_sweep
+from lfm.viz import plot_sweep  # noqa: E402
 
 sweep_cfg = lfm.SimulationConfig(grid_size=32)
 results = lfm.sweep(

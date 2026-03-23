@@ -40,7 +40,7 @@ print()
 # Evolve — the soliton sits in its own gravity well.
 sim.run(steps=2000)
 m = sim.metrics()
-print(f"After 2000 steps of evolution:")
+print("After 2000 steps of evolution:")
 print(f"  χ_min  = {m['chi_min']:.2f}")
 print(f"  wells  = {m['well_fraction'] * 100:.1f}%")
 print(f"  energy = {m['energy_total']:.2e}")

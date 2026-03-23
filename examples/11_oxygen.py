@@ -18,6 +18,7 @@ Run:
 """
 
 import numpy as np
+
 import lfm
 
 N = 64
@@ -77,7 +78,7 @@ print(f"  Oxygen   nucleus χ_min  = {o_min:.3f}  (Δχ = {o_min - lfm.CHI0:.3f}
 print(
     f"  Ratio Δχ(oxygen)/Δχ(hydrogen)             = {(o_min - lfm.CHI0) / (h_min - lfm.CHI0):.2f}"
 )
-print(f"  (Oxygen well is deeper → supports more electrons)")
+print("  (Oxygen well is deeper → supports more electrons)")
 print()
 
 # ─── Evolve and check stability ────────────────────────────────────────────

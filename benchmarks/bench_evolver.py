@@ -12,12 +12,8 @@ Or with pytest-benchmark::
 from __future__ import annotations
 
 import time
-from typing import Iterator
-
-import numpy as np
 
 import lfm
-
 
 # ---------------------------------------------------------------------------
 # Helpers

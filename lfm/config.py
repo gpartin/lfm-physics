@@ -25,8 +25,6 @@ from lfm.constants import (
     E_AMPLITUDE_BY_GRID,
     EPSILON_W,
     KAPPA,
-    KAPPA_STRING,
-    KAPPA_TUBE,
     N_COLORS,
     OBSERVABLE_RADIUS_PLANCK,
     SA_D,

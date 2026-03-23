@@ -8,6 +8,13 @@ from lfm.analysis.angular_momentum import (
 from lfm.analysis.color import (
     color_variance,
 )
+from lfm.analysis.confinement import (
+    color_current_variance,
+    flux_tube_profile,
+    measure_chi_midpoint,
+    smoothed_color_variance,
+    string_tension,
+)
 from lfm.analysis.energy import (
     continuity_residual,
     energy_components,
@@ -51,16 +58,9 @@ from lfm.analysis.structure import (
     void_fraction,
     well_fraction,
 )
-from lfm.analysis.confinement import (
-    color_current_variance,
-    flux_tube_profile,
-    measure_chi_midpoint,
-    smoothed_color_variance,
-    string_tension,
-)
 from lfm.analysis.tracker import (
-    detect_collision_events,
     compute_impact_parameter,
+    detect_collision_events,
     flatten_trajectories,
     track_peaks,
 )

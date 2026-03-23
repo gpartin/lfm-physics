@@ -21,6 +21,7 @@ Run:
 """
 
 import numpy as np
+
 import lfm
 
 N = 64
@@ -50,7 +51,7 @@ sim_anti = make_h2(bond_half=8, phase_a=0.0, phase_b=np.pi)
 m_bond_0 = sim_bond.metrics()
 m_anti_0 = sim_anti.metrics()
 
-print(f"Initial state (separation = 16 cells):")
+print("Initial state (separation = 16 cells):")
 print(f"  Bonding    χ_min = {m_bond_0['chi_min']:.3f},  energy = {m_bond_0['energy_total']:.2e}")
 print(f"  Anti-bond  χ_min = {m_anti_0['chi_min']:.3f},  energy = {m_anti_0['energy_total']:.2e}")
 print()
@@ -97,8 +98,8 @@ bond_proxy = bond_chi - anti_chi
 print("Bond formation diagnostic:")
 if bond_proxy < -0.05:
     print(f"  Δ(χ_min)_bond - Δ(χ_min)_anti = {bond_proxy:.3f}  →  BOND FORMED")
-    print(f"  Bonding deepens the shared well; anti-bonding shallows it.")
-    print(f"  This is a covalent bond from wave interference — no MO theory used.")
+    print("  Bonding deepens the shared well; anti-bonding shallows it.")
+    print("  This is a covalent bond from wave interference — no MO theory used.")
 else:
     print(f"  Δ(χ_min) difference = {bond_proxy:.3f}  (increase amplitude for clearer signal)")
 print()

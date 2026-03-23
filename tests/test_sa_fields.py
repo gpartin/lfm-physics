@@ -21,11 +21,9 @@ N=16 as well — the grid is small but sufficient to check correctness.
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from lfm.config import BoundaryType, FieldLevel, SimulationConfig
-from lfm.constants import CHI0, KAPPA, KAPPA_TUBE, KAPPA_C, KAPPA_STRING
-
+from lfm.constants import CHI0, KAPPA, KAPPA_C
 
 N = 16  # grid size for all tests — fast but non-trivial
 

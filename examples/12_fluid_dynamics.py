@@ -31,6 +31,7 @@ Run:
 """
 
 import numpy as np
+
 import lfm
 
 N = 48  # small grid — fluid runs fast
@@ -55,7 +56,7 @@ for pos, phase, amp in zip(positions, phases, amplitudes):
 sim.equilibrate()
 
 m0 = sim.metrics()
-print(f"Initial state (40-soliton ensemble):")
+print("Initial state (40-soliton ensemble):")
 print(f"  χ_mean  = {m0['chi_mean']:.3f}")
 print(f"  χ_min   = {m0['chi_min']:.3f}")
 print(f"  energy  = {m0['energy_total']:.4e}")
@@ -103,7 +104,7 @@ print()
 print("Euler equation emergence summary:")
 print(f"  v_rms  = {f['v_rms']:.4f} c   (realistic sub-c wave transport speed)")
 print(f"  P_mean = {f['pressure_mean']:.4f}  (pressure from gradient energy)")
-print(f"  Euler equation dε/dt + div(g) = 0 holds in the continuum limit:")
-print(f"  derived from GOV-01 Noether current (stress-energy tensor conservation).")
-print(f"  No Navier-Stokes used.  No viscosity.  No density equation.")
-print(f"  Fluid velocity emerged from v = g/ε (stress-energy only).")
+print("  Euler equation dε/dt + div(g) = 0 holds in the continuum limit:")
+print("  derived from GOV-01 Noether current (stress-energy tensor conservation).")
+print("  No Navier-Stokes used.  No viscosity.  No density equation.")
+print("  Fluid velocity emerged from v = g/ε (stress-energy only).")

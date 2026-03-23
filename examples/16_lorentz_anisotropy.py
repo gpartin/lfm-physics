@@ -31,6 +31,7 @@ Expected output:
 from __future__ import annotations
 
 import numpy as np
+
 import lfm
 
 N = 64

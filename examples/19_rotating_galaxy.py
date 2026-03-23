@@ -29,6 +29,7 @@ Expected output:
 from __future__ import annotations
 
 import numpy as np
+
 import lfm
 from lfm.analysis.observables import rotation_curve
 
@@ -130,7 +131,7 @@ if inner_mask.any() and outer_mask.any():
     v_kep_outer = float(np.median(v_kep[outer_mask]))
     kep_flatness = v_kep_outer / (v_kep_inner + 1e-30)
 
-    print(f"\nFlatness ratios (outer / inner):")
+    print("\nFlatness ratios (outer / inner):")
     print(f"  v_chi (LFM):     {flatness:.4f}  (1.0 = perfectly flat)")
     print(f"  v_Keplerian:     {kep_flatness:.4f}  (<1 = falling, i.e. no DM)")
     print(f"\n  LFM is {'FLATTER' if flatness > kep_flatness else 'STEEPER'} than Keplerian")
