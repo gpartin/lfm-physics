@@ -25,8 +25,12 @@ from lfm.constants import (
     E_AMPLITUDE_BY_GRID,
     EPSILON_W,
     KAPPA,
+    KAPPA_STRING,
+    KAPPA_TUBE,
     N_COLORS,
     OBSERVABLE_RADIUS_PLANCK,
+    SA_D,
+    SA_GAMMA,
 )
 
 
@@ -90,6 +94,23 @@ class SimulationConfig:
     """Cross-color coupling (v15). 0.0 = independent colors (v14 default).
     Set to EPSILON_CC (2/17) for dynamic f_c evolution.
     Adds −ε_cc·χ²·(Ψₐ − Ψ̄) to GOV-01. Only active at FieldLevel.COLOR."""
+
+    kappa_string: float = 0.0
+    """Color current variance (CCV) coupling (v15 GOV-02). Default 0.0 = off.
+    Set to KAPPA_STRING (= KAPPA_C = 1/189) for v15-style GOV-02 CCV term.
+    Adds −κ_string·CCV to GOV-02. Only active at FieldLevel.COLOR."""
+
+    kappa_tube: float = 0.0
+    """Smoothed color variance (SCV) coupling (v16). Default 0.0 = off.
+    Set to KAPPA_TUBE (30/63) for full confinement with λ_self=LAMBDA_H,
+    or to 10*KAPPA for stable experiments without Mexican hat.
+    Adds −κ_tube·SCV to GOV-02. Only active at FieldLevel.COLOR."""
+
+    sa_gamma: float = SA_GAMMA
+    """S_a decay rate γ = 0.1. Only used when kappa_tube > 0."""
+
+    sa_d: float = SA_D
+    """S_a diffusion coefficient D = γ·L² = 4.9. Only used when kappa_tube > 0."""
 
     e0_sq: float = E0_SQ_DEFAULT
     """Background energy density. 0 = vacuum."""
@@ -188,6 +209,11 @@ class SimulationConfig:
             )
         if self.field_level == FieldLevel.COLOR and self.n_colors < 1:
             raise ValueError(f"n_colors must be >= 1, got {self.n_colors}")
+
+    @property
+    def sa_enabled(self) -> bool:
+        """True when S_a auxiliary fields are active (kappa_tube > 0)."""
+        return self.kappa_tube > 0.0
 
     @property
     def planck_scale(self) -> "PlanckScale":

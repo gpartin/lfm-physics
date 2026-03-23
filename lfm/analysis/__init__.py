@@ -17,7 +17,9 @@ from lfm.analysis.energy import (
 )
 from lfm.analysis.metric import (
     effective_metric_00,
+    find_apparent_horizon,
     gravitational_potential,
+    horizon_mass,
     metric_perturbation,
     schwarzschild_chi,
     time_dilation_factor,
@@ -27,10 +29,12 @@ from lfm.analysis.observables import (
     confinement_proxy,
     find_peaks,
     fit_power_law,
+    keplerian_velocity,
     measure_force,
     measure_separation,
     momentum_density,
     radial_profile,
+    rotation_curve,
     weak_parity_asymmetry,
 )
 from lfm.analysis.phase import (
@@ -47,7 +51,19 @@ from lfm.analysis.structure import (
     void_fraction,
     well_fraction,
 )
-from lfm.analysis.tracker import flatten_trajectories, track_peaks
+from lfm.analysis.confinement import (
+    color_current_variance,
+    flux_tube_profile,
+    measure_chi_midpoint,
+    smoothed_color_variance,
+    string_tension,
+)
+from lfm.analysis.tracker import (
+    detect_collision_events,
+    compute_impact_parameter,
+    flatten_trajectories,
+    track_peaks,
+)
 
 __all__ = [
     # energy
@@ -68,24 +84,36 @@ __all__ = [
     "radial_profile",
     "find_peaks",
     "fit_power_law",
+    "keplerian_velocity",
     "measure_separation",
     "measure_force",
     "momentum_density",
+    "rotation_curve",
     "weak_parity_asymmetry",
     "confinement_proxy",
     # color
     "color_variance",
+    # confinement (v16 S_a)
+    "smoothed_color_variance",
+    "color_current_variance",
+    "flux_tube_profile",
+    "measure_chi_midpoint",
+    "string_tension",
     # spectrum
     "power_spectrum",
     # tracker
     "track_peaks",
     "flatten_trajectories",
+    "detect_collision_events",
+    "compute_impact_parameter",
     # metric (spacetime geometry)
     "effective_metric_00",
     "metric_perturbation",
     "time_dilation_factor",
     "gravitational_potential",
     "schwarzschild_chi",
+    "find_apparent_horizon",
+    "horizon_mass",
     # phase (EM / charge)
     "phase_field",
     "charge_density",

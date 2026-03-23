@@ -27,6 +27,7 @@ from lfm.core.backends.kernel_source import (
     EVOLUTION_KERNEL_SRC,
     EVOLUTION_REAL_KERNEL_SRC,
     PHASE1_KERNEL_SRC,
+    SA_DIFFUSION_KERNEL_SRC,
 )
 
 # Block size — 256 is optimal for most NVIDIA GPUs
@@ -63,6 +64,9 @@ class CupyBackend:
         )
         self._kernel_phase1 = cp.RawKernel(
             PHASE1_KERNEL_SRC, "phase1_parametric",
+        )
+        self._kernel_sa_diffusion = cp.RawKernel(
+            SA_DIFFUSION_KERNEL_SRC, "evolve_sa_diffusion",
         )
 
     @property
@@ -161,9 +165,21 @@ class CupyBackend:
         epsilon_w: float,
         kappa_c: float = 0.0,
         epsilon_cc: float = 0.0,
+        # v16 S_a confinement fields
+        kappa_string: float = 0.0,
+        kappa_tube: float = 0.0,
+        sa_fields_in=None,
+        sa_fields_out=None,
+        sa_gamma: float = 0.1,
+        sa_d: float = 4.9,
+        dt: float = 0.02,
     ) -> None:
         total = N**3
         grid, block = _grid_block(total)
+
+        # S_a: need a valid device pointer even when SA is disabled
+        _sa_in = sa_fields_in if sa_fields_in is not None else cp.zeros(3 * total, dtype=cp.float32)
+
         self._kernel_color(grid, block, (
             psi_r_in, psi_r_prev_in,
             psi_i_in, psi_i_prev_in,
@@ -176,7 +192,19 @@ class CupyBackend:
             np.float32(lambda_self), np.float32(chi0), np.float32(e0_sq),
             np.float32(epsilon_w),
             np.float32(kappa_c), np.float32(epsilon_cc),
+            _sa_in, np.float32(kappa_string), np.float32(kappa_tube),
         ))
+
+        # S_a diffusion step (v16 flux-tube confinement)
+        if kappa_tube > 0.0 and sa_fields_in is not None and sa_fields_out is not None:
+            # |Ψ_a|² per color, computed from just-updated output fields
+            psi_sq_colors = psi_r_out * psi_r_out + psi_i_out * psi_i_out
+            self._kernel_sa_diffusion(grid, block, (
+                sa_fields_in, psi_sq_colors, sa_fields_out,
+                np.int32(N), np.float32(dt),
+                np.float32(sa_d), np.float32(sa_gamma),
+            ))
+
         cp.cuda.Stream.null.synchronize()
 
     def step_phase1(

@@ -159,6 +159,21 @@ class Simulation:
         """Set χ field."""
         self._evolver.set_chi(value)
 
+    @property
+    def sa_fields(self) -> "NDArray[np.float32] | None":
+        """S_a auxiliary confinement fields, shape (3, N, N, N).
+
+        Returns ``None`` when ``config.kappa_tube == 0`` (SA disabled).
+        Initialised to zero; the evolver updates them each step via the
+        diffusion equation dS_a/dt = D∇²S_a + γ(|Ψ_a|² − S_a).
+        """
+        return self._evolver.get_sa_fields()
+
+    @sa_fields.setter
+    def sa_fields(self, value: NDArray[np.float32]) -> None:
+        """Set S_a auxiliary confinement fields."""
+        self._evolver.set_sa_fields(value)
+
     # ── Field initialization ──────────────────────────────
 
     def place_soliton(
@@ -167,6 +182,7 @@ class Simulation:
         amplitude: float | None = None,
         sigma: float | None = None,
         phase: float = 0.0,
+        velocity: tuple[float, float, float] | None = None,
     ) -> None:
         """Place a single Gaussian soliton on the grid.
 
@@ -180,12 +196,35 @@ class Simulation:
             Width (default from config).
         phase : float
             Complex phase (0 = electron, π = positron).
+        velocity : (vx, vy, vz) or None
+            Initial velocity in lattice units (|v| < c = 1).  Adds a
+            spatial phase gradient k·(∂r−r₀) where k = χ₀·v/c,
+            creating a boosted soliton with net momentum.
         """
         N = self.config.grid_size
         amp = amplitude if amplitude is not None else self.config.e_amplitude
         sig = sigma if sigma is not None else self.config.sigma
 
-        pr, pi = gaussian_soliton(N, position, amp, sig, phase)
+        if velocity is not None:
+            # Velocity boost: spatial phase k·(∂r − r₀), k = χ₀·v/c
+            vx, vy, vz = velocity
+            chi0 = self.config.chi0
+            c = self.config.c
+            kx = chi0 * vx / c
+            ky = chi0 * vy / c
+            kz = chi0 * vz / c
+
+            x = np.arange(N, dtype=np.float32)
+            X, Y, Z = np.meshgrid(x, x, x, indexing="ij")
+            px, py, pz = position
+            r2 = (X - px) ** 2 + (Y - py) ** 2 + (Z - pz) ** 2
+            envelope = (amp * np.exp(-r2 / (2.0 * sig ** 2))).astype(np.float32)
+            phase_grid = (phase + kx * (X - px) + ky * (Y - py) + kz * (Z - pz))\
+                .astype(np.float32)
+            pr = (envelope * np.cos(phase_grid)).astype(np.float32)
+            pi = (envelope * np.sin(phase_grid)).astype(np.float32)
+        else:
+            pr, pi = gaussian_soliton(N, position, amp, sig, phase)
 
         # Add to existing field
         current_r = self._evolver.get_psi_real()
@@ -452,6 +491,11 @@ class Simulation:
         if self._psi_i_prev is not None:
             data["psi_imag_prev"] = self._psi_i_prev
 
+        # S_a auxiliary fields (v16 confinement)
+        sa = self._evolver.get_sa_fields()
+        if sa is not None:
+            data["sa_fields"] = sa
+
         # Serialize config + history as JSON strings
         cfg_dict = {
             k: v for k, v in vars(self.config).items()
@@ -507,6 +551,10 @@ class Simulation:
             sim._psi_r_prev = data["psi_real_prev"]
         if "psi_imag_prev" in data:
             sim._psi_i_prev = data["psi_imag_prev"]
+
+        # Restore S_a fields if present
+        if "sa_fields" in data and sim._evolver.sa_A is not None:
+            sim._evolver.set_sa_fields(data["sa_fields"])
 
         # Restore history
         sim._history = json.loads(str(data["history_json"]))

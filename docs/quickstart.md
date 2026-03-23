@@ -109,3 +109,29 @@ sim2.run(steps=5_000)
 
 - Walk through the [examples](examples.md) for deeper physics demonstrations.
 - Browse the [API reference](api/simulation.rst) for the full `Simulation` interface.
+
+## 7. Feasibility & use-case presets
+
+Before launching a long run, estimate whether it fits your hardware and start
+from a domain preset:
+
+```python
+import lfm
+
+# Pick a preset for your physics goal
+cfg = lfm.use_case_preset("cosmic_structure")
+
+# Check memory and backend feasibility
+report = lfm.assess_feasibility(cfg, cpu_ram_gb=32, gpu_vram_gb=8)
+print(report.status, report.recommended_backend, report.estimated_memory_gb)
+
+# Notes for intrinsically infeasible one-grid requests
+print(lfm.scale_limit_note())
+```
+
+Available presets:
+- `intro_gravity`
+- `electromagnetism_charges`
+- `strong_force_color`
+- `cosmic_structure`
+- `matter_creation_resonance`

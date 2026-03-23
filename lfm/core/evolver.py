@@ -123,6 +123,15 @@ class Evolver:
         # Boundary mask
         self.boundary_mask = xp.create_boundary_mask(N, cfg.boundary_fraction)
 
+        # S_a auxiliary fields for v16 flux-tube confinement (COLOR field level only)
+        if cfg.sa_enabled and cfg.field_level == FieldLevel.COLOR:
+            sa_init = np.zeros(cfg.n_colors * total, dtype=np.float32)
+            self.sa_A = xp.from_numpy(sa_init.copy())
+            self.sa_B = xp.from_numpy(sa_init.copy())
+        else:
+            self.sa_A = None
+            self.sa_B = None
+
     def evolve(self, steps: int, callback=None) -> None:
         """Run the evolution loop for a given number of steps.
 
@@ -178,6 +187,8 @@ class Evolver:
                 cfg.lambda_self, cfg.chi0, cfg.e0_sq, cfg.epsilon_w,
             )
         else:  # COLOR
+            sa_in  = (self.sa_A if self._use_buffer_A else self.sa_B)  if self.sa_A is not None else None
+            sa_out = (self.sa_B if self._use_buffer_A else self.sa_A)  if self.sa_A is not None else None
             self.backend.step_color(
                 r_in, rp_in, i_in, ip_in, c_in, cp_in,
                 self.boundary_mask,
@@ -185,6 +196,13 @@ class Evolver:
                 self._N, self._dt2, cfg.kappa,
                 cfg.lambda_self, cfg.chi0, cfg.e0_sq, cfg.epsilon_w,
                 cfg.kappa_c, cfg.epsilon_cc,
+                kappa_string=cfg.kappa_string,
+                kappa_tube=cfg.kappa_tube,
+                sa_fields_in=sa_in,
+                sa_fields_out=sa_out,
+                sa_gamma=cfg.sa_gamma,
+                sa_d=cfg.sa_d,
+                dt=cfg.dt,
             )
 
         self._use_buffer_A = not self._use_buffer_A
@@ -288,6 +306,36 @@ class Evolver:
             else:
                 np.copyto(buf, data)
         for buf in [self.chi_prev_A, self.chi_prev_B]:
+            if hasattr(buf, 'copy_'):
+                buf[:] = data
+            else:
+                np.copyto(buf, data)
+
+    def get_sa_fields(self) -> "NDArray[np.float32] | None":
+        """Get S_a auxiliary fields as numpy array, shape (3, N, N, N).
+
+        Returns None if SA confinement is not enabled (kappa_tube == 0).
+        """
+        if self.sa_A is None:
+            return None
+        flat = self.backend.to_numpy(self.sa_A if self._use_buffer_A else self.sa_B)
+        return flat.reshape(self.config.n_colors, self.N, self.N, self.N)
+
+    def set_sa_fields(self, arr: NDArray) -> None:
+        """Set S_a auxiliary fields on both buffers.
+
+        Parameters
+        ----------
+        arr : ndarray
+            Shape (3, N, N, N) or (3*N^3,). Values must be ≥ 0.
+        """
+        if self.sa_A is None:
+            raise ValueError(
+                "SA fields not allocated — set kappa_tube > 0 in SimulationConfig before creating the Evolver."
+            )
+        flat = arr.astype(np.float32).ravel()
+        data = self.backend.from_numpy(flat)
+        for buf in [self.sa_A, self.sa_B]:
             if hasattr(buf, 'copy_'):
                 buf[:] = data
             else:

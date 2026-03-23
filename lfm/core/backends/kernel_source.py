@@ -42,7 +42,10 @@ void evolve_gov01_gov02(
     const float E0_sq,
     const float eps_w,
     const float kappa_c,
-    const float eps_cc)
+    const float eps_cc,
+    const float* __restrict__ Sa_in,
+    const float kappa_string,
+    const float kappa_tube)
 {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     int total = N * N * N;
@@ -91,6 +94,11 @@ void evolve_gov01_gov02(
 
     // Per-color energy densities for f_c (v14)
     float ea[3];
+
+    // Per-color per-direction currents for CCV (v15 GOV-02)
+    float j_color_x[3] = {0.0f, 0.0f, 0.0f};
+    float j_color_y[3] = {0.0f, 0.0f, 0.0f};
+    float j_color_z[3] = {0.0f, 0.0f, 0.0f};
 
     // v15: compute color average Psi_bar for cross-color coupling
     float Pr_avg = 0.0f;
@@ -155,6 +163,37 @@ void evolve_gov01_gov02(
         float j_y = Pr * (Psi_i[off+jp] - Psi_i[off+jm]) - Pi_val * (Psi_r[off+jp] - Psi_r[off+jm]);
         float j_z = Pr * (Psi_i[off+kp] - Psi_i[off+km]) - Pi_val * (Psi_r[off+kp] - Psi_r[off+km]);
         j_total += 0.5f * (j_x + j_y + j_z);
+        // Store per-color currents for CCV
+        j_color_x[a] = j_x;
+        j_color_y[a] = j_y;
+        j_color_z[a] = j_z;
+    }  // end color loop
+    // CCV = Sum_d [ Sum_a j_{a,d}^2 - (1/3)(Sum_a j_{a,d})^2 ]
+    float ccv = 0.0f;
+    if (kappa_string > 0.0f) {
+        float jx_sum = j_color_x[0] + j_color_x[1] + j_color_x[2];
+        float jy_sum = j_color_y[0] + j_color_y[1] + j_color_y[2];
+        float jz_sum = j_color_z[0] + j_color_z[1] + j_color_z[2];
+        float sum_jxsq = j_color_x[0]*j_color_x[0] + j_color_x[1]*j_color_x[1] + j_color_x[2]*j_color_x[2];
+        float sum_jysq = j_color_y[0]*j_color_y[0] + j_color_y[1]*j_color_y[1] + j_color_y[2]*j_color_y[2];
+        float sum_jzsq = j_color_z[0]*j_color_z[0] + j_color_z[1]*j_color_z[1] + j_color_z[2]*j_color_z[2];
+        ccv = (sum_jxsq - (1.0f/3.0f)*jx_sum*jx_sum)
+            + (sum_jysq - (1.0f/3.0f)*jy_sum*jy_sum)
+            + (sum_jzsq - (1.0f/3.0f)*jz_sum*jz_sum);
+    }
+
+    // v16: smoothed color variance (SCV) from S_a auxiliary fields
+    // SCV = Sum_a S_a^2 - (1/3)(Sum_a S_a)^2
+    float scv = 0.0f;
+    if (kappa_tube > 0.0f) {
+        float sa_sum = 0.0f;
+        float sa_sq_sum = 0.0f;
+        for (int a = 0; a < 3; a++) {
+            float sa = Sa_in[a * total + idx];
+            sa_sum += sa;
+            sa_sq_sum += sa * sa;
+        }
+        scv = sa_sq_sum - (1.0f/3.0f) * sa_sum * sa_sum;
     }
 
     // v14: normalized color variance f_c = [Sum_a |Psi_a|^4 / (Sum_a |Psi_a|^2)^2] - 1/3
@@ -178,10 +217,11 @@ void evolve_gov01_gov02(
     // Mexican hat: -4*lam*chi*(chi^2 - chi0^2)
     float chi_self = -4.0f * lam * chi_c * (chi_sq - chi0 * chi0);
 
-    // GOV-02 v14+: colorblind gravity + color variance
+    // GOV-02 v16: colorblind gravity + color variance + CCV + SCV
     float chi_new = 2.0f * chi_c - chi_prev[idx] + dt2 * (
         lap_chi - kappa * (psi_sq_total + eps_w * j_total - E0_sq)
-        - color_var_term + chi_self);
+        - color_var_term + chi_self
+        - kappa_string * ccv - kappa_tube * scv);
 
     // BH excision: clamp to Z2 second vacuum
     if (chi_new < -chi0) chi_new = -chi0;
@@ -494,5 +534,63 @@ void evolve_complex(
     Psi_i_prev_next[idx] = Pi_val;
     chi_next[idx] = chi_new;
     chi_prev_next[idx] = chi_c;
+}
+'''
+
+# ---------------------------------------------------------------------------
+# S_a auxiliary field diffusion kernel (v16 — confinement flux tube)
+# ---------------------------------------------------------------------------
+SA_DIFFUSION_KERNEL_SRC = r'''
+extern "C" __global__
+void evolve_sa_diffusion(
+    // Input: S_a fields, packed [3*N^3]
+    const float* __restrict__ Sa_in,
+    // Input: |Ψ_a|^2 source for each color, packed [3*N^3]
+    const float* __restrict__ psi_sq_colors,
+    // Output: S_a fields after Euler step
+    float* __restrict__ Sa_out,
+    // Grid params
+    const int N,
+    const float dt,
+    const float sa_d,
+    const float sa_gamma)
+{
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    int total = N * N * N;
+    if (idx >= total) return;
+
+    int i = idx / (N * N);
+    int j = (idx / N) % N;
+    int k = idx % N;
+
+    // 6-point neighbours for standard Laplacian (sufficient for diffusion)
+    int ip = ((i + 1) % N) * N * N + j * N + k;
+    int im = ((i - 1 + N) % N) * N * N + j * N + k;
+    int jp = i * N * N + ((j + 1) % N) * N + k;
+    int jm = i * N * N + ((j - 1 + N) % N) * N + k;
+    int kp = i * N * N + j * N + (k + 1) % N;
+    int km = i * N * N + j * N + (k - 1 + N) % N;
+
+    // Euler update: dS_a/dt = D * Lap(S_a) + gamma * (|Psi_a|^2 - S_a)
+    // gamma-normalised source ensures equilibrium S_a -> |Psi_a|^2
+    #pragma unroll
+    for (int a = 0; a < 3; a++) {
+        int off = a * total;
+        float sa = Sa_in[off + idx];
+
+        // 6-pt Laplacian (no edges needed — diffusion tolerates lower isotropy)
+        float lap_sa = Sa_in[off + ip] + Sa_in[off + im]
+                     + Sa_in[off + jp] + Sa_in[off + jm]
+                     + Sa_in[off + kp] + Sa_in[off + km]
+                     - 6.0f * sa;
+
+        float psi_sq_a = psi_sq_colors[off + idx];
+        float sa_new = sa + dt * (sa_d * lap_sa + sa_gamma * (psi_sq_a - sa));
+
+        // S_a must be non-negative
+        if (sa_new < 0.0f) sa_new = 0.0f;
+
+        Sa_out[off + idx] = sa_new;
+    }
 }
 '''

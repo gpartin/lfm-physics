@@ -1,7 +1,10 @@
 """Field initialization: solitons, equilibrium, arrangements."""
 
 from lfm.fields.arrangements import (
+    disk_positions,
+    disk_velocities,
     grid_positions,
+    initialize_disk,
     sparse_positions,
     tetrahedral_positions,
 )
@@ -27,4 +30,7 @@ __all__ = [
     "tetrahedral_positions",
     "sparse_positions",
     "grid_positions",
+    "disk_positions",
+    "disk_velocities",
+    "initialize_disk",
 ]

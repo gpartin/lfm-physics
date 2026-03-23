@@ -65,6 +65,41 @@ EPSILON_CC: float = ALPHA_S
 Drives f_c dynamic: −ε_cc·χ²·(Ψₐ − Ψ̄) in GOV-01."""
 
 # ============================================================
+# v16 — S_a auxiliary fields (flux tube / confinement)
+# ============================================================
+
+BETA_0: int = int(CHI0) - 12
+"""QCD β₀ coefficient = 7 = χ₀ − 12. Also the S_a diffusion range L."""
+
+SA_GAMMA: float = EPSILON_W
+"""S_a decay rate γ = ε_W = 0.1.
+Same physics as weak helicity coupling: both derived from 2/(χ₀+1)."""
+
+SA_L: int = BETA_0
+"""S_a coherence / diffusion range L = β₀ = 7 lattice units.
+Sets the spatial scale of flux tubes."""
+
+SA_D: float = SA_GAMMA * SA_L**2
+"""S_a diffusion coefficient D = γ·L² = 0.1 × 49 = 4.9.
+CFL for S_a Euler step: dt < 1/(6D) ≈ 0.034. Our dt=0.02 is safe."""
+
+Z2_COORD: int = 2 * D_ST**2
+"""Second coordination shell z₂ = 2·D_st² = 32 (face+edge+NNN on 4D hypercubic)."""
+
+RANK_SU3: int = N_COLORS - 1
+"""Rank of SU(3) gauge group = 2 = N_c − 1. Appears in κ_tube derivation."""
+
+KAPPA_TUBE: float = (Z2_COORD - RANK_SU3) * KAPPA
+"""Smoothed color variance (SCV) coupling κ_tube = (z₂ − rank_G)·κ = 30/63 ≈ 0.4762.
+All parameters derived from χ₀=19 (Session 143).
+At this full value the simulation requires λ_self=LAMBDA_H for stability.
+For standalone experiments without Mexican hat use 10*KAPPA for safety."""
+
+KAPPA_STRING: float = KAPPA_C
+"""Color current variance (CCV) coupling κ_string = κ_c = 1/189.
+Activates v15-style CCV term in GOV-02."""
+
+# ============================================================
 # NUMERICAL — Simulation defaults
 # ============================================================
 

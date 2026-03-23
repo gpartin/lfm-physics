@@ -345,6 +345,178 @@ def measure_force(
     return -grad
 
 
+def rotation_curve(
+    chi: NDArray,
+    energy_density: NDArray,
+    center: tuple[int, int, int] | None = None,
+    c: float = 1.0,
+    chi0: float = 19.0,
+    kappa: float = 1.0 / 63.0,
+    plane_axis: int = 2,
+    max_radius: float | None = None,
+    n_bins: int | None = None,
+) -> dict[str, NDArray]:
+    """Compute the radial rotation curve v_circ(r) from χ field and |Ψ|².
+
+    Two complementary estimates are returned:
+
+    * **chi_gradient** — uses the local gravitational acceleration directly::
+
+        v_circ²(r) = r · (c²/χ₀) · |dχ/dr|
+
+      This is measurement-based and works in the weak and strong field regimes.
+
+    * **enclosed_mass** — uses the Newtonian analogy::
+
+        v_circ²(r) = G_eff · M_enc(r) / r,  G_eff = c⁴ / (κ · χ₀² · c²)
+
+      Useful for comparing with MOND-like predictions.
+
+    Parameters
+    ----------
+    chi : ndarray (N, N, N)
+        χ field.
+    energy_density : ndarray (N, N, N)
+        |Ψ|² energy density (the "mass" source for GOV-02).
+    center : (x, y, z) or None
+        Rotation-curve center.  Defaults to grid centre.
+    c : float
+        Wave speed (default 1.0 = lattice units).
+    chi0 : float
+        Vacuum χ (default 19.0).
+    kappa : float
+        GOV-02 coupling constant (default κ = 1/63).
+    plane_axis : int
+        Axis *perpendicular* to the disk (0, 1, or 2).
+    max_radius : float or None
+        Maximum radius in cells (default = N/2 − 2).
+    n_bins : int or None
+        Number of radial bins (default = max_radius).
+
+    Returns
+    -------
+    dict with keys:
+        ``r``            — radii (cell units)
+        ``v_chi``        — v_circ from χ gradient (lattice units, c = 1)
+        ``v_enc``        — v_circ from enclosed mass
+        ``v_keplerian``  — pure-Keplerian (total mass at r_max, Newtonian)
+        ``m_enclosed``   — cumulative enclosed |Ψ|² vs r
+        ``chi_profile``  — mean χ vs r (for plotting)
+    """
+    chi_arr = np.asarray(chi, dtype=np.float64)
+    e_arr   = np.asarray(energy_density, dtype=np.float64)
+    N = chi_arr.shape[0]
+    if center is None:
+        center = (N // 2, N // 2, N // 2)
+    if max_radius is None:
+        max_radius = N // 2 - 2
+    if n_bins is None:
+        n_bins = int(max_radius)
+
+    cx, cy, cz = center
+    ix = np.arange(N, dtype=np.float64) - cx
+    iy = np.arange(N, dtype=np.float64) - cy
+    iz = np.arange(N, dtype=np.float64) - cz
+    DX, DY, DZ = np.meshgrid(ix, iy, iz, indexing="ij")
+
+    # 3-D radius
+    R = np.sqrt(DX**2 + DY**2 + DZ**2)
+
+    r_edges = np.linspace(0.0, max_radius, n_bins + 1)
+    r_centres = 0.5 * (r_edges[:-1] + r_edges[1:])
+
+    chi_profile   = np.zeros(n_bins)
+    m_enclosed_all = np.zeros(n_bins)  # cumulative mass up to bin i
+
+    # chi radial derivative via finite diff on binned profile
+    chi_r_mean   = np.full(n_bins, chi0)  # fallback: vacuum
+    r_int        = (R / (max_radius / n_bins)).astype(int)
+    r_int        = np.clip(r_int, 0, n_bins - 1)
+
+    counts = np.bincount(r_int.ravel(), minlength=n_bins)
+    chi_sum = np.bincount(r_int.ravel(), weights=chi_arr.ravel(), minlength=n_bins)
+    e_sum   = np.bincount(r_int.ravel(), weights=e_arr.ravel(), minlength=n_bins)
+
+    for b in range(n_bins):
+        if counts[b] > 0:
+            chi_r_mean[b] = chi_sum[b] / counts[b]
+
+    # Enclosed mass: sum of |Ψ|² in shells out to r (discrete cumsum)
+    dr = max_radius / n_bins
+    shell_mass = e_sum  # each element ≈ sum of |Ψ|² in the bin
+    m_enclosed_all = np.cumsum(shell_mass)
+
+    chi_profile = chi_r_mean
+
+    # dchi/dr via central difference
+    dchi_dr = np.gradient(chi_r_mean, r_centres)
+
+    # v_circ from chi gradient (|dchi/dr| should be positive = chi drops inward)
+    v_chi_sq = r_centres * (c**2 / chi0) * np.abs(dchi_dr)
+    v_chi = np.sqrt(np.maximum(v_chi_sq, 0.0))
+
+    # Effective Newton constant: G_eff = c^4 / (kappa * chi0^2)
+    G_eff = c**4 / (kappa * chi0**2)
+    m_enc_positive = np.maximum(m_enclosed_all, 0.0)
+    r_safe = np.maximum(r_centres, 0.1)
+    v_enc_sq = G_eff * m_enc_positive / r_safe
+    v_enc = np.sqrt(v_enc_sq)
+
+    # Pure Keplerian (all mass at galactic centre)
+    M_total = float(m_enclosed_all[-1])
+    v_kep_sq = G_eff * M_total / r_safe
+    v_keplerian = np.sqrt(v_kep_sq)
+
+    return {
+        "r":           r_centres.astype(np.float32),
+        "v_chi":       v_chi.astype(np.float32),
+        "v_enc":       v_enc.astype(np.float32),
+        "v_keplerian": v_keplerian.astype(np.float32),
+        "m_enclosed":  m_enclosed_all.astype(np.float32),
+        "chi_profile": chi_profile.astype(np.float32),
+    }
+
+
+def keplerian_velocity(
+    r: NDArray,
+    m_total: float,
+    kappa: float = 1.0 / 63.0,
+    chi0: float = 19.0,
+    c: float = 1.0,
+) -> NDArray[np.float32]:
+    """Compute the pure-Keplerian circular velocity for a point mass.
+
+    In LFM natural units, the effective gravitational constant is::
+
+        G_eff = c⁴ / (κ · χ₀²)
+
+    so the Keplerian velocity is::
+
+        v_K(r) = sqrt(G_eff · M / r)
+
+    Parameters
+    ----------
+    r : 1-D array
+        Radii in lattice cells.
+    m_total : float
+        Total mass (sum of |Ψ|²) — treated as a point mass at the origin.
+    kappa : float
+        GOV-02 coupling (default 1/63).
+    chi0 : float
+        Vacuum χ (default 19).
+    c : float
+        Wave speed (default 1).
+
+    Returns
+    -------
+    ndarray, float32 — Keplerian velocity at each r.
+    """
+    r_arr = np.asarray(r, dtype=np.float64)
+    G_eff = c**4 / (kappa * chi0**2)
+    r_safe = np.maximum(r_arr, 1e-30)
+    return np.sqrt(G_eff * m_total / r_safe).astype(np.float32)
+
+
 def fit_power_law(
     r: NDArray,
     profile: NDArray,
