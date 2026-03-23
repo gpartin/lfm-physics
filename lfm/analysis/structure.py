@@ -37,11 +37,16 @@ def chi_statistics(
     dict with keys: min, max, mean, std
     """
     region = chi[interior_mask] if interior_mask is not None else chi.ravel()
+    _min = float(np.min(region))
+    _max = float(np.max(region))
     return {
-        "min": float(np.min(region)),
-        "max": float(np.max(region)),
+        "min": _min,
+        "max": _max,
         "mean": float(np.mean(region)),
         "std": float(np.std(region)),
+        # Convenience aliases (more descriptive names)
+        "chi_min": _min,
+        "chi_max": _max,
     }
 
 

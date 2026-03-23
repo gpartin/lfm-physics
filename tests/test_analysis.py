@@ -122,7 +122,7 @@ class TestChiStatistics:
     def test_keys(self):
         chi = np.full((N, N, N), CHI0, dtype=np.float32)
         stats = chi_statistics(chi)
-        assert set(stats.keys()) == {"min", "max", "mean", "std"}
+        assert {"min", "max", "mean", "std"} <= set(stats.keys())
 
     def test_uniform_chi(self):
         chi = np.full((N, N, N), CHI0, dtype=np.float32)

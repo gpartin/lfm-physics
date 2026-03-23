@@ -66,7 +66,6 @@ def galaxy_summary_plot(
     import matplotlib.pyplot as plt
 
     from lfm.analysis.observables import radial_profile, rotation_curve
-    from lfm.analysis.sparc import _BUILTIN_SPARC
 
     # ------------------------------------------------------------------
     # 1. Radially-averaged chi profile
@@ -88,17 +87,19 @@ def galaxy_summary_plot(
     # ------------------------------------------------------------------
     obs_r = np.asarray(sparc_row["r_kpc"], dtype=np.float64)
     obs_v = np.asarray(sparc_row["v_obs_kms"], dtype=np.float64)
-    obs_err = np.asarray(
-        sparc_row.get("v_err_kms", np.full_like(obs_v, 5.0)), dtype=np.float64
-    )
+    obs_err = np.asarray(sparc_row.get("v_err_kms", np.full_like(obs_v, 5.0)), dtype=np.float64)
 
     v_obs_peak = float(np.max(obs_v)) if len(obs_v) > 0 else 1.0
-    v_lfm_peak = float(np.max(np.abs(v_lfm))) if len(v_lfm) > 0 and np.any(np.isfinite(v_lfm)) else 1.0
+    v_lfm_peak = (
+        float(np.max(np.abs(v_lfm))) if len(v_lfm) > 0 and np.any(np.isfinite(v_lfm)) else 1.0
+    )
     if v_lfm_peak < 1e-30:
         v_lfm_peak = 1.0
 
     # Scale LFM radii so max matches SPARC max
-    r_lfm_scaled = r_lfm * (float(np.max(obs_r)) / float(np.max(r_lfm))) if float(np.max(r_lfm)) > 0 else r_lfm
+    r_lfm_scaled = (
+        r_lfm * (float(np.max(obs_r)) / float(np.max(r_lfm))) if float(np.max(r_lfm)) > 0 else r_lfm
+    )
     # Scale LFM velocities to km/s
     v_lfm_kms = v_lfm * (v_obs_peak / v_lfm_peak)
 
@@ -109,7 +110,9 @@ def galaxy_summary_plot(
 
     # --- Panel 1: chi radial profile ---
     ax0 = axes[0]
-    ax0.plot(r_cells, chi_prof["mean"], color="#1f77b4", linewidth=2, label=r"$\langle\chi\rangle(r)$")
+    ax0.plot(
+        r_cells, chi_prof["mean"], color="#1f77b4", linewidth=2, label=r"$\langle\chi\rangle(r)$"
+    )
     if "std" in chi_prof:
         std = np.asarray(chi_prof["std"])
         mean = np.asarray(chi_prof["mean"])

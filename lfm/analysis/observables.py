@@ -232,13 +232,14 @@ def radial_profile(
             profile[i] = vals.mean()
             std[i] = vals.std()
 
-    return {"r": radii, "profile": profile, "std": std, "counts": counts}
+    return {"r": radii, "profile": profile, "mean": profile, "std": std, "counts": counts}
 
 
 def find_peaks(
     psi_sq: NDArray,
     n: int = 2,
     min_separation: int = 5,
+    n_peaks: int | None = None,
 ) -> list[tuple[int, int, int]]:
     """Find the N brightest |Ψ|² peaks on the grid.
 
@@ -255,6 +256,8 @@ def find_peaks(
     -------
     List of (x, y, z) positions, brightest first.
     """
+    if n_peaks is not None:
+        n = n_peaks
     from scipy.ndimage import maximum_filter
 
     # Suppress non-maxima
@@ -475,6 +478,7 @@ def rotation_curve(
         "r": r_centres.astype(np.float32),
         "v_chi": v_chi.astype(np.float32),
         "v_enc": v_enc.astype(np.float32),
+        "v_circ": v_enc.astype(np.float32),  # alias for v_enc (most galaxy-like)
         "v_keplerian": v_keplerian.astype(np.float32),
         "m_enclosed": m_enclosed_all.astype(np.float32),
         "chi_profile": chi_profile.astype(np.float32),

@@ -14,7 +14,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-from numpy.typing import NDArray
 
 # ---------------------------------------------------------------------------
 # Built-in sample data (five representative galaxies, hard-coded so that
