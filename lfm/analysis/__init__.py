@@ -5,6 +5,17 @@ from lfm.analysis.angular_momentum import (
     precession_rate,
     total_angular_momentum,
 )
+from lfm.analysis.cosmology import (
+    correlation_function,
+    halo_mass_function,
+    matter_power_spectrum,
+    void_statistics,
+)
+from lfm.analysis.grav_waves import (
+    gravitational_wave_strain,
+    gw_power,
+    gw_quadrupole,
+)
 from lfm.analysis.color import (
     color_variance,
 )
@@ -131,4 +142,13 @@ __all__ = [
     "angular_momentum_density",
     "total_angular_momentum",
     "precession_rate",
+    # cosmological statistics
+    "correlation_function",
+    "matter_power_spectrum",
+    "halo_mass_function",
+    "void_statistics",
+    # gravitational waves
+    "gravitational_wave_strain",
+    "gw_quadrupole",
+    "gw_power",
 ]

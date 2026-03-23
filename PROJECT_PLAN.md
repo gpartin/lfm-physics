@@ -358,6 +358,30 @@ Identified during P019–P025 implementation:
 
 ---
 
+## v1.1.0 Features (P031–P047) — COMPLETED
+
+| ID | Feature | Status | Notes |
+|----|---------|--------|-------|
+| P031 | `Simulation.run_with_snapshots()` | ✅ DONE | Block-loop design; fields=["chi","psi_real","psi_imag","energy_density"] |
+| P032 | `lfm.viz.animate_slice()` | ✅ DONE | FuncAnimation, optional GIF/MP4 save via pillow/ffmpeg |
+| P033 | `lfm.viz.animate_three_slices()` | ✅ DONE | Three mid-plane panels in one animation |
+| P034 | `lfm.viz.project_field()` | ✅ DONE | sum/mean/max column-density projection |
+| P035 | `lfm.viz.plot_projection()` | ✅ DONE | Log/linear 2-D projection image with colorbar |
+| P036 | `lfm.viz.spacetime_diagram()` | ✅ DONE | χ(x,t) heatmap from snapshot sequence |
+| P037 | `lfm.correlation_function()` | ✅ DONE | Wiener–Khinchin FFT-based two-point ξ(r) |
+| P038 | `lfm.matter_power_spectrum()` | ✅ DONE | Dimensionless Δ²(k) = k³P(k)/(2π²) |
+| P039 | `lfm.halo_mass_function()` | ✅ DONE | scipy.ndimage.label connected-components halos |
+| P040 | `lfm.void_statistics()` | ✅ DONE | High-χ void finder + size distribution |
+| P041 | `lfm.gravitational_wave_strain()` | ✅ DONE | h = (χ − χ₀)/χ₀ strain field |
+| P042 | `lfm.gw_quadrupole()` | ✅ DONE | Reduced traceless quadrupole tensor I_ij |
+| P043 | `lfm.gw_power()` | ✅ DONE | Peters-formula L_GW from snapshot sequence |
+| P044 | `examples/20_gravitational_waves.py` | ✅ DONE | Binary inspiral + GW chirp + spacetime diagram |
+| P045 | `examples/21_wave_interference.py` | ✅ DONE | Double-source interference, phase sweep |
+| P046 | `examples/22_soliton_modes.py` | ✅ DONE | Breathing-mode FFT vs ω_H = √(8λ_H)·χ₀ |
+| P047 | `tests/test_v11_features.py` (50 tests) | ✅ DONE | 405/405 total passing |
+
+---
+
 ## Derivation Rationale for S_a Parameters
 
 All four S_a parameters are DERIVED from χ₀ = 19 (Session 143):

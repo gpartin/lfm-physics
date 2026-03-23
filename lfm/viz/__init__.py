@@ -20,21 +20,35 @@ Quick usage::
     plot_evolution(sim.history)
 """
 
+from lfm.viz.animation import animate_slice, animate_three_slices
 from lfm.viz.evolution import plot_energy_components, plot_evolution
 from lfm.viz.fields import plot_isosurface
 from lfm.viz.galaxy import galaxy_summary_plot
+from lfm.viz.projection import plot_projection, project_field
 from lfm.viz.radial import plot_radial_profile
 from lfm.viz.slices import plot_chi_histogram, plot_slice, plot_three_slices
+from lfm.viz.spacetime import spacetime_diagram
 from lfm.viz.spectrum import plot_power_spectrum
 from lfm.viz.sweep import plot_sweep
 from lfm.viz.tracker import plot_trajectories
 
 __all__ = [
+    # static slices
     "plot_slice",
     "plot_three_slices",
     "plot_chi_histogram",
+    # animations
+    "animate_slice",
+    "animate_three_slices",
+    # projections
+    "project_field",
+    "plot_projection",
+    # space-time
+    "spacetime_diagram",
+    # evolution / energy
     "plot_evolution",
     "plot_energy_components",
+    # other
     "plot_radial_profile",
     "plot_isosurface",
     "plot_power_spectrum",

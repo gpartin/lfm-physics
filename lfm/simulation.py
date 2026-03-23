@@ -411,6 +411,74 @@ class Simulation:
                 m["step"] = float(base_step + s + 1)
                 self._history.append(m)
 
+    def run_with_snapshots(
+        self,
+        steps: int,
+        snapshot_every: int = 100,
+        fields: list[str] | None = None,
+        callback: Callable[[Simulation, int], None] | None = None,
+        record_metrics: bool = True,
+    ) -> list[dict[str, NDArray[np.float32]]]:
+        """Run and accumulate field snapshots at regular intervals.
+
+        Snapshots are stored in memory as copies of the requested fields.
+        Use these with :func:`lfm.viz.animate_slice` to create animations.
+
+        Parameters
+        ----------
+        steps : int
+            Number of leapfrog steps.
+        snapshot_every : int
+            Save a snapshot every this many steps (aligned to
+            ``config.report_interval``).
+        fields : list of str or None
+            Which fields to capture: any subset of
+            ``["chi", "psi_real", "psi_imag", "energy_density"]``.
+            Defaults to ``["chi"]``.
+        callback : callable or None
+            Optional callback as in :meth:`run`.
+        record_metrics : bool
+            Also append metrics to :attr:`history` every report_interval.
+
+        Returns
+        -------
+        list of dict
+            Each entry is ``{"step": int, "chi": array, ...}`` for each
+            snapshot taken.
+
+        Examples
+        --------
+        >>> snaps = sim.run_with_snapshots(5000, snapshot_every=200)
+        >>> lfm.animate_slice(snaps, save_path="chi_evolution.gif")
+        """
+        if fields is None:
+            fields = ["chi"]
+
+        snapshots: list[dict] = []
+        n_full, remainder = divmod(steps, snapshot_every)
+
+        def _take_snap() -> dict:
+            snap: dict = {"step": self.step}
+            if "chi" in fields:
+                snap["chi"] = self.chi.copy()
+            if "psi_real" in fields:
+                snap["psi_real"] = self.psi_real.copy()
+            if "psi_imag" in fields and self.psi_imag is not None:
+                snap["psi_imag"] = self.psi_imag.copy()
+            if "energy_density" in fields:
+                snap["energy_density"] = self.energy_density.copy()
+            return snap
+
+        for _ in range(n_full):
+            self.run(snapshot_every, callback=callback, record_metrics=record_metrics)
+            snapshots.append(_take_snap())
+
+        if remainder > 0:
+            self.run(remainder, callback=callback, record_metrics=record_metrics)
+            snapshots.append(_take_snap())
+
+        return snapshots
+
     # ── Analysis ──────────────────────────────────────────
 
     def get_interior_mask(self) -> NDArray[np.bool_]:

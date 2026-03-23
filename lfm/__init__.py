@@ -15,7 +15,7 @@ Quick start::
     print(sim.metrics())
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 from lfm.analysis import (
     angular_momentum_density,
@@ -28,6 +28,7 @@ from lfm.analysis import (
     compute_metrics,
     confinement_proxy,
     continuity_residual,
+    correlation_function,
     coulomb_interaction_energy,
     count_clusters,
     detect_collision_events,
@@ -41,10 +42,15 @@ from lfm.analysis import (
     fluid_fields,
     flux_tube_profile,
     gravitational_potential,
+    gravitational_wave_strain,
+    gw_power,
+    gw_quadrupole,
+    halo_mass_function,
     horizon_mass,
     interior_mask,
     keplerian_velocity,
     list_sparc_galaxies,
+    matter_power_spectrum,
     measure_chi_midpoint,
     measure_force,
     measure_separation,
@@ -66,6 +72,7 @@ from lfm.analysis import (
     total_energy,
     track_peaks,
     void_fraction,
+    void_statistics,
     weak_parity_asymmetry,
     well_fraction,
 )
@@ -259,6 +266,15 @@ __all__ = [
     "angular_momentum_density",
     "total_angular_momentum",
     "precession_rate",
+    # Cosmological statistics
+    "correlation_function",
+    "matter_power_spectrum",
+    "halo_mass_function",
+    "void_statistics",
+    # Gravitational waves
+    "gravitational_wave_strain",
+    "gw_quadrupole",
+    "gw_power",
     # Boosted soliton
     "boosted_soliton",
     # Sweep
