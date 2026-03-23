@@ -4,7 +4,7 @@ Brief description of the change and why it's needed.
 
 ## Changes
 
-- 
+-
 
 ## Testing
 
