@@ -48,16 +48,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.10", "3.11", "3.12"]
-        exclude:
-          # Only test one Python version on slow OSes; Linux carries full matrix
-          - os: windows-latest
-            python-version: "3.10"
-          - os: windows-latest
-            python-version: "3.12"
-          - os: macos-latest
-            python-version: "3.10"
-          - os: macos-latest
-            python-version: "3.12"
 
     steps:
       - uses: actions/checkout@v5
