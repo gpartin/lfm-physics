@@ -98,13 +98,47 @@ class DetectorScreen:
 
         Call this at every simulation step (or every few steps) to build
         up the interference pattern with sufficient temporal resolution.
+
+        GPU fast-path: when the simulation is running on a CuPy backend and
+        the requested field is ``energy_density`` (the common case), we access
+        the live GPU buffer directly, compute the 2-D slice on the GPU, and
+        copy only the N×N result to CPU.  This avoids the full N³ GPU→CPU
+        transfer that ``sim.energy_density`` would trigger.
         """
+        if self._field_name == "energy_density" and self._try_record_gpu_fast():
+            return
         field = self._get_field()
-        # Extract 2-D slice perpendicular to axis
         idx = [slice(None), slice(None), slice(None)]
         idx[self._axis] = self._pos
         frame = field[tuple(idx)].astype(np.float32)
         self._frames.append(frame.copy())
+
+    def _try_record_gpu_fast(self) -> bool:
+        """GPU fast-path for energy_density recording.
+
+        Accesses the live GPU buffer directly, squares it, extracts the
+        2-D slice on-device, then copies only that slice to CPU.  This
+        reduces per-step PCIe traffic from N³×4 bytes to N²×4 bytes
+        (64× reduction for N=64).
+
+        Returns True if the fast path succeeded, False to fall through to
+        the normal CPU path.
+        """
+        try:
+            import cupy as cp
+        except ImportError:
+            return False
+        try:
+            pr_gpu = self._sim._native_psi_real()  # live (N, N, N) CuPy view
+        except AttributeError:
+            return False
+        if not isinstance(pr_gpu, cp.ndarray):
+            return False
+        idx: list = [slice(None), slice(None), slice(None)]
+        idx[self._axis] = self._pos
+        energy_slice = (pr_gpu[tuple(idx)] ** 2).astype(cp.float32)
+        self._frames.append(cp.asnumpy(energy_slice))
+        return True
 
     def step_callback(self, sim: "Simulation", step: int) -> None:
         """Simulation step callback.  Equivalent to calling :meth:`record`.
@@ -152,9 +186,7 @@ class DetectorScreen:
             return np.zeros((0, self._N, self._N), dtype=np.float32)
         return np.stack(self._frames, axis=0)
 
-    def click_pattern(
-        self, n_particles: int = 1000, seed: int | None = None
-    ) -> NDArray[np.int32]:
+    def click_pattern(self, n_particles: int = 1000, seed: int | None = None) -> NDArray[np.int32]:
         """Simulate discrete *particle clicks* from the intensity pattern.
 
         Samples ``n_particles`` detection events from the probability
@@ -240,14 +272,11 @@ class DetectorScreen:
             return self._sim.psi_real
         if name == "psi_imag":
             f = self._sim.psi_imag
-            return f if f is not None else np.zeros(
-                (self._N, self._N, self._N), dtype=np.float32
-            )
+            return f if f is not None else np.zeros((self._N, self._N, self._N), dtype=np.float32)
         if name == "chi":
             return self._sim.chi
         raise ValueError(
-            f"Unknown field '{name}'. "
-            "Choose from 'energy_density', 'psi_real', 'psi_imag', 'chi'."
+            f"Unknown field '{name}'. Choose from 'energy_density', 'psi_real', 'psi_imag', 'chi'."
         )
 
     def __repr__(self) -> str:

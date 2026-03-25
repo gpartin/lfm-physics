@@ -154,7 +154,8 @@ class CupyBackend:
                 np.float32(e0_sq),
             ),
         )
-        cp.cuda.Stream.null.synchronize()
+        # No synchronize() here — GPU ops are serialized on the default
+        # stream and cp.asnumpy() / to_numpy() syncs when data is needed.
 
     def step_complex(
         self,
@@ -207,7 +208,7 @@ class CupyBackend:
                 np.float32(epsilon_w),
             ),
         )
-        cp.cuda.Stream.null.synchronize()
+        # No synchronize() here — syncs lazily on first CPU read.
 
     def step_color(
         self,
@@ -298,7 +299,7 @@ class CupyBackend:
                 ),
             )
 
-        cp.cuda.Stream.null.synchronize()
+        # No synchronize() here — syncs lazily on first CPU read.
 
     def step_phase1(
         self,
@@ -334,6 +335,10 @@ class CupyBackend:
                 np.float32(chi_sq),
             ),
         )
+        # No synchronize() here — syncs lazily on first CPU read.
+
+    def synchronize(self) -> None:
+        """Explicitly synchronise the GPU stream (use before timing or profiling)."""
         cp.cuda.Stream.null.synchronize()
 
     def to_numpy(self, arr) -> NDArray[np.float32]:

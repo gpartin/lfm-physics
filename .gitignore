@@ -205,3 +205,38 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ===========================================================================
+# LFM-PHYSICS PROJECT: Internal / non-public files
+# ===========================================================================
+
+# --- Internal planning & research documents ---
+# (README.md, CHANGELOG.md, CONTRIBUTING.md are tracked; these are not)
+PARTICLE_PHYSICS_PROJECT_PLAN.md
+DESIGN_SCALING_AND_SOURCES.md
+DOUBLE_SLIT_PHYSICS_REPORT.md
+
+# --- Temporary debug/test scripts (underscore-prefixed) ---
+/_*.py
+*.py.bak
+
+# --- Temporary output / log files ---
+/_*.txt
+/ds256_*.txt
+/v5_*.txt
+
+# --- One-off scratch scripts in repo root ---
+/gen_3d_movie.py
+/particles.py
+/run_n64.py
+
+# --- Internal research directories (belong in Papers repo, not public) ---
+/paper_experiments/
+/tools/
+/research/
+
+# --- Generated example outputs (large, regenerable) ---
+examples/*.png
+examples/*.gif
+examples/*.mp4
+examples/*.npz

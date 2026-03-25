@@ -26,7 +26,9 @@ from lfm.viz.fields import plot_isosurface
 from lfm.viz.galaxy import galaxy_summary_plot
 from lfm.viz.projection import plot_projection, project_field
 from lfm.viz.quantum import (
+    animate_3d_slices,
     animate_double_slit,
+    animate_double_slit_3d,
     plot_interference_pattern,
     render_3d_volume,
     volume_render_available,
@@ -57,6 +59,8 @@ __all__ = [
     # quantum / double-slit
     "plot_interference_pattern",
     "animate_double_slit",
+    "animate_double_slit_3d",
+    "animate_3d_slices",
     "render_3d_volume",
     "volume_render_available",
     # other

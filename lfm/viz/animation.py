@@ -113,7 +113,7 @@ def animate_slice(
     plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     axis_labels = ["x", "y", "z"]
     removed = axis_labels[axis]
-    remaining = [l for l in axis_labels if l != removed]
+    remaining = [lbl for lbl in axis_labels if lbl != removed]
     ax.set_xlabel(remaining[0])
     ax.set_ylabel(remaining[1])
 
@@ -123,8 +123,11 @@ def animate_slice(
     def _update(i: int) -> tuple:
         im.set_data(slices[i].T)
         step = snapshots[i].get("step", i)
-        title_obj.set_text(_base_title.replace("{step}", str(step)) if "{step}" in _base_title
-                           else f"{_base_title}  step={step}")
+        title_obj.set_text(
+            _base_title.replace("{step}", str(step))
+            if "{step}" in _base_title
+            else f"{_base_title}  step={step}"
+        )
         return im, title_obj
 
     anim = FuncAnimation(
@@ -233,24 +236,22 @@ def animate_three_slices(
 
 def _save_animation(anim: "FuncAnimation", path: str, fps: int = 10) -> None:
     """Save animation to GIF or MP4 depending on file extension."""
-    import os
+    from pathlib import Path as _Path
 
-    ext = os.path.splitext(path)[1].lower()
+    ext = _Path(path).suffix.lower()
     if ext == ".gif":
         try:
             anim.save(path, writer="pillow", fps=fps)
         except Exception as exc:  # pragma: no cover
             raise RuntimeError(
-                f"Could not save GIF to '{path}'.  "
-                "Install Pillow: pip install Pillow"
+                f"Could not save GIF to '{path}'.  Install Pillow: pip install Pillow"
             ) from exc
     elif ext in (".mp4", ".webm", ".avi"):
         try:
             anim.save(path, writer="ffmpeg", fps=fps)
         except Exception as exc:  # pragma: no cover
             raise RuntimeError(
-                f"Could not save video to '{path}'.  "
-                "Ensure FFmpeg is installed and on PATH."
+                f"Could not save video to '{path}'.  Ensure FFmpeg is installed and on PATH."
             ) from exc
     else:
         anim.save(path, fps=fps)

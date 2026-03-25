@@ -229,8 +229,13 @@ def halo_mass_function(
     masses = masses[masses > 0.0]
     if len(masses) == 0:
         empty = np.array([], dtype=np.float64)
-        return {"m_bins": empty, "dn_dlnm": empty, "n_cumulative": empty,
-                "masses": empty, "n_halos": 0}
+        return {
+            "m_bins": empty,
+            "dn_dlnm": empty,
+            "n_cumulative": empty,
+            "masses": empty,
+            "n_halos": 0,
+        }
 
     m_min = masses.min()
     m_max = masses.max()
@@ -284,9 +289,7 @@ def void_statistics(
     try:
         from scipy.ndimage import label  # type: ignore[import-untyped]
     except ImportError as exc:
-        raise ImportError(
-            "void_statistics requires scipy.  Install it: pip install scipy"
-        ) from exc
+        raise ImportError("void_statistics requires scipy.  Install it: pip install scipy") from exc
 
     chi_arr = np.asarray(chi, dtype=np.float64)
     void_mask = chi_arr >= chi_min

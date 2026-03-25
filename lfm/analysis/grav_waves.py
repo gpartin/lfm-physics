@@ -106,13 +106,13 @@ def gw_quadrupole(
     r2 = dx**2 + dy**2 + dz**2
 
     coords_vec = [dx, dy, dz]
-    I = np.zeros((3, 3), dtype=np.float64)
+    quad = np.zeros((3, 3), dtype=np.float64)
     for i in range(3):
         for j in range(3):
             delta_ij = 1.0 if i == j else 0.0
-            I[i, j] = float((rho * (coords_vec[i] * coords_vec[j] - delta_ij / 3.0 * r2)).sum())
+            quad[i, j] = float((rho * (coords_vec[i] * coords_vec[j] - delta_ij / 3.0 * r2)).sum())
 
-    return I
+    return quad
 
 
 def gw_power(
@@ -165,10 +165,9 @@ def gw_power(
         )
 
     # Compute quadrupole at each frame
-    I_series = np.array([
-        gw_quadrupole(snap[field], center=center)
-        for snap in snapshots
-    ])  # shape: (n_frames, 3, 3)
+    I_series = np.array(
+        [gw_quadrupole(snap[field], center=center) for snap in snapshots]
+    )  # shape: (n_frames, 3, 3)
 
     n = len(I_series)
     # Second derivative via central finite differences (valid for interior frames)
@@ -182,10 +181,9 @@ def gw_power(
         I_dddot[k] = (I_ddot[k + 1] - I_ddot[k - 1]) / (2.0 * dt) if k + 1 < n else 0.0
 
     # L_GW = (1/5) Tr(I_dddot · I_dddot) per Peters formula
-    luminosity = np.array([
-        float(np.einsum("ij,ij->", I_dddot[k], I_dddot[k])) / 5.0
-        for k in range(n)
-    ])
+    luminosity = np.array(
+        [float(np.einsum("ij,ij->", I_dddot[k], I_dddot[k])) / 5.0 for k in range(n)]
+    )
 
     # Snapshot times (from "step" key if present, else index * dt)
     t_steps = np.array([snap.get("step", i) for i, snap in enumerate(snapshots)], dtype=np.float64)

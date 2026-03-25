@@ -434,9 +434,9 @@ class TestSparcLoad:
         from lfm.analysis.sparc import sparc_load
 
         for name, row in sparc_load().items():
-            assert (
-                len(row["r_kpc"]) == len(row["v_obs_kms"]) == len(row["v_err_kms"])
-            ), f"{name}: inconsistent array lengths"
+            assert len(row["r_kpc"]) == len(row["v_obs_kms"]) == len(row["v_err_kms"]), (
+                f"{name}: inconsistent array lengths"
+            )
 
     def test_missing_dir_raises(self, tmp_path):
         from lfm.analysis.sparc import sparc_load

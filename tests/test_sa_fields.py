@@ -240,9 +240,9 @@ class TestVelocityBoost:
         # psi_imag is the public property for the imaginary component
         psi_i = sim.psi_imag
         assert psi_i is not None
-        assert (
-            np.abs(psi_i).max() > 1e-8
-        ), "Imaginary component is zero — velocity boost produced no phase gradient"
+        assert np.abs(psi_i).max() > 1e-8, (
+            "Imaginary component is zero — velocity boost produced no phase gradient"
+        )
 
     def test_place_soliton_no_velocity_gives_real_field(self):
         """place_soliton without velocity should leave Psi_i ≈ 0 for COMPLEX."""

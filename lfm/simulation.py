@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Callable
 if TYPE_CHECKING:
     from lfm.experiment.barrier import Barrier
     from lfm.experiment.detector import DetectorScreen
+    from lfm.experiment.source import ContinuousSource
 
 import numpy as np
 from numpy.typing import NDArray
@@ -159,9 +160,85 @@ class Simulation:
         """Set imaginary part of Ψ."""
         self._evolver.set_psi_imag(value)
 
+    def set_psi_real_prev(self, value: NDArray[np.float32]) -> None:
+        """Override the previous-timestep Ψ_real for traveling-wave init.
+
+        Call *after* :meth:`set_psi_real` to set Ψ(t=−Δt) independently,
+        so that the leapfrog starts with a non-zero dΨ/dt.
+        """
+        self._evolver.set_psi_real_prev(value)
+
+    def set_psi_imag_prev(self, value: NDArray[np.float32]) -> None:
+        """Override the previous-timestep Ψ_imag for traveling-wave init."""
+        self._evolver.set_psi_imag_prev(value)
+
+    def set_psi_real_current(self, value: NDArray[np.float32]) -> None:
+        """Set only the active current-timestep Ψ_real buffer.
+
+        Safe to call from a step callback: does **not** touch the prev
+        buffers, so field velocities elsewhere on the grid are preserved.
+        Use this for driven continuous-wave sources.
+        """
+        self._evolver.set_psi_real_current(value)
+
+    def set_psi_imag_current(self, value: NDArray[np.float32]) -> None:
+        """Set only the active current-timestep Ψ_imag buffer.
+
+        See :meth:`set_psi_real_current` for the intended usage pattern.
+        """
+        self._evolver.set_psi_imag_current(value)
+
     def set_chi(self, value: NDArray[np.float32]) -> None:
         """Set χ field."""
         self._evolver.set_chi(value)
+
+    # ── zero-copy native buffer access (avoids GPU↔CPU roundtrips) ─────
+
+    def _native_psi_real(self):
+        """Active psi_real buffer as a 3D view on the native backend.
+
+        Returns a *view* (cupy on GPU, numpy on CPU) — no data is copied.
+        Modifications are immediately visible to the evolver.
+        """
+        ev = self._evolver
+        buf = ev.psi_r_A if ev._use_buffer_A else ev.psi_r_B
+        N = ev.N
+        return buf.reshape(N, N, N)
+
+    def _native_psi_imag(self):
+        """Active psi_imag buffer as a 3D view (None for real field)."""
+        ev = self._evolver
+        if not ev._has_imag:
+            return None
+        buf = ev.psi_i_A if ev._use_buffer_A else ev.psi_i_B
+        N = ev.N
+        return buf.reshape(N, N, N)
+
+    def _native_chi(self):
+        """Active chi buffer as a 3D view on the native backend."""
+        ev = self._evolver
+        buf = ev.chi_A if ev._use_buffer_A else ev.chi_B
+        N = ev.N
+        return buf.reshape(N, N, N)
+
+    def _native_chi_pair(self):
+        """All four chi buffers as 3D views (for barrier enforcement).
+
+        Returns (chi_A, chi_B, chi_prev_A, chi_prev_B).  Modify all four
+        so the barrier persists across leapfrog double-buffer swaps.
+        """
+        ev = self._evolver
+        N = ev.N
+        return (
+            ev.chi_A.reshape(N, N, N),
+            ev.chi_B.reshape(N, N, N),
+            ev.chi_prev_A.reshape(N, N, N),
+            ev.chi_prev_B.reshape(N, N, N),
+        )
+
+    def _to_device(self, arr):
+        """Convert a numpy array to the backend's native format."""
+        return self._evolver.backend.from_numpy(arr.ravel().astype(np.float32))
 
     @property
     def sa_fields(self) -> "NDArray[np.float32] | None":
@@ -226,19 +303,39 @@ class Simulation:
             phase_grid = (phase + kx * (X - px) + ky * (Y - py) + kz * (Z - pz)).astype(np.float32)
             pr = (envelope * np.cos(phase_grid)).astype(np.float32)
             pi = (envelope * np.sin(phase_grid)).astype(np.float32)
+
+            # Ψ(t=−Δt) = envelope × exp(i(k·(r−r₀) + ω·Δt))
+            # This gives dΨ/dt = −iω·Ψ at t=0, correctly initialising the
+            # traveling wave so the leapfrog propagates the packet forward.
+            omega = float(np.sqrt(kx**2 + ky**2 + kz**2 + chi0**2))
+            phase_prev = (phase_grid + omega * self.config.dt).astype(np.float32)
+            pr_prev = (envelope * np.cos(phase_prev)).astype(np.float32)
+            pi_prev = (envelope * np.sin(phase_prev)).astype(np.float32)
         else:
             pr, pi = gaussian_soliton(N, position, amp, sig, phase)
+            pr_prev = pr
+            pi_prev = pi
 
         # Add to existing field
         current_r = self._evolver.get_psi_real()
         new_r = current_r + pr
         self._evolver.set_psi_real(new_r)
+        # For velocity-boosted soliton, override prev buffers with the
+        # time-shifted version so the leapfrog computes dΨ/dt ≠ 0.
+        if velocity is not None:
+            prev_r = self._evolver.get_psi_real()  # = new_r (already set above)
+            # Reconstruct: prev = (existing field contribution, same both steps) + pr_prev
+            prev_r = current_r + pr_prev  # existing field assumed stationary
+            self._evolver.set_psi_real_prev(prev_r)
 
         if self.config.field_level != FieldLevel.REAL:
             current_i = self._evolver.get_psi_imag()
             if current_i is not None:
                 new_i = current_i + pi
                 self._evolver.set_psi_imag(new_i)
+                if velocity is not None:
+                    prev_i = current_i + pi_prev
+                    self._evolver.set_psi_imag_prev(prev_i)
 
     def place_solitons(
         self,
@@ -294,6 +391,101 @@ class Simulation:
             current_i = self._evolver.get_psi_imag()
             if current_i is not None:
                 self._evolver.set_psi_imag(current_i + pi)
+
+    def place_plane_wave(
+        self,
+        axis: int = 2,
+        amplitude: float = 0.3,
+        velocity: float = 0.5,
+        z_max: "int | None" = None,
+        phase: float = 0.0,
+        beam_waist: "float | None" = None,
+    ) -> None:
+        """Initialize a forward-propagating Gaussian beam (coherent wave source).
+
+        Fills the domain (or the region ``coord < z_max`` along *axis*) with a
+        monochromatic Gaussian beam at ``t = 0`` **and** ``t = −Δt``, so the
+        leapfrog integrator starts with the correct field velocity and the wave
+        propagates in the ``+axis`` direction immediately.
+
+        Unlike a flat plane wave, the beam is shaped with a Gaussian transverse
+        envelope so its energy stays within the active (non-damped) interior,
+        avoiding the edge-absorption problem of ABSORBING boundaries.
+
+        This is the recommended source for double-slit and diffraction
+        experiments: the wave is already near the barrier at ``t = 0``, so
+        the experiment only needs barrier → detector transit time (not source
+        → barrier → detector).
+
+        Parameters
+        ----------
+        axis : int
+            Propagation direction (0 = x, 1 = y, 2 = z).  Default 2.
+        amplitude : float
+            Peak wave amplitude.  Use small values (0.2–0.5) to keep Δχ
+            negligible over the run.
+        velocity : float
+            Phase speed in lattice units (c = 1).  Higher values (~0.5)
+            reduce required step count.  Group velocity
+            ``v_g = χ₀·v / √((χ₀v)² + χ₀²) ≈ v`` for ``v ≪ 1``.
+        z_max : int or None
+            If given, zero the wave for ``coord ≥ z_max`` along *axis*.
+            Set to ``barrier_position`` to pre-fill only the source side.
+        phase : float
+            Initial phase offset in radians (0 = cosine wave).
+        beam_waist : float or None
+            1/e² Gaussian half-width in the transverse plane (grid cells).
+            Defaults to half of the frozen-boundary radius so the beam
+            stays well inside the active region:
+            ``w0 = 0.5 × boundary_fraction × N / 2``.
+            Set larger to illuminate wider slit separations.
+        """
+        N = self.config.grid_size
+        chi0 = self.config.chi0
+        c = self.config.c
+        dt = self.config.dt
+
+        k = chi0 * velocity / c
+        omega = float(np.sqrt(k**2 + chi0**2))
+
+        # Beam waist: default to half the active-sphere radius so the beam
+        # decays to ~2% before the absorbing/frozen boundary.
+        if beam_waist is None:
+            beam_waist = self.config.boundary_fraction * N / 2
+
+        # ── Transverse Gaussian envelope (centred on grid) ──────────────────
+        centre = N / 2.0
+        trans_axes = [i for i in range(3) if i != axis]
+        gauss = np.ones((N, N, N), dtype=np.float32)
+        for ta in trans_axes:
+            c_t = np.arange(N, dtype=np.float32) - centre
+            shape = [1, 1, 1]
+            shape[ta] = N
+            gauss *= np.exp(-(c_t.reshape(shape) ** 2) / (2.0 * beam_waist**2))
+
+        # ── Propagating cosine along the propagation axis ────────────────────
+        prop_coord = np.arange(N, dtype=np.float32)  # 0 … N-1
+        cos_cur = (amplitude * np.cos(k * prop_coord + phase)).astype(np.float32)
+        cos_prev = (amplitude * np.cos(k * prop_coord + phase + omega * dt)).astype(np.float32)
+
+        shape_p = [1, 1, 1]
+        shape_p[axis] = N
+        psi_3d = (gauss * cos_cur.reshape(shape_p)).astype(np.float32)
+        psi_3d_prev = (gauss * cos_prev.reshape(shape_p)).astype(np.float32)
+
+        # ── Truncate at z_max (don't pre-fill past the barrier) ─────────────
+        if z_max is not None:
+            slc: list = [slice(None), slice(None), slice(None)]
+            slc[axis] = slice(z_max, None)
+            psi_3d[tuple(slc)] = 0.0
+            psi_3d_prev[tuple(slc)] = 0.0
+
+        # ── Write into leapfrog buffers ───────────────────────────────────────
+        # set_psi_real writes all four buffers to the same value; then
+        # set_psi_real_prev overrides only the prev buffers so
+        # dΨ/dt = (psi_current − psi_prev) / dt ≠ 0 → wave propagates.
+        self._evolver.set_psi_real(psi_3d)
+        self._evolver.set_psi_real_prev(psi_3d_prev)
 
     def equilibrate(self) -> None:
         """Poisson-equilibrate χ from current Ψ field.
@@ -400,6 +592,59 @@ class Simulation:
 
         return DetectorScreen(self, axis=axis, position=position, field=field)
 
+    def add_source(
+        self,
+        *,
+        axis: int = 2,
+        position: float = 0.25,
+        omega: float = 2.0,
+        amplitude: float = 2.0,
+        envelope_sigma: float = 0.25,
+        phase: float = 0.0,
+        boost: float = 10.0,
+    ) -> "ContinuousSource":
+        """Add a CW monochromatic source plane (Paper-055 technique).
+
+        Creates a :class:`~lfm.experiment.ContinuousSource` attached
+        to this simulation.  All position/size parameters accept
+        fractional (< 1.0 → fraction of N) or absolute cell values,
+        so the same specification auto-scales with grid size.
+
+        Parameters
+        ----------
+        axis : int
+            Propagation axis (default 2 = z).
+        position : float
+            Source plane location.  Fractional (< 1) or absolute cell.
+        omega : float
+            Drive angular frequency.  Must exceed ``chi0`` for
+            propagation.
+        amplitude : float
+            Peak injection amplitude.
+        envelope_sigma : float
+            Transverse Gaussian 1/e half-width (fractional or absolute).
+        phase : float
+            Complex phase of source (0 = electron, π = positron).
+        boost : float
+            Extra multiplicative factor per step (default 10.0).
+
+        Returns
+        -------
+        source : ContinuousSource
+        """
+        from lfm.experiment.source import ContinuousSource
+
+        return ContinuousSource(
+            self,
+            axis=axis,
+            position=position,
+            omega=omega,
+            amplitude=amplitude,
+            envelope_sigma=envelope_sigma,
+            phase=phase,
+            boost=boost,
+        )
+
     # ── Evolution ─────────────────────────────────────────
 
     def run(
@@ -407,6 +652,7 @@ class Simulation:
         steps: int,
         callback: Callable[[Simulation, int], None] | None = None,
         record_metrics: bool = True,
+        evolve_chi: bool = True,
     ) -> None:
         """Run the simulation for a number of steps.
 
@@ -418,6 +664,12 @@ class Simulation:
             Called as callback(sim, step) every report_interval.
         record_metrics : bool
             If True, record metrics every report_interval.
+        evolve_chi : bool
+            If True (default), evolve both Psi and chi via GOV-01+GOV-02.
+            If False, only GOV-01 is applied: chi is held frozen at its
+            current value throughout all steps.  Used by the eigenmode
+            solver (SCF iteration) so that the wave-function can relax
+            without disturbing the chi-well.
         """
         # Snapshot previous state for energy calculations
         self._psi_r_prev = self._evolver.get_psi_real().copy()
@@ -436,7 +688,11 @@ class Simulation:
             pi = evolver.get_psi_imag()
             self._psi_i_prev = pi.copy() if pi is not None else None
 
-        self._evolver.evolve(steps, callback=_internal_callback)
+        self._evolver.evolve(
+            steps,
+            callback=_internal_callback,
+            freeze_chi=(not evolve_chi),
+        )
 
     def run_driven(
         self,
@@ -503,12 +759,21 @@ class Simulation:
         snapshot_every: int = 100,
         fields: list[str] | None = None,
         callback: Callable[[Simulation, int], None] | None = None,
+        step_callback: Callable[[Simulation, int], None] | None = None,
         record_metrics: bool = True,
     ) -> list[dict[str, NDArray[np.float32]]]:
         """Run and accumulate field snapshots at regular intervals.
 
         Snapshots are stored in memory as copies of the requested fields.
         Use these with :func:`lfm.viz.animate_slice` to create animations.
+
+        Parameters
+        ----------
+        step_callback : callable or None
+            If provided, called at **every** leapfrog step.  Use this for
+            things that must be re-enforced each step (e.g.
+            ``barrier.step_callback``).  The ``callback`` parameter is
+            called once per ``snapshot_every`` batch instead.
 
         Parameters
         ----------
@@ -555,13 +820,53 @@ class Simulation:
                 snap["energy_density"] = self.energy_density.copy()
             return snap
 
-        for _ in range(n_full):
-            self.run(snapshot_every, callback=callback, record_metrics=record_metrics)
-            snapshots.append(_take_snap())
+        # Wrap step_callback so it fires through run()'s report_interval
+        # mechanism.  We temporarily override report_interval to 1 so it
+        # fires every step.  When step_callback is None, run without it.
+        if step_callback is not None:
+            orig_interval = self.config.report_interval
+            self.config.report_interval = 1
+            try:
+                for _ in range(n_full):
+                    # Pass record_metrics=False here: report_interval is
+                    # temporarily 1, which would fire metrics() on EVERY step
+                    # (thousands of GPU->CPU copies). We record metrics once
+                    # per snapshot boundary below instead.
+                    self.run(snapshot_every, callback=step_callback, record_metrics=False)
+                    if callback is not None:
+                        callback(self, self.step)
+                    snapshots.append(_take_snap())
+                    if record_metrics:
+                        m = self.metrics()
+                        m["step"] = float(self.step)
+                        self._history.append(m)
 
-        if remainder > 0:
-            self.run(remainder, callback=callback, record_metrics=record_metrics)
-            snapshots.append(_take_snap())
+                if remainder > 0:
+                    self.run(remainder, callback=step_callback, record_metrics=False)
+                    if callback is not None:
+                        callback(self, self.step)
+                    snapshots.append(_take_snap())
+                    if record_metrics:
+                        m = self.metrics()
+                        m["step"] = float(self.step)
+                        self._history.append(m)
+            finally:
+                self.config.report_interval = orig_interval
+        else:
+            for _ in range(n_full):
+                # run() fires callback at report_interval, but we always
+                # fire the snapshot callback explicitly after each batch so
+                # it occurs every snapshot_every steps regardless.
+                self.run(snapshot_every, callback=None, record_metrics=record_metrics)
+                if callback is not None:
+                    callback(self, self.step)
+                snapshots.append(_take_snap())
+
+            if remainder > 0:
+                self.run(remainder, callback=None, record_metrics=record_metrics)
+                if callback is not None:
+                    callback(self, self.step)
+                snapshots.append(_take_snap())
 
         return snapshots
 

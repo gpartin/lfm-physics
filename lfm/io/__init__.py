@@ -83,4 +83,6 @@ def load_checkpoint(path: str | Path, backend: str = "auto") -> "Simulation":
     return Simulation.load_checkpoint(Path(path), backend=backend)
 
 
-__all__ = ["save_checkpoint", "load_checkpoint"]
+from lfm.io.snapshots import load_snapshots, save_snapshots  # noqa: E402
+
+__all__ = ["save_checkpoint", "load_checkpoint", "save_snapshots", "load_snapshots"]

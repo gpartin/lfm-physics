@@ -132,7 +132,7 @@ class Evolver:
             self.sa_A = None
             self.sa_B = None
 
-    def evolve(self, steps: int, callback=None) -> None:
+    def evolve(self, steps: int, callback=None, freeze_chi: bool = False) -> None:
         """Run the evolution loop for a given number of steps.
 
         Parameters
@@ -141,12 +141,20 @@ class Evolver:
             Number of leapfrog steps.
         callback : callable, optional
             Called as callback(evolver, step) every report_interval steps.
+        freeze_chi : bool
+            If True, chi is held frozen at its value at the start of
+            this call.  Only GOV-01 (Psi update) is applied; the chi
+            arrays are restored to the frozen snapshot after every step.
+            Used by the eigenmode SCF solver.
         """
         cfg = self.config
         report = cfg.report_interval
+        chi_frozen = self.get_chi().copy() if freeze_chi else None
 
         for i in range(steps):
             self._step()
+            if freeze_chi:
+                self.set_chi(chi_frozen)
             self.step += 1
 
             if callback is not None and report > 0 and self.step % report == 0:
@@ -341,6 +349,79 @@ class Evolver:
                 buf[:] = data
             else:
                 np.copyto(buf, data)
+
+    def set_psi_real_prev(self, arr: NDArray) -> None:
+        """Set *only* the previous-timestep Ψ_real buffers.
+
+        Call after :meth:`set_psi_real` to override the previous-step
+        buffers independently.  This is essential for proper traveling-wave
+        initialisation: set the current buffers to Ψ(t=0) with
+        :meth:`set_psi_real`, then set the previous buffers to Ψ(t=−Δt) here
+        so that the leapfrog computes dΨ/dt ≠ 0 on the first step.
+
+        Parameters
+        ----------
+        arr : ndarray
+            Shape (N,N,N) for REAL/COMPLEX, (n_colors,N,N,N) for COLOR.
+        """
+        flat = arr.astype(np.float32).ravel()
+        data = self.backend.from_numpy(flat)
+        for buf in [self.psi_r_prev_A, self.psi_r_prev_B]:
+            if hasattr(buf, "copy_"):
+                buf[:] = data
+            else:
+                np.copyto(buf, data)
+
+    def set_psi_imag_prev(self, arr: NDArray) -> None:
+        """Set *only* the previous-timestep Ψ_imag buffers.
+
+        See :meth:`set_psi_real_prev` for the intended usage pattern.
+        """
+        if not self._has_imag:
+            raise ValueError("Cannot set imaginary part for REAL field level")
+        flat = arr.astype(np.float32).ravel()
+        data = self.backend.from_numpy(flat)
+        for buf in [self.psi_i_prev_A, self.psi_i_prev_B]:
+            if hasattr(buf, "copy_"):
+                buf[:] = data
+            else:
+                np.copyto(buf, data)
+
+    def set_psi_real_current(self, arr: NDArray) -> None:
+        """Set *only* the active current-timestep Ψ_real buffer.
+
+        Unlike :meth:`set_psi_real`, this does **not** touch the prev
+        buffers at all, making it safe to call from a step callback that
+        drives a continuous-wave source without resetting field velocities
+        elsewhere on the grid.
+
+        Parameters
+        ----------
+        arr : ndarray
+            Shape (N,N,N) for REAL/COMPLEX, (n_colors,N,N,N) for COLOR.
+        """
+        flat = arr.astype(np.float32).ravel()
+        data = self.backend.from_numpy(flat)
+        buf = self.psi_r_A if self._use_buffer_A else self.psi_r_B
+        if hasattr(buf, "copy_"):
+            buf[:] = data
+        else:
+            np.copyto(buf, data)
+
+    def set_psi_imag_current(self, arr: NDArray) -> None:
+        """Set *only* the active current-timestep Ψ_imag buffer.
+
+        See :meth:`set_psi_real_current` for the intended usage pattern.
+        """
+        if not self._has_imag:
+            raise ValueError("Cannot set imaginary part for REAL field level")
+        flat = arr.astype(np.float32).ravel()
+        data = self.backend.from_numpy(flat)
+        buf = self.psi_i_A if self._use_buffer_A else self.psi_i_B
+        if hasattr(buf, "copy_"):
+            buf[:] = data
+        else:
+            np.copyto(buf, data)
 
     def set_chi(self, arr: NDArray) -> None:
         """Set χ field on both buffers. Shape (N, N, N)."""

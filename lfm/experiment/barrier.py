@@ -49,7 +49,7 @@ Example
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -173,11 +173,19 @@ class Barrier:
 
         # Pre-compute boolean masks
         self._barrier_mask, self._slit_masks = self._build_masks()
-        self._full_slit_mask: NDArray[np.bool_] = np.zeros(
-            (N, N, N), dtype=bool
-        )
+        self._full_slit_mask: NDArray[np.bool_] = np.zeros((N, N, N), dtype=bool)
         for sm in self._slit_masks:
             self._full_slit_mask |= sm
+
+        # Cache float32 masks on the compute device
+        # (avoids per-step CPU→GPU copy in apply()).
+        # Values are 1.0 (inside mask) / 0.0 (outside) for arithmetic masking.
+        _td = sim._to_device
+        self._barrier_mask_dev = _td(self._barrier_mask.astype(np.float32)).reshape(N, N, N)
+        self._full_slit_mask_dev = _td(self._full_slit_mask.astype(np.float32)).reshape(N, N, N)
+        self._slit_masks_dev = [
+            _td(sm.astype(np.float32)).reshape(N, N, N) for sm in self._slit_masks
+        ]
 
         # Apply the initial barrier
         self.apply()
@@ -221,43 +229,62 @@ class Barrier:
         Call this every step (or every few steps) via
         :meth:`step_callback` to keep the barrier stable against GOV-02
         diffusion.
+
+        Which-path detectors are implemented via χ modification: a
+        detector at strength α sets χ at that slit to
+        ``χ₀ + (height − χ₀) × α``.  At α=1 the slit is opaque
+        (χ = height), at α=0 it is fully transparent (χ = χ₀).
+        The wave is attenuated by GOV-01 evanescence — no Ψ modification
+        is needed, avoiding global-velocity artefacts.
         """
-        chi = self._sim.chi.copy()
-        chi[self._barrier_mask] = self._height       # solid wall
-        chi[self._full_slit_mask] = CHI0             # slit openings
-        self._sim.set_chi(chi)
+        # All 4 chi buffers must be written so the barrier persists
+        # across leapfrog double-buffer swaps.
+        #
+        # IMPORTANT: we replicate the active buffer to all 4 after
+        # modifying barrier/slit cells.  This zeros the chi velocity
+        # (chi_current − chi_prev) everywhere, which prevents the
+        # barrier's high-χ value from radiating outward as a chi-wave
+        # through the GOV-02 wave equation.  Without this, the barrier
+        # χ floods the entire grid within a few hundred steps.
+        active = self._sim._native_chi()  # 3D view of active buf
+        bm = self._barrier_mask_dev  # float32 1/0
+        sm_all = self._full_slit_mask_dev  # float32 1/0
+        h = float(self._height)
+        chi0 = float(self._sim.config.chi0)
+
+        # Set barrier/slit/detector values in the active buffer
+        active[:] = active * (1.0 - bm) + h * bm
+        active[:] = active * (1.0 - sm_all) + chi0 * sm_all
+
+        for slit, sm_dev in zip(self._slits, self._slit_masks_dev):
+            if slit.detector and slit.detector_strength > 0.0:
+                alpha = float(min(1.0, slit.detector_strength))
+                det_chi = chi0 + (h - chi0) * alpha
+                active[:] = active * (1.0 - sm_dev) + det_chi * sm_dev
+
+        # Replicate active to all 4 chi buffers (zero velocity).
+        # One copy is self→self (harmless); avoids complex pointer comparison.
+        chi_bufs = self._sim._native_chi_pair()  # (A, B, prevA, prevB)
+        for buf in chi_bufs:
+            buf[:] = active
 
         if self._absorb:
-            # Zero Ψ inside solid barrier cells (perfect absorber)
-            pr = self._sim.psi_real.copy()
-            pr[self._barrier_mask] = 0.0
-            self._sim.set_psi_real(pr)
+            # Zero Ψ inside solid barrier cells (perfect absorber).
+            pr = self._sim._native_psi_real()
+            pr[:] = pr * (1.0 - bm)
 
-            if self._sim.psi_imag is not None:
-                pi = self._sim.psi_imag.copy()
-                pi[self._barrier_mask] = 0.0
-                self._sim.set_psi_imag(pi)
+            pi = self._sim._native_psi_imag()
+            if pi is not None:
+                pi[:] = pi * (1.0 - bm)
 
     def attenuate_slits(self) -> None:
-        """Apply which-path detector damping at all detector slits.
+        """No-op: which-path detection is now handled via χ in :meth:`apply`.
 
-        For each slit with ``detector=True``, the wave amplitude inside
-        the slit opening is multiplied by ``(1 − detector_strength)``.
-        A strength of 1.0 completely absorbs the wave (full measurement);
-        a strength of 0.0 leaves the field untouched.
+        The χ-based mechanism (raising χ at detector slits proportional to
+        ``detector_strength``) naturally attenuates the wave through GOV-01
+        evanescence without requiring any Ψ modification, which avoids the
+        global-velocity artefact that psi-based attenuation causes.
         """
-        for slit, sm in zip(self._slits, self._slit_masks):
-            if not slit.detector or slit.detector_strength <= 0.0:
-                continue
-            factor = float(1.0 - min(1.0, slit.detector_strength))
-            pr = self._sim.psi_real.copy()
-            pr[sm] *= factor
-            self._sim.set_psi_real(pr)
-
-            if self._sim.psi_imag is not None:
-                pi = self._sim.psi_imag.copy()
-                pi[sm] *= factor
-                self._sim.set_psi_imag(pi)
 
     def measure_slits(self) -> dict[str, float]:
         """Return mean energy density at each slit opening.
@@ -270,10 +297,7 @@ class Barrier:
             ``{"slit_0": float, "slit_1": float, ...}`` for each slit.
         """
         ed = self._sim.energy_density
-        return {
-            f"slit_{i}": float(ed[sm].mean())
-            for i, sm in enumerate(self._slit_masks)
-        }
+        return {f"slit_{i}": float(ed[sm].mean()) for i, sm in enumerate(self._slit_masks)}
 
     # ── Callback ───────────────────────────────────────────────────────
 

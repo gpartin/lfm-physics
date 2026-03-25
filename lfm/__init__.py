@@ -17,7 +17,6 @@ Quick start::
 
 __version__ = "1.2.0"
 
-from lfm.experiment import Barrier, DetectorScreen, Slit
 from lfm.analysis import (
     angular_momentum_density,
     charge_density,
@@ -113,6 +112,14 @@ from lfm.constants import (
 )
 from lfm.core.backends import get_backend, gpu_available
 from lfm.core.evolver import Evolver
+from lfm.experiment import (
+    Barrier,
+    ContinuousSource,
+    DetectorScreen,
+    Dispersion,
+    Slit,
+    dispersion,
+)
 from lfm.fields import (
     boosted_soliton,
     disk_positions,
@@ -130,6 +137,42 @@ from lfm.fields import (
     uniform_chi,
     wave_kick,
 )
+from lfm.io.snapshots import load_snapshots, save_snapshots
+from lfm.particles import (
+    ANTIMUON,
+    ANTINEUTRON,
+    ANTIPROTON,
+    ANTITAU,
+    CHARM_QUARK,
+    DOWN_QUARK,
+    ELECTRON,
+    MUON,
+    NEUTRON,
+    PARTICLES,
+    PHOTON,
+    POSITRON,
+    PROTON,
+    STRANGE_QUARK,
+    TAU,
+    UP_QUARK,
+    AtomState,
+    MoleculeState,
+    Particle,
+    PlacedParticle,
+    SolitonSolution,
+    amplitude_for_particle,
+    boost_soliton_solution,
+    create_atom,
+    create_molecule,
+    create_particle,
+    get_particle,
+    measure_center_of_energy,
+    measure_momentum_density,
+    measure_velocity,
+    nuclear_chi_well,
+    sigma_for_particle,
+    solve_eigenmode,
+)
 from lfm.planning import (
     FeasibilityReport,
     UseCaseName,
@@ -141,6 +184,7 @@ from lfm.planning import (
 from lfm.simulation import Simulation
 from lfm.sweep import sweep, sweep_2d
 from lfm.units import CosmicScale, PlanckScale
+from lfm.viz.quantum import animate_3d_slices, animate_double_slit_3d
 
 __all__ = [
     "__version__",
@@ -206,6 +250,9 @@ __all__ = [
     "Barrier",
     "Slit",
     "DetectorScreen",
+    "ContinuousSource",
+    "Dispersion",
+    "dispersion",
     # Planning
     "FeasibilityReport",
     "UseCaseName",
@@ -288,4 +335,48 @@ __all__ = [
     # Units
     "CosmicScale",
     "PlanckScale",
+    # Snapshot I/O
+    "save_snapshots",
+    "load_snapshots",
+    # Visualization
+    "animate_3d_slices",
+    "animate_double_slit_3d",
+    # Particle catalog (Phase 1)
+    "Particle",
+    "PARTICLES",
+    "get_particle",
+    "amplitude_for_particle",
+    "sigma_for_particle",
+    "ELECTRON",
+    "POSITRON",
+    "MUON",
+    "ANTIMUON",
+    "TAU",
+    "ANTITAU",
+    "UP_QUARK",
+    "DOWN_QUARK",
+    "STRANGE_QUARK",
+    "CHARM_QUARK",
+    "PROTON",
+    "ANTIPROTON",
+    "NEUTRON",
+    "ANTINEUTRON",
+    "PHOTON",
+    # Phase 2: Eigenmode solver
+    "SolitonSolution",
+    "solve_eigenmode",
+    # Phase 3: Particle motion
+    "boost_soliton_solution",
+    "measure_center_of_energy",
+    "measure_momentum_density",
+    "measure_velocity",
+    # Phase 4: Composite systems
+    "AtomState",
+    "MoleculeState",
+    "nuclear_chi_well",
+    "create_atom",
+    "create_molecule",
+    # Phase 5: Factory
+    "PlacedParticle",
+    "create_particle",
 ]

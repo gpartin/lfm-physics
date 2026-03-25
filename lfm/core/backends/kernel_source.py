@@ -16,7 +16,7 @@ Three kernels:
 # Full 3-color complex evolution kernel (Level 2 — all four forces)
 # ---------------------------------------------------------------------------
 EVOLUTION_KERNEL_SRC = r"""
-extern "C" __global__
+extern "C" __global__ __launch_bounds__(256)
 void evolve_gov01_gov02(
     // Input arrays -- 3-color complex Psi_a, packed [3*N^3]
     const float* __restrict__ Psi_r,
@@ -238,7 +238,7 @@ void evolve_gov01_gov02(
 # Parametric resonance kernel (Phase 1 — matter creation via Mathieu eq.)
 # ---------------------------------------------------------------------------
 PHASE1_KERNEL_SRC = r"""
-extern "C" __global__
+extern "C" __global__ __launch_bounds__(256)
 void phase1_parametric(
     const float* __restrict__ Psi_r,
     const float* __restrict__ Psi_r_prev,
@@ -321,7 +321,7 @@ void phase1_parametric(
 # Real-E gravity-only kernel (Level 0 — cosmology, structure formation)
 # ---------------------------------------------------------------------------
 EVOLUTION_REAL_KERNEL_SRC = r"""
-extern "C" __global__
+extern "C" __global__ __launch_bounds__(256)
 void evolve_real(
     const float* __restrict__ E,
     const float* __restrict__ E_prev,
@@ -421,7 +421,7 @@ void evolve_real(
 # Complex single-component kernel (Level 1 — gravity + EM)
 # ---------------------------------------------------------------------------
 EVOLUTION_COMPLEX_KERNEL_SRC = r"""
-extern "C" __global__
+extern "C" __global__ __launch_bounds__(256)
 void evolve_complex(
     const float* __restrict__ Psi_r,
     const float* __restrict__ Psi_r_prev,
@@ -541,7 +541,7 @@ void evolve_complex(
 # S_a auxiliary field diffusion kernel (v16 — confinement flux tube)
 # ---------------------------------------------------------------------------
 SA_DIFFUSION_KERNEL_SRC = r"""
-extern "C" __global__
+extern "C" __global__ __launch_bounds__(256)
 void evolve_sa_diffusion(
     // Input: S_a fields, packed [3*N^3]
     const float* __restrict__ Sa_in,

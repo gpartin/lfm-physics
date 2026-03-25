@@ -145,6 +145,97 @@ python 14_strong_force.py       # all four forces active
 **Interactive tutorials with visualisations:**
 [emergentphysicslab.com/tutorials](https://emergentphysicslab.com/tutorials)
 
+## Particle Physics
+
+The `lfm.particles` sub-package provides a catalog of 15 Standard-Model-like
+particles, an SCF eigenmode solver, and a one-call factory that drops a
+physically correct soliton into a ready-to-run simulation.
+
+### Particle Catalog
+
+```python
+import lfm
+
+# List all 15 particles with quantum numbers
+for name, p in lfm.PARTICLE_CATALOG.items():
+    print(f"{name:12s}  mass_ratio={p.mass_ratio:.1f}  l={p.l}  gen={p.generation}")
+# electron, positron, muon, antimuon, tau, antitau
+# up, down, strange, charm, bottom, top
+# proton, neutron, pion
+```
+
+See [examples/24_particle_catalog.py](examples/24_particle_catalog.py) for the full table.
+
+### Electron at Rest
+
+```python
+import lfm
+
+# Eigenmode solver finds the stable self-consistent soliton (~10 000 steps)
+placed = lfm.create_particle("electron")
+print(f"chi_min = {placed.sim.metrics()['chi_min']:.3f}")  # < 19 — well formed
+
+# Run 1 000 coupled GOV-01 + GOV-02 steps
+placed.sim.run(1000)
+```
+
+The solver runs the Self-Consistent Field (SCF) algorithm:
+1. Place a Gaussian seed; Poisson-equilibrate χ
+2. Evolve Ψ only (χ frozen) — radiation escapes, bound mode survives
+3. Re-equilibrate χ; iterate until energy converges (<5% change)
+4. Verify stability with 500 coupled GOV-01+GOV-02 steps
+
+See [examples/25_electron_at_rest.py](examples/25_electron_at_rest.py).
+
+### Moving Particles
+
+```python
+# Boost to 4% of lightspeed — wraps the eigenmode in a Gaussian wave packet
+e = lfm.create_particle("electron", velocity=(0.04, 0.0, 0.0))
+e.sim.run(5000)
+
+# Compare electron vs muon at same velocity
+mu = lfm.create_particle("muon", velocity=(0.04, 0.0, 0.0))
+```
+
+See [examples/26_electron_traverse.py](examples/26_electron_traverse.py) and
+[examples/27_electron_vs_muon.py](examples/27_electron_vs_muon.py).
+
+### Coulomb Force (Phase = Charge)
+
+```python
+# theta=0 → negative charge (electron)
+# theta=pi → positive charge (positron)
+# Same phase repels; opposite phase attracts — from GOV-01 interference alone
+```
+
+See [examples/28_coulomb_force.py](examples/28_coulomb_force.py).
+
+### Hydrogen Atom and Molecule
+
+```python
+import lfm
+
+# H atom: proton χ-well traps psi wave — returns bound=True, fraction_near_nucleus
+atom = lfm.create_atom("H", N=64, steps=10000)
+print(f"bound={atom.bound}  fraction={atom.fraction_near_nucleus:.3f}")
+
+# H2 molecule: two proton wells at bond_length separation
+mol = lfm.create_molecule("H2", N=64, bond_length=16.0)
+print(f"bond_stable={mol.bond_stable}")
+```
+
+See [examples/29_hydrogen_atom.py](examples/29_hydrogen_atom.py) and
+[examples/30_hydrogen_molecule.py](examples/30_hydrogen_molecule.py).
+
+### Fast Gaussian Seed (no eigenmode solver)
+
+```python
+# Skip the SCF solver for quick prototyping — Gaussian blob, instant
+placed = lfm.create_particle("muon", use_eigenmode=False)
+placed.sim.run(500)
+```
+
 ## Measurement & Analysis
 
 ```python

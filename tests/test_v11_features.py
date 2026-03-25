@@ -124,18 +124,14 @@ class TestRunWithSnapshots:
 
     def test_psi_imag_absent_for_real_field(self):
         sim = self._sim()
-        snaps = sim.run_with_snapshots(
-            100, snapshot_every=100, fields=["psi_imag"]
-        )
+        snaps = sim.run_with_snapshots(100, snapshot_every=100, fields=["psi_imag"])
         # Real simulation → psi_imag is None → key absent
         assert "psi_imag" not in snaps[0]
 
     def test_psi_imag_present_for_complex_field(self):
         sim = Simulation(_small_config(field_level=FieldLevel.COMPLEX))
         sim.place_soliton((N // 2, N // 2, N // 2), amplitude=3.0)
-        snaps = sim.run_with_snapshots(
-            100, snapshot_every=100, fields=["psi_imag"]
-        )
+        snaps = sim.run_with_snapshots(100, snapshot_every=100, fields=["psi_imag"])
         assert "psi_imag" in snaps[0]
 
 
@@ -303,31 +299,31 @@ class TestGWQuadrupole:
         from lfm.analysis.grav_waves import gw_quadrupole
 
         ed = _make_energy_density()
-        I = gw_quadrupole(ed)
-        assert I.shape == (3, 3)
+        quad = gw_quadrupole(ed)
+        assert quad.shape == (3, 3)
 
     def test_is_symmetric(self):
         from lfm.analysis.grav_waves import gw_quadrupole
 
         ed = _make_energy_density()
-        I = gw_quadrupole(ed)
-        assert np.allclose(I, I.T)
+        quad = gw_quadrupole(ed)
+        assert np.allclose(quad, quad.T)
 
     def test_trace_is_zero_by_construction(self):
         """Reduced quadrupole has trace ∝ Σ(x_i² - r²/3) = r² - r² = 0."""
         from lfm.analysis.grav_waves import gw_quadrupole
 
         ed = _make_energy_density()
-        I = gw_quadrupole(ed)
-        assert abs(np.trace(I)) < 1e-6 * abs(I).max() + 1e-10
+        quad = gw_quadrupole(ed)
+        assert abs(np.trace(quad)) < 1e-6 * abs(quad).max() + 1e-10
 
     def test_explicit_center(self):
         from lfm.analysis.grav_waves import gw_quadrupole
 
         ed = _make_energy_density()
         c = float(N // 2)
-        I = gw_quadrupole(ed, center=(c, c, c))
-        assert I.shape == (3, 3)
+        quad = gw_quadrupole(ed, center=(c, c, c))
+        assert quad.shape == (3, 3)
 
     def test_spherical_source_nearly_zero(self):
         """Perfectly spherical source has I_ij ≈ 0 (no quadrupole moment)."""
@@ -338,10 +334,10 @@ class TestGWQuadrupole:
         c = N / 2.0
         r2 = (X - c) ** 2 + (Y - c) ** 2 + (Z - c) ** 2
         ed = np.exp(-r2 / 4.0).astype(np.float32)
-        I = gw_quadrupole(ed, center=(c, c, c))
+        quad = gw_quadrupole(ed, center=(c, c, c))
         # For spherically symmetric source the off-diagonal → 0, diagonal << mass
-        assert abs(I[0, 1]) < 1e-6
-        assert abs(I[0, 2]) < 1e-6
+        assert abs(quad[0, 1]) < 1e-6
+        assert abs(quad[0, 2]) < 1e-6
 
 
 class TestGWPower:

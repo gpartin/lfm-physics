@@ -43,9 +43,14 @@ Typical double-slit usage::
 
 from lfm.experiment.barrier import Barrier, Slit
 from lfm.experiment.detector import DetectorScreen
+from lfm.experiment.dispersion import Dispersion, dispersion
+from lfm.experiment.source import ContinuousSource
 
 __all__ = [
     "Barrier",
     "Slit",
     "DetectorScreen",
+    "ContinuousSource",
+    "Dispersion",
+    "dispersion",
 ]

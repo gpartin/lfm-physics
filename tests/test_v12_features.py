@@ -25,7 +25,7 @@ from lfm.simulation import Simulation
 
 N = 24  # small grid for fast tests
 DT = 0.02
-BARRIER_POS = N // 2        # z = 12
+BARRIER_POS = N // 2  # z = 12
 SLIT_CENTER_A = N // 2 - 4  # y =  8
 SLIT_CENTER_B = N // 2 + 4  # y = 16
 
@@ -569,8 +569,10 @@ class TestVizQuantum:
 
     def test_plot_interference_pattern_returns_figure(self):
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+
         from lfm.viz.quantum import plot_interference_pattern
 
         pattern = np.random.rand(N, N).astype(np.float32)
@@ -580,8 +582,10 @@ class TestVizQuantum:
 
     def test_plot_interference_pattern_no_profile(self):
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+
         from lfm.viz.quantum import plot_interference_pattern
 
         pattern = np.random.rand(N, N).astype(np.float32)
@@ -600,8 +604,10 @@ class TestVizQuantum:
 
     def test_render_3d_volume_matplotlib_returns_figure(self):
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+
         from lfm.viz.quantum import render_3d_volume
 
         field = np.random.rand(8, 8, 8).astype(np.float32)
@@ -623,9 +629,11 @@ class TestVizQuantum:
 
     def test_animate_double_slit_returns_func_animation(self):
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
         from matplotlib.animation import FuncAnimation
+
         from lfm.viz.quantum import animate_double_slit
 
         n_snaps = 5
@@ -699,9 +707,11 @@ class TestAnimateDoubleSlit3D:
 
     def test_returns_func_animation(self):
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
         from matplotlib.animation import FuncAnimation
+
         from lfm.viz.quantum import animate_double_slit_3d
 
         anim = animate_double_slit_3d(
@@ -733,17 +743,17 @@ class TestAnimateDoubleSlit3D:
     def test_2d_field_raises(self):
         from lfm.viz.quantum import animate_double_slit_3d
 
-        snapshots = [
-            {"step": 0, "energy_density": np.ones((N, N), dtype=np.float32)}
-        ]
+        snapshots = [{"step": 0, "energy_density": np.ones((N, N), dtype=np.float32)}]
         with pytest.raises(ValueError, match="3-D"):
             animate_double_slit_3d(snapshots)
 
     def test_subsamples_when_exceeding_max_frames(self):
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
         from matplotlib.animation import FuncAnimation
+
         from lfm.viz.quantum import animate_double_slit_3d
 
         anim = animate_double_slit_3d(
@@ -776,9 +786,11 @@ class TestAnimate3DSlices:
 
     def test_returns_func_animation(self):
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
         from matplotlib.animation import FuncAnimation
+
         from lfm.viz.quantum import animate_3d_slices
 
         anim = animate_3d_slices(self._snapshots())
@@ -801,9 +813,7 @@ class TestAnimate3DSlices:
     def test_2d_field_raises(self):
         from lfm.viz.quantum import animate_3d_slices
 
-        snapshots = [
-            {"step": 0, "energy_density": np.ones((N, N), dtype=np.float32)}
-        ]
+        snapshots = [{"step": 0, "energy_density": np.ones((N, N), dtype=np.float32)}]
         with pytest.raises(ValueError, match="3-D"):
             animate_3d_slices(snapshots)
 
@@ -818,16 +828,14 @@ class TestSnapshotIO:
         return [
             {
                 "step": i * 100,
-                "energy_density": np.random.rand(grid, grid, grid).astype(
-                    np.float32
-                ),
+                "energy_density": np.random.rand(grid, grid, grid).astype(np.float32),
                 "chi": np.random.rand(grid, grid, grid).astype(np.float32),
             }
             for i in range(n)
         ]
 
     def test_roundtrip_preserves_count(self, tmp_path):
-        from lfm.io import save_snapshots, load_snapshots
+        from lfm.io import load_snapshots, save_snapshots
 
         snaps = self._snapshots(5)
         path = save_snapshots(snaps, tmp_path / "test.npz")
@@ -835,7 +843,7 @@ class TestSnapshotIO:
         assert len(loaded) == 5
 
     def test_roundtrip_preserves_steps(self, tmp_path):
-        from lfm.io import save_snapshots, load_snapshots
+        from lfm.io import load_snapshots, save_snapshots
 
         snaps = self._snapshots(3)
         path = save_snapshots(snaps, tmp_path / "test.npz")
@@ -844,7 +852,7 @@ class TestSnapshotIO:
             assert loaded_s["step"] == orig["step"]
 
     def test_roundtrip_preserves_fields(self, tmp_path):
-        from lfm.io import save_snapshots, load_snapshots
+        from lfm.io import load_snapshots, save_snapshots
 
         snaps = self._snapshots(2)
         path = save_snapshots(snaps, tmp_path / "test.npz")
@@ -853,12 +861,10 @@ class TestSnapshotIO:
             np.testing.assert_array_almost_equal(
                 loaded_s["energy_density"], orig["energy_density"], decimal=5
             )
-            np.testing.assert_array_almost_equal(
-                loaded_s["chi"], orig["chi"], decimal=5
-            )
+            np.testing.assert_array_almost_equal(loaded_s["chi"], orig["chi"], decimal=5)
 
     def test_roundtrip_preserves_field_keys(self, tmp_path):
-        from lfm.io import save_snapshots, load_snapshots
+        from lfm.io import load_snapshots, save_snapshots
 
         snaps = self._snapshots(2)
         path = save_snapshots(snaps, tmp_path / "test.npz")

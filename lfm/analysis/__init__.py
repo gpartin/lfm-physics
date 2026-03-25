@@ -5,17 +5,6 @@ from lfm.analysis.angular_momentum import (
     precession_rate,
     total_angular_momentum,
 )
-from lfm.analysis.cosmology import (
-    correlation_function,
-    halo_mass_function,
-    matter_power_spectrum,
-    void_statistics,
-)
-from lfm.analysis.grav_waves import (
-    gravitational_wave_strain,
-    gw_power,
-    gw_quadrupole,
-)
 from lfm.analysis.color import (
     color_variance,
 )
@@ -26,12 +15,23 @@ from lfm.analysis.confinement import (
     smoothed_color_variance,
     string_tension,
 )
+from lfm.analysis.cosmology import (
+    correlation_function,
+    halo_mass_function,
+    matter_power_spectrum,
+    void_statistics,
+)
 from lfm.analysis.energy import (
     continuity_residual,
     energy_components,
     energy_conservation_drift,
     fluid_fields,
     total_energy,
+)
+from lfm.analysis.grav_waves import (
+    gravitational_wave_strain,
+    gw_power,
+    gw_quadrupole,
 )
 from lfm.analysis.metric import (
     effective_metric_00,
