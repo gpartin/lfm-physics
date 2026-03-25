@@ -167,7 +167,7 @@ class TestBarrierApply:
         sim.set_psi_real(pr)
         _before_sum = sim.psi_real[BARRIER_POS, :, :].sum()
 
-        b = Barrier(sim, axis=2, position=BARRIER_POS, slits=_two_slits(), absorb=False)
+        _b = Barrier(sim, axis=2, position=BARRIER_POS, slits=_two_slits(), absorb=False)
         # With absorb=False, psi should NOT have been zeroed (may differ
         # only due to slit relaxation, but we check solid barrier cells)
         assert sim.psi_real[BARRIER_POS, :, :].sum() != pytest.approx(0.0, abs=1e-6)
@@ -191,21 +191,21 @@ class TestBarrierApply:
 
 
 class TestBarrierWhichPath:
-    def test_attenuate_reduces_psi_at_detector_slit(self):
+    def test_attenuate_is_noop(self):
+        """attenuate_slits is a no-op; which-path detection uses χ in apply()."""
         sim = _sim()
         slits = [
             Slit(center=SLIT_CENTER_A, width=4, detector=True, detector_strength=0.5),
             Slit(center=SLIT_CENTER_B, width=4),
         ]
         b = Barrier(sim, axis=2, position=BARRIER_POS, slits=slits, absorb=False)
-        # Add energy at the first slit
         pr = sim.psi_real.copy()
         pr[b.slit_masks[0]] = 5.0
         sim.set_psi_real(pr)
         before = sim.psi_real[b.slit_masks[0]].mean()
         b.attenuate_slits()
         after = sim.psi_real[b.slit_masks[0]].mean()
-        assert after < before
+        assert after == pytest.approx(before, rel=1e-5)
 
     def test_non_detector_slit_unaffected(self):
         sim = _sim()
@@ -222,7 +222,8 @@ class TestBarrierWhichPath:
         after = sim.psi_real[b.slit_masks[1]].mean()
         assert after == pytest.approx(before, rel=1e-5)
 
-    def test_full_absorption_zeros_psi(self):
+    def test_full_strength_leaves_psi_unchanged(self):
+        """Even at full strength, attenuate_slits is a no-op (χ-based)."""
         sim = _sim()
         slits = [Slit(center=SLIT_CENTER_A, width=4, detector=True, detector_strength=1.0)]
         b = Barrier(sim, axis=2, position=BARRIER_POS, slits=slits, absorb=False)
@@ -230,9 +231,10 @@ class TestBarrierWhichPath:
         pr[b.slit_masks[0]] = 4.0
         sim.set_psi_real(pr)
         b.attenuate_slits()
-        assert np.allclose(sim.psi_real[b.slit_masks[0]], 0.0, atol=1e-6)
+        assert np.allclose(sim.psi_real[b.slit_masks[0]], 4.0, atol=1e-6)
 
-    def test_attenuate_complex_field(self):
+    def test_attenuate_complex_field_unchanged(self):
+        """Complex psi_imag also unchanged by no-op attenuate_slits."""
         sim = _sim_complex()
         slits = [Slit(center=SLIT_CENTER_A, width=4, detector=True, detector_strength=0.5)]
         b = Barrier(sim, axis=2, position=BARRIER_POS, slits=slits, absorb=False)
@@ -242,7 +244,7 @@ class TestBarrierWhichPath:
         before = sim.psi_imag[b.slit_masks[0]].mean()
         b.attenuate_slits()
         after = sim.psi_imag[b.slit_masks[0]].mean()
-        assert after < before
+        assert after == pytest.approx(before, rel=1e-5)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -293,7 +295,7 @@ class TestBarrierCallback:
         assert (sim.chi[b.mask] > CHI0).all()
 
     def test_callback_calls_attenuate_if_detector(self):
-        """If any slit has a detector, attenuate_slits is called."""
+        """attenuate_slits is a no-op; psi unchanged by callback."""
         sim = _sim()
         slits = [Slit(center=SLIT_CENTER_A, width=4, detector=True, detector_strength=0.5)]
         b = Barrier(sim, axis=2, position=BARRIER_POS, slits=slits, absorb=False)
@@ -301,7 +303,7 @@ class TestBarrierCallback:
         pr[b.slit_masks[0]] = 5.0
         sim.set_psi_real(pr)
         b.step_callback(sim, 0)
-        assert sim.psi_real[b.slit_masks[0]].mean() < 5.0
+        assert sim.psi_real[b.slit_masks[0]].mean() == pytest.approx(5.0, rel=1e-5)
 
     def test_callback_no_attenuate_without_detector(self):
         sim = _sim()
@@ -674,3 +676,214 @@ def test_version_is_v12():
     parts = lfm.__version__.split(".")
     assert int(parts[0]) >= 1
     assert int(parts[1]) >= 2
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# animate_double_slit_3d
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.skipif(
+    pytest.importorskip("matplotlib", reason="matplotlib not installed") is None,
+    reason="matplotlib not available",
+)
+class TestAnimateDoubleSlit3D:
+    def _snapshots(self, n_snaps: int = 5) -> list[dict]:
+        return [
+            {
+                "step": i * 10,
+                "energy_density": np.random.rand(N, N, N).astype(np.float32),
+            }
+            for i in range(n_snaps)
+        ]
+
+    def test_returns_func_animation(self):
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from matplotlib.animation import FuncAnimation
+        from lfm.viz.quantum import animate_double_slit_3d
+
+        anim = animate_double_slit_3d(
+            self._snapshots(),
+            barrier_axis=2,
+            barrier_position=N // 2,
+            detector_position=N - 4,
+            source_position=N // 4,
+            slit_centers=[N // 2 - 3, N // 2 + 3],
+            max_frames=5,
+            max_points=50,
+        )
+        assert isinstance(anim, FuncAnimation)
+        plt.close("all")
+
+    def test_empty_snapshots_raises(self):
+        from lfm.viz.quantum import animate_double_slit_3d
+
+        with pytest.raises(ValueError, match="empty"):
+            animate_double_slit_3d([])
+
+    def test_missing_field_raises(self):
+        from lfm.viz.quantum import animate_double_slit_3d
+
+        snapshots = [{"step": 0, "chi": np.ones((N, N, N), dtype=np.float32)}]
+        with pytest.raises(ValueError, match="energy_density"):
+            animate_double_slit_3d(snapshots, field="energy_density")
+
+    def test_2d_field_raises(self):
+        from lfm.viz.quantum import animate_double_slit_3d
+
+        snapshots = [
+            {"step": 0, "energy_density": np.ones((N, N), dtype=np.float32)}
+        ]
+        with pytest.raises(ValueError, match="3-D"):
+            animate_double_slit_3d(snapshots)
+
+    def test_subsamples_when_exceeding_max_frames(self):
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from matplotlib.animation import FuncAnimation
+        from lfm.viz.quantum import animate_double_slit_3d
+
+        anim = animate_double_slit_3d(
+            self._snapshots(20),
+            max_frames=5,
+            max_points=20,
+        )
+        assert isinstance(anim, FuncAnimation)
+        plt.close("all")
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# animate_3d_slices
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.skipif(
+    pytest.importorskip("matplotlib", reason="matplotlib not installed") is None,
+    reason="matplotlib not available",
+)
+class TestAnimate3DSlices:
+    def _snapshots(self, n_snaps: int = 5) -> list[dict]:
+        return [
+            {
+                "step": i * 10,
+                "energy_density": np.random.rand(N, N, N).astype(np.float32),
+            }
+            for i in range(n_snaps)
+        ]
+
+    def test_returns_func_animation(self):
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from matplotlib.animation import FuncAnimation
+        from lfm.viz.quantum import animate_3d_slices
+
+        anim = animate_3d_slices(self._snapshots())
+        assert isinstance(anim, FuncAnimation)
+        plt.close("all")
+
+    def test_empty_snapshots_raises(self):
+        from lfm.viz.quantum import animate_3d_slices
+
+        with pytest.raises(ValueError, match="empty"):
+            animate_3d_slices([])
+
+    def test_missing_field_raises(self):
+        from lfm.viz.quantum import animate_3d_slices
+
+        snapshots = [{"step": 0, "chi": np.ones((N, N, N), dtype=np.float32)}]
+        with pytest.raises(ValueError, match="energy_density"):
+            animate_3d_slices(snapshots, field="energy_density")
+
+    def test_2d_field_raises(self):
+        from lfm.viz.quantum import animate_3d_slices
+
+        snapshots = [
+            {"step": 0, "energy_density": np.ones((N, N), dtype=np.float32)}
+        ]
+        with pytest.raises(ValueError, match="3-D"):
+            animate_3d_slices(snapshots)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# save_snapshots / load_snapshots roundtrip
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class TestSnapshotIO:
+    def _snapshots(self, n: int = 3, grid: int = 8) -> list[dict]:
+        return [
+            {
+                "step": i * 100,
+                "energy_density": np.random.rand(grid, grid, grid).astype(
+                    np.float32
+                ),
+                "chi": np.random.rand(grid, grid, grid).astype(np.float32),
+            }
+            for i in range(n)
+        ]
+
+    def test_roundtrip_preserves_count(self, tmp_path):
+        from lfm.io import save_snapshots, load_snapshots
+
+        snaps = self._snapshots(5)
+        path = save_snapshots(snaps, tmp_path / "test.npz")
+        loaded = load_snapshots(path)
+        assert len(loaded) == 5
+
+    def test_roundtrip_preserves_steps(self, tmp_path):
+        from lfm.io import save_snapshots, load_snapshots
+
+        snaps = self._snapshots(3)
+        path = save_snapshots(snaps, tmp_path / "test.npz")
+        loaded = load_snapshots(path)
+        for orig, loaded_s in zip(snaps, loaded):
+            assert loaded_s["step"] == orig["step"]
+
+    def test_roundtrip_preserves_fields(self, tmp_path):
+        from lfm.io import save_snapshots, load_snapshots
+
+        snaps = self._snapshots(2)
+        path = save_snapshots(snaps, tmp_path / "test.npz")
+        loaded = load_snapshots(path)
+        for orig, loaded_s in zip(snaps, loaded):
+            np.testing.assert_array_almost_equal(
+                loaded_s["energy_density"], orig["energy_density"], decimal=5
+            )
+            np.testing.assert_array_almost_equal(
+                loaded_s["chi"], orig["chi"], decimal=5
+            )
+
+    def test_roundtrip_preserves_field_keys(self, tmp_path):
+        from lfm.io import save_snapshots, load_snapshots
+
+        snaps = self._snapshots(2)
+        path = save_snapshots(snaps, tmp_path / "test.npz")
+        loaded = load_snapshots(path)
+        assert "energy_density" in loaded[0]
+        assert "chi" in loaded[0]
+        assert "step" in loaded[0]
+
+    def test_adds_npz_suffix(self, tmp_path):
+        from lfm.io import save_snapshots
+
+        snaps = self._snapshots(1)
+        path = save_snapshots(snaps, tmp_path / "no_suffix")
+        assert path.suffix == ".npz"
+
+    def test_empty_raises(self):
+        from lfm.io import save_snapshots
+
+        with pytest.raises(ValueError, match="empty"):
+            save_snapshots([], "dummy.npz")
+
+    def test_compressed_smaller_than_raw(self, tmp_path):
+        from lfm.io import save_snapshots
+
+        snaps = self._snapshots(10, grid=16)
+        p_comp = save_snapshots(snaps, tmp_path / "comp.npz", compress=True)
+        p_raw = save_snapshots(snaps, tmp_path / "raw.npz", compress=False)
+        assert p_comp.stat().st_size < p_raw.stat().st_size
