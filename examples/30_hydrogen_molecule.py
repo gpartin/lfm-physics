@@ -13,7 +13,7 @@ print("30 — LFM Hydrogen Molecule (H2)")
 print("=" * 55)
 print()
 
-BOND_LENGTH = 16.0   # proton separation in cells
+BOND_LENGTH = 16.0  # proton separation in cells
 
 print(f"Solving H2 molecule (N=64, bond_length={BOND_LENGTH:.0f} cells, 10 000 steps)...")
 print()

@@ -15,6 +15,7 @@ move toward or away from each other over short evolution.
 """
 
 import numpy as np
+
 import lfm
 from lfm.config import BoundaryType, FieldLevel, SimulationConfig
 
@@ -24,7 +25,8 @@ print()
 
 N = 64
 STEPS = 2_000
-SEP = 12   # initial separation in cells
+SEP = 12  # initial separation in cells
+
 
 # We place two solitons by hand using Gaussian seeds (fast, sufficient demo)
 def place_two(phase1, phase2, sep=SEP, N=N):
@@ -38,10 +40,12 @@ def place_two(phase1, phase2, sep=SEP, N=N):
     sig = lfm.sigma_for_particle(lfm.ELECTRON, N)
     sim.place_soliton((half - sep // 2, half, half), amplitude=amp, sigma=sig, phase=phase1)
     sim.place_soliton((half + sep // 2, half, half), amplitude=amp, sigma=sig, phase=phase2)
-    sim.equilibrate()   # build chi-wells
+    sim.equilibrate()  # build chi-wells
     return sim
 
-import math
+
+import math  # noqa: E402
+
 
 def chi_gap(sim, N=N):
     """Return chi-well separation (distance between two chi minima along x-axis)."""
@@ -50,11 +54,13 @@ def chi_gap(sim, N=N):
     chi_line = np.asarray(sim.chi[:, half, half], dtype=np.float64)
     # Find two deepest troughs by looking at local minima below 18.5
     from scipy.signal import argrelmin
+
     idx = argrelmin(chi_line, order=3)[0]
     wells = sorted(idx, key=lambda i: chi_line[i])[:2]
     if len(wells) < 2:
         return float(np.nan)
     return float(abs(wells[0] - wells[1]))
+
 
 def run_demo(label, phase1, phase2):
     sim = place_two(phase1, phase2)
@@ -67,14 +73,14 @@ def run_demo(label, phase1, phase2):
     else:
         delta = float("nan")
         direction = "undetermined"
-    print(f"  {label:<30} gap0={gap0:.1f}  gap1={gap1:.1f}  "
-          f"delta={delta:+.1f}  -> {direction}")
+    print(f"  {label:<30} gap0={gap0:.1f}  gap1={gap1:.1f}  delta={delta:+.1f}  -> {direction}")
+
 
 print("Measuring chi-well gap change after 2000 steps:")
 print()
-run_demo("e- + e+  (phase 0 vs pi)",  0.0,       math.pi)
-run_demo("e- + e-  (phase 0 vs 0)",   0.0,       0.0)
-run_demo("e+ + e+  (phase pi vs pi)", math.pi,   math.pi)
+run_demo("e- + e+  (phase 0 vs pi)", 0.0, math.pi)
+run_demo("e- + e-  (phase 0 vs 0)", 0.0, 0.0)
+run_demo("e+ + e+  (phase pi vs pi)", math.pi, math.pi)
 print()
 print("Same charge -> repel (gap grows).  Opposite charge -> attract (gap shrinks).")
 print()

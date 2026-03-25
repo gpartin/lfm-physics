@@ -10,6 +10,7 @@ self-consistent solution, producing a true soliton that does not disperse.
 """
 
 import numpy as np
+
 import lfm
 
 print("25 — Electron at Rest (eigenmode verification)")
@@ -22,7 +23,7 @@ placed = lfm.create_particle("electron", N=48, use_eigenmode=True)
 sim = placed.sim
 
 m0 = sim.metrics()
-print(f"\nAfter eigenmode solve:")
+print("\nAfter eigenmode solve:")
 print(f"  chi_min  = {m0['chi_min']:.3f}  (below 19 = gravity well present)")
 print(f"  energy   = {m0['energy_total']:.4e}")
 center0 = lfm.measure_center_of_energy(sim)
@@ -42,7 +43,7 @@ print(f"  chi_min  = {m1['chi_min']:.3f}")
 print(f"  energy   = {m1['energy_total']:.4e}")
 print(f"  position = ({center1[0]:.2f}, {center1[1]:.2f}, {center1[2]:.2f})")
 print()
-print(f"Stability metrics:")
+print("Stability metrics:")
 print(f"  position drift = {drift:.3f} cells  (target < 3.0)")
 print(f"  energy drift   = {energy_rel * 100:.2f}%  (target < 5%)")
 print()

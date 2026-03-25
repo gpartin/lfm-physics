@@ -37,7 +37,7 @@ def main() -> None:
     print(f"  Theory: ω_H = √(8·λ_H)·χ₀ = {_theory_omega():.4f} rad/step\n")
 
     N = 48
-    DT = 0.02   # matches lfm default
+    DT = 0.02  # matches lfm default
 
     config = lfm.SimulationConfig(
         grid_size=N,
@@ -78,11 +78,11 @@ def main() -> None:
 
     t = np.arange(len(chi_series)) * DT
     signal = np.array(chi_series)
-    signal -= signal.mean()   # remove DC offset
+    signal -= signal.mean()  # remove DC offset
 
     # ── FFT ──────────────────────────────────────────────────────────────
-    freqs = np.fft.rfftfreq(len(signal), d=DT)    # cycles per lattice-time unit
-    omegas = 2.0 * np.pi * freqs                   # rad / lattice-time
+    freqs = np.fft.rfftfreq(len(signal), d=DT)  # cycles per lattice-time unit
+    omegas = 2.0 * np.pi * freqs  # rad / lattice-time
     spectrum = np.abs(np.fft.rfft(signal))
 
     # Find dominant peak (skip DC bin 0)
@@ -99,20 +99,24 @@ def main() -> None:
     if error_pct < 5.0:
         print("\n  ✓ PASS: Measured breathing frequency within 5% of theory")
     else:
-        print(f"\n  NOTE: Difference is {error_pct:.1f}% — "
-              "may need larger amplitude or longer run for clean mode isolation")
+        print(
+            f"\n  NOTE: Difference is {error_pct:.1f}% — "
+            "may need larger amplitude or longer run for clean mode isolation"
+        )
 
     # ── Second-mode search: look for a sub-dominant peak ─────────────────
     # zero out the main peak ± 2 bins, find next
     spec2 = spectrum.copy()
     lo = max(0, peak_idx - 2)
     hi = min(len(spec2) - 1, peak_idx + 2)
-    spec2[lo:hi + 1] = 0
+    spec2[lo : hi + 1] = 0
     spec2[0] = 0
     peak2_idx = int(np.argmax(spec2))
     omega2 = omegas[peak2_idx]
-    print(f"    Sub-dominant mode: ω = {omega2:.4f} rad/step "
-          f"  (ratio = {omega2 / omega_measured:.3f})")
+    print(
+        f"    Sub-dominant mode: ω = {omega2:.4f} rad/step "
+        f"  (ratio = {omega2 / omega_measured:.3f})"
+    )
 
     # ── Visualisation ─────────────────────────────────────────────────────
     try:
@@ -130,10 +134,12 @@ def main() -> None:
 
         # Power spectrum
         axes[1].semilogy(omegas[1:], spectrum[1:], color="steelblue", lw=0.8)
-        axes[1].axvline(omega_theory, color="red", ls="--", lw=1.5,
-                        label=f"ω_theory = {omega_theory:.2f}")
-        axes[1].axvline(omega_measured, color="orange", ls="-", lw=1.5,
-                        label=f"ω_meas = {omega_measured:.2f}")
+        axes[1].axvline(
+            omega_theory, color="red", ls="--", lw=1.5, label=f"ω_theory = {omega_theory:.2f}"
+        )
+        axes[1].axvline(
+            omega_measured, color="orange", ls="-", lw=1.5, label=f"ω_meas = {omega_measured:.2f}"
+        )
         axes[1].set_xlabel("ω (rad / lattice-time)")
         axes[1].set_ylabel("|FFT| (log scale)")
         axes[1].set_title("Power Spectrum of χ Core Oscillation")

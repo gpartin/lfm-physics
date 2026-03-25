@@ -20,7 +20,7 @@ repos:
         files: &python_files ^(lfm/|tests/).*\.py$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.8
+    rev: v0.15.7
     hooks:
       - id: ruff          # lint
         args: [--fix]

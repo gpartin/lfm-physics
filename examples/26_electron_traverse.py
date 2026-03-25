@@ -8,11 +8,10 @@ For an electron with chi_min ~ 16, v_max ~ 0.39c.  At v = 0.04c we are well
 inside the stable regime.
 """
 
-import numpy as np
 import lfm
 
 N = 64
-V = 0.04   # in units of c
+V = 0.04  # in units of c
 STEPS = 10_000
 
 print("26 — Electron Traverse (v = 0.04c)")
@@ -38,7 +37,7 @@ print(f"Final position:    x = {pos1[0]:.2f} cells")
 print()
 
 actual_disp = float(pos1[0] - pos0[0])
-expected_disp = V * STEPS * lfm.constants.DT_DEFAULT   # v * N_steps * dt
+expected_disp = V * STEPS * lfm.constants.DT_DEFAULT  # v * N_steps * dt
 
 print("Results:")
 print(f"  Actual displacement:   {actual_disp:.1f} cells")

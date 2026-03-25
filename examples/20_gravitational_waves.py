@@ -20,8 +20,6 @@ Run (takes ~30 s on CPU for N=48, much faster on GPU)::
 
 from __future__ import annotations
 
-import sys
-
 import numpy as np
 
 import lfm
@@ -95,7 +93,7 @@ def main() -> None:
     try:
         import matplotlib.pyplot as plt
 
-        from lfm.viz import animate_slice, spacetime_diagram
+        from lfm.viz import spacetime_diagram
 
         # Space-time diagram: χ(x, t) along x-axis through the binary
         fig, ax = spacetime_diagram(

@@ -63,8 +63,8 @@ def main() -> None:
     phases = [0.0, np.pi / 4, np.pi / 2, 3 * np.pi / 4, np.pi]
     labels = ["0", "π/4", "π/2", "3π/4", "π"]
 
-    print(f"\n  Phase diff    χ_min    χ_midpoint   Δχ_mid")
-    print(f"  ----------    ------   ----------   ------")
+    print("\n  Phase diff    χ_min    χ_midpoint   Δχ_mid")
+    print("  ----------    ------   ----------   ------")
 
     chi_mids = []
     for ph, lbl in zip(phases, labels):
@@ -84,7 +84,7 @@ def main() -> None:
     try:
         import matplotlib.pyplot as plt
 
-        from lfm.viz import plot_projection, plot_slice, plot_three_slices
+        from lfm.viz import plot_projection, plot_slice
 
         print("\n  Running full simulation for visualisation (Δθ = 0)...")
         config = lfm.SimulationConfig(
@@ -100,7 +100,7 @@ def main() -> None:
         sim.place_soliton((cx, cx - sep // 2, cx), phase=0.0)
         sim.place_soliton((cx, cx + sep // 2, cx), phase=0.0)
         sim.equilibrate()
-        snaps = sim.run_with_snapshots(2000, snapshot_every=200, fields=["chi"])
+        sim.run_with_snapshots(2000, snapshot_every=200, fields=["chi"])
 
         # Mid-plane slice
         fig1, ax1 = plot_slice(sim.chi, axis=2, title="χ after interference (Δθ = 0)")
@@ -109,7 +109,10 @@ def main() -> None:
 
         # Column density projection along z
         fig2, ax2 = plot_projection(
-            sim.chi, axis=2, log=False, cmap="RdBu_r",
+            sim.chi,
+            axis=2,
+            log=False,
+            cmap="RdBu_r",
             title="χ column-density projection (Δθ = 0)",
         )
         fig2.savefig("interference_projection.png", dpi=120, bbox_inches="tight")
@@ -119,8 +122,11 @@ def main() -> None:
         fig3, axes = plt.subplots(1, 3, figsize=(13, 4), sharey=True)
         for ax_i, ph, lbl in zip(axes, [0.0, np.pi / 2, np.pi], ["0", "π/2", "π"]):
             cfg2 = lfm.SimulationConfig(
-                grid_size=N, field_level=lfm.FieldLevel.COMPLEX,
-                e_amplitude=5.0, sigma=2.5, report_interval=500,
+                grid_size=N,
+                field_level=lfm.FieldLevel.COMPLEX,
+                e_amplitude=5.0,
+                sigma=2.5,
+                report_interval=500,
             )
             s2 = lfm.Simulation(cfg2)
             s2.place_soliton((cx, cx - sep // 2, cx), phase=0.0)

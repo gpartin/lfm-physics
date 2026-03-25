@@ -40,7 +40,7 @@ print()
 print("Grid parameters at N=64:")
 print()
 
-for p in particles[:6]:   # show first 6 as examples
+for p in particles[:6]:  # show first 6 as examples
     amp = lfm.amplitude_for_particle(p, 64)
     sig = lfm.sigma_for_particle(p, 64)
     print(f"  {p.name:<14}  amplitude={amp:.3f}  sigma={sig:.2f}")
