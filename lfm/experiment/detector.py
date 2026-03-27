@@ -38,7 +38,7 @@ smooth interference pattern.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -109,7 +109,7 @@ class DetectorScreen:
         if self._field_name == "energy_density" and self._try_record_gpu_fast():
             return
         field = self._get_field()
-        idx = [slice(None), slice(None), slice(None)]
+        idx: list[Any] = [slice(None), slice(None), slice(None)]
         idx[self._axis] = self._pos
         frame = field[tuple(idx)].astype(np.float32)
         self._frames.append(frame.copy())

@@ -214,6 +214,8 @@ def fluid_fields(
 
     has_imag = psi_i is not None and psi_i_prev is not None
     if has_imag:
+        assert psi_i is not None
+        assert psi_i_prev is not None
         psi_i64 = psi_i.astype(np.float64)
         psi_i_prev64 = psi_i_prev.astype(np.float64)
         dpsi_dt = (psi_i64 - psi_i_prev64) / dt

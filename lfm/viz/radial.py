@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -61,7 +61,7 @@ def plot_radial_profile(
     if ax is None:
         fig, ax = plt.subplots(figsize=(7, 4.5))
     else:
-        fig = ax.figure
+        fig = cast(Figure, ax.figure)
 
     ax.plot(r, vals, "o-", ms=3, color="#2563eb", lw=1.5, label="χ(r)")
 

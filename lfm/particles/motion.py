@@ -36,7 +36,7 @@ Usage::
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -287,7 +287,7 @@ def boost_soliton_solution(
 
     # Use place_soliton to place a Gaussian wave packet at position with velocity
     sim.place_soliton(
-        position=tuple(float(p) for p in position),
+        position=cast("tuple[float, float, float]", tuple(float(p) for p in position)),
         amplitude=amp,
         sigma=sigma_gauss,
         phase=particle_phase,

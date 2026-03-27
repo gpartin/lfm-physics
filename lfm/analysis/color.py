@@ -42,11 +42,11 @@ def color_variance(
     if psi_r.ndim == 1:
         total = psi_r.shape[0] // n_colors
         N = round(total ** (1 / 3))
-        ea = []
+        ea_list = []
         for a in range(n_colors):
             s = slice(a * total, (a + 1) * total)
-            ea.append(psi_r[s] ** 2 + psi_i[s] ** 2)
-        ea = np.stack(ea, axis=0)  # (n_colors, total)
+            ea_list.append(psi_r[s] ** 2 + psi_i[s] ** 2)
+        ea = np.stack(ea_list, axis=0)  # (n_colors, total)
     else:
         N = psi_r.shape[1]
         total = N**3

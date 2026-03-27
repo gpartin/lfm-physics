@@ -9,7 +9,7 @@ g₀₀ = -(χ/χ₀)²  follows from the GOV-01 dispersion relation.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -204,7 +204,7 @@ def find_apparent_horizon(
     min_pos = tuple(int(x) for x in np.unravel_index(np.argmin(chi_arr), chi_arr.shape))
 
     if center is None:
-        center = min_pos
+        center = cast(tuple[int, int, int], min_pos)
 
     inside = chi_arr <= threshold
     n_cells = int(inside.sum())
@@ -224,6 +224,7 @@ def find_apparent_horizon(
     r_horizon = float((3.0 * n_cells / (4.0 * np.pi)) ** (1.0 / 3.0))
 
     # Mean time dilation just outside the horizon (r_horizon ± 2 cells)
+    assert center is not None
     cx, cy, cz = center
     idx = np.arange(N, dtype=np.float64)
     X, Y, Z = np.meshgrid(idx, idx, idx, indexing="ij")

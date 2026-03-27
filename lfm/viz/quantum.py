@@ -13,7 +13,7 @@ volume_render_available     — True if pyvista is importable
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -217,7 +217,7 @@ def animate_double_slit(
     def _detector_slice(arr: NDArray) -> NDArray:
         """Extract the detector plane from a 3-D field."""
         pos = int(N * 0.8) if detector_position is None else detector_position
-        idx = [slice(None), slice(None), slice(None)]
+        idx: list[Any] = [slice(None), slice(None), slice(None)]
         idx[barrier_axis] = pos
         return arr[tuple(idx)]
 
@@ -884,7 +884,7 @@ def animate_double_slit_3d(
         # -- Phase indicator --
         energy_per_layer = np.zeros(N, dtype=np.float64)
         for k in range(N):
-            idx = [slice(None)] * 3
+            idx: list[Any] = [slice(None)] * 3
             idx[prop] = k
             layer = arr[tuple(idx)]
             energy_per_layer[k] = float(np.abs(layer).sum() if _is_signed else layer.sum())
@@ -1051,7 +1051,7 @@ def render_3d_volume(
         )
 
     if use_pyvista:
-        return _render_pyvista(
+        _render_pyvista(
             field,
             threshold=threshold,
             colormap=colormap,
@@ -1059,6 +1059,7 @@ def render_3d_volume(
             title=title,
             save_path=save_path,
         )
+        return None
     else:
         return _render_matplotlib(
             field,
@@ -1290,8 +1291,8 @@ def _save_animation(anim, path: str, fps: int) -> None:
 
     suffix = path.split(".")[-1].lower()
     if suffix == "gif":
-        writer = matplotlib.animation.PillowWriter(fps=fps)
-        anim.save(path, writer=writer)
+        gif_writer = matplotlib.animation.PillowWriter(fps=fps)
+        anim.save(path, writer=gif_writer)
     else:
-        writer = matplotlib.animation.FFMpegWriter(fps=fps)
-        anim.save(path, writer=writer)
+        mp4_writer = matplotlib.animation.FFMpegWriter(fps=fps)
+        anim.save(path, writer=mp4_writer)

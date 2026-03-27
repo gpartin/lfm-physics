@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -60,7 +60,7 @@ def plot_slice(
     if index is None:
         index = field.shape[axis] // 2
 
-    slc = [slice(None)] * 3
+    slc: list[Any] = [slice(None)] * 3
     slc[axis] = index
     data = field[tuple(slc)]
 
@@ -69,7 +69,7 @@ def plot_slice(
     if ax is None:
         fig, ax = plt.subplots(figsize=(6, 5))
     else:
-        fig = ax.figure
+        fig = cast(Figure, ax.figure)
 
     im = ax.imshow(
         data.T,
@@ -135,7 +135,7 @@ def plot_chi_histogram(
     if ax is None:
         fig, ax = plt.subplots(figsize=(7, 4))
     else:
-        fig = ax.figure
+        fig = cast(Figure, ax.figure)
 
     flat = np.asarray(chi).ravel()
     ax.hist(flat, bins=bins, color="#4a90d9", edgecolor="none", alpha=0.85)

@@ -110,10 +110,10 @@ class Evolver:
             self.psi_i_B = xp.from_numpy(np.zeros(psi_size, dtype=np.float32))
             self.psi_i_prev_B = xp.from_numpy(np.zeros(psi_size, dtype=np.float32))
         else:
-            self.psi_i_A = None
-            self.psi_i_prev_A = None
-            self.psi_i_B = None
-            self.psi_i_prev_B = None
+            self.psi_i_A = None  # type: ignore[assignment]
+            self.psi_i_prev_A = None  # type: ignore[assignment]
+            self.psi_i_B = None  # type: ignore[assignment]
+            self.psi_i_prev_B = None  # type: ignore[assignment]
 
         # Chi — A and B buffers
         chi_init = np.full(total, cfg.chi0, dtype=np.float32)
@@ -131,8 +131,8 @@ class Evolver:
             self.sa_A = xp.from_numpy(sa_init.copy())
             self.sa_B = xp.from_numpy(sa_init.copy())
         else:
-            self.sa_A = None
-            self.sa_B = None
+            self.sa_A = None  # type: ignore[assignment]
+            self.sa_B = None  # type: ignore[assignment]
 
     def evolve(self, steps: int, callback=None, freeze_chi: bool = False) -> None:
         """Run the evolution loop for a given number of steps.

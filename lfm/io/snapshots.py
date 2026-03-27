@@ -83,7 +83,7 @@ def save_snapshots(
     fields = [k for k, v in snaps[0].items() if isinstance(v, np.ndarray) and k != "step"]
 
     data: dict[str, np.ndarray] = {
-        "n_snapshots": np.int32(len(snaps)),
+        "n_snapshots": np.array(len(snaps), dtype=np.int32),
         "steps": np.array(
             [int(s.get("step", i)) for i, s in enumerate(snaps)],
             dtype=np.int32,
@@ -93,7 +93,7 @@ def save_snapshots(
         data[f] = np.stack([s[f] for s in snaps], axis=0)  # (T, *shape)
 
     saver = np.savez_compressed if compress else np.savez
-    saver(str(path), **data)
+    saver(str(path), **data)  # type: ignore[arg-type]
     return path.resolve()
 
 

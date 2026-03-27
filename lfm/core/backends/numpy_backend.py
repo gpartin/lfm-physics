@@ -310,7 +310,7 @@ class NumpyBackend:
                 ),
                 0.0,
             )
-            f_c = (ratio - 1.0 / n_colors) * safe
+            f_c = ((ratio - 1.0 / n_colors) * safe).astype(np.float32)
             color_var_term = kappa_c * f_c * psi_sq_total
 
         # v15 GOV-02: color current variance (CCV)

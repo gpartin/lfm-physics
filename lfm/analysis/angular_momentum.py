@@ -139,8 +139,8 @@ def precession_rate(
     """
     if len(L_history) < 3:
         return 0.0
-    angles = [np.arctan2(ly, lx) for lx, ly, _ in L_history]
-    angles = np.unwrap(angles)
+    raw_angles = [np.arctan2(ly, lx) for lx, ly, _ in L_history]
+    angles = np.unwrap(raw_angles)
     n = len(angles)
     t = np.arange(n) * dt_between
     # Linear fit: angle = omega * t + phi

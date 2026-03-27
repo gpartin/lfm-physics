@@ -1051,7 +1051,7 @@ class Simulation:
         data["config_json"] = np.array(json.dumps(cfg_dict))
         data["history_json"] = np.array(json.dumps(self._history))
 
-        np.savez_compressed(str(path), **data)
+        np.savez_compressed(str(path), **data)  # type: ignore[arg-type]
 
     @classmethod
     def load_checkpoint(cls, path: str | Path, backend: str = "auto") -> Simulation:

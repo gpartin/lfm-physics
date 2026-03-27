@@ -21,7 +21,7 @@ References
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -34,7 +34,7 @@ def correlation_function(
     n_bins: int = 32,
     normalize: bool = True,
     chi0: float | None = None,
-) -> dict[str, NDArray[np.float64]]:
+) -> dict[str, Any]:
     """Two-point correlation function ξ(r) via FFT.
 
     Computes the isotropically binned three-dimensional two-point correlation
@@ -175,7 +175,7 @@ def halo_mass_function(
     energy_density: NDArray,
     chi_threshold: float = 17.0,
     n_bins: int = 20,
-) -> dict[str, NDArray[np.float64]]:
+) -> dict[str, Any]:
     """Differential and cumulative halo mass function N(M).
 
     Identifies halos as connected regions where χ < *chi_threshold*
@@ -269,7 +269,7 @@ def void_statistics(
     chi: NDArray,
     chi_min: float = 18.5,
     n_bins: int = 20,
-) -> dict[str, NDArray[np.float64]]:
+) -> dict[str, Any]:
     """Size distribution of underdense void regions (χ ≈ χ₀).
 
     Parameters

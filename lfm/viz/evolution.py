@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from lfm.viz._util import _require_matplotlib
 
@@ -101,7 +101,7 @@ def plot_energy_components(
     if ax is None:
         fig, ax = plt.subplots(figsize=(9, 5))
     else:
-        fig = ax.figure
+        fig = cast(Figure, ax.figure)
 
     import numpy as np
 

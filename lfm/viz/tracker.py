@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from lfm.analysis.tracker import flatten_trajectories
 from lfm.viz._util import _require_matplotlib
@@ -49,7 +49,7 @@ def plot_trajectories(
     if ax is None:
         fig, ax = plt.subplots(figsize=(6, 6))
     else:
-        fig = ax.figure
+        fig = cast(Figure, ax.figure)
 
     steps = flat["step"]
     if steps.size == 0:

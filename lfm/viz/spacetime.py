@@ -106,7 +106,7 @@ def spacetime_diagram(
         fig = ax.get_figure()
 
     n_frames, n_space = data.shape
-    extent = [0, n_space, 0, n_frames * dt]
+    extent = (0.0, float(n_space), 0.0, float(n_frames) * dt)
     im = ax.imshow(
         data,
         origin="lower",
