@@ -20,15 +20,18 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from numpy.typing import NDArray
+
     from lfm.experiment.barrier import Barrier
     from lfm.experiment.detector import DetectorScreen
     from lfm.experiment.source import ContinuousSource
 
 import numpy as np
-from numpy.typing import NDArray
 
 from lfm.analysis.energy import total_energy
 from lfm.analysis.metrics import compute_metrics
@@ -241,7 +244,7 @@ class Simulation:
         return self._evolver.backend.from_numpy(arr.ravel().astype(np.float32))
 
     @property
-    def sa_fields(self) -> "NDArray[np.float32] | None":
+    def sa_fields(self) -> NDArray[np.float32] | None:
         """S_a auxiliary confinement fields, shape (3, N, N, N).
 
         Returns ``None`` when ``config.kappa_tube == 0`` (SA disabled).
@@ -281,6 +284,22 @@ class Simulation:
             Initial velocity in lattice units (|v| < c = 1).  Adds a
             spatial phase gradient k·(∂r−r₀) where k = χ₀·v/c,
             creating a boosted soliton with net momentum.
+
+        Examples
+        --------
+        Single neutral soliton in the centre of a 64³ grid:
+
+        >>> sim.place_soliton((32, 32, 32), amplitude=6.0)
+
+        Electron–positron pair (opposite phases) separated by 20 cells:
+
+        >>> sim.place_soliton((32, 22, 32), amplitude=4.0, phase=0.0)     # e⁻
+        >>> sim.place_soliton((32, 42, 32), amplitude=4.0, phase=3.1416)  # e⁺
+
+        Moving soliton with velocity 0.3c along the x-axis:
+
+        >>> sim.place_soliton((32, 32, 32), amplitude=5.0,
+        ...                   velocity=(0.3, 0.0, 0.0))
         """
         N = self.config.grid_size
         amp = amplitude if amplitude is not None else self.config.e_amplitude
@@ -378,7 +397,7 @@ class Simulation:
             pi_total = np.zeros((N, N, N), dtype=np.float32)
             if phases is None:
                 phases = [0.0] * len(positions)
-            for pos, ph in zip(positions, phases):
+            for pos, ph in zip(positions, phases, strict=False):
                 pr, pi = gaussian_soliton(N, pos, amp, sig, ph)
                 pr_total += pr
                 pi_total += pi
@@ -397,9 +416,9 @@ class Simulation:
         axis: int = 2,
         amplitude: float = 0.3,
         velocity: float = 0.5,
-        z_max: "int | None" = None,
+        z_max: int | None = None,
         phase: float = 0.0,
-        beam_waist: "float | None" = None,
+        beam_waist: float | None = None,
     ) -> None:
         """Initialize a forward-propagating Gaussian beam (coherent wave source).
 
@@ -490,7 +509,27 @@ class Simulation:
     def equilibrate(self) -> None:
         """Poisson-equilibrate χ from current Ψ field.
 
-        Solves GOV-04 quasi-static limit: ∇²δχ = κ(|Ψ|² − E₀²).
+        Solves the GOV-04 quasi-static limit via FFT:
+
+        .. math::
+
+            \\nabla^2 \\delta\\chi = \\kappa(|\\Psi|^2 - E_0^2)
+
+        The Fourier-space solution is applied in-place to the χ buffers
+        so that the very first leapfrog step starts from a self-consistent
+        gravitational configuration rather than a cold uniform χ = χ₀
+        background.
+
+        Call :meth:`equilibrate` once after all initial solitons have
+        been placed and before the first :meth:`run`.
+
+        Examples
+        --------
+        >>> import lfm
+        >>> sim = lfm.Simulation(lfm.SimulationConfig(grid_size=64))
+        >>> sim.place_soliton((32, 32, 32), amplitude=6.0)
+        >>> sim.equilibrate()           # χ-well forms around the soliton
+        >>> print(sim.chi.min())        # should be < 19 (chi0)
         """
         pr = self._evolver.get_psi_real()
         pi = self._evolver.get_psi_imag()
@@ -519,7 +558,8 @@ class Simulation:
         slits=None,
         slit_axis: int | None = None,
         absorb: bool = True,
-    ) -> "Barrier":
+        transit_steps: int = 10,
+    ) -> Barrier:
         """Place a χ-potential barrier with configurable slit openings.
 
         Convenience method that creates and applies a
@@ -559,6 +599,7 @@ class Simulation:
             slits=slits,
             slit_axis=slit_axis,
             absorb=absorb,
+            transit_steps=transit_steps,
         )
 
     def add_detector(
@@ -566,7 +607,7 @@ class Simulation:
         axis: int = 2,
         position: int | None = None,
         field: str = "energy_density",
-    ) -> "DetectorScreen":
+    ) -> DetectorScreen:
         """Add a detector screen that records field intensity at a plane.
 
         Creates a :class:`~lfm.experiment.DetectorScreen` attached to
@@ -602,7 +643,7 @@ class Simulation:
         envelope_sigma: float = 0.25,
         phase: float = 0.0,
         boost: float = 10.0,
-    ) -> "ContinuousSource":
+    ) -> ContinuousSource:
         """Add a CW monochromatic source plane (Paper-055 technique).
 
         Creates a :class:`~lfm.experiment.ContinuousSource` attached
@@ -656,20 +697,38 @@ class Simulation:
     ) -> None:
         """Run the simulation for a number of steps.
 
+        Advances both fields (GOV-01 for Ψ, GOV-02 for χ) using the
+        double-buffer leapfrog integrator.  Metric snapshots are appended
+        to :attr:`history` at every ``config.report_interval`` steps.
+
         Parameters
         ----------
         steps : int
-            Number of leapfrog steps.
+            Number of leapfrog steps to advance.
         callback : callable or None
-            Called as callback(sim, step) every report_interval.
+            If provided, called as ``callback(sim, step)`` once per
+            ``config.report_interval`` steps.  Use this for progress
+            reporting or live visualisation.
         record_metrics : bool
-            If True, record metrics every report_interval.
+            If ``True`` (default), append a :meth:`metrics` snapshot to
+            :attr:`history` every ``report_interval`` steps.
         evolve_chi : bool
-            If True (default), evolve both Psi and chi via GOV-01+GOV-02.
-            If False, only GOV-01 is applied: chi is held frozen at its
-            current value throughout all steps.  Used by the eigenmode
-            solver (SCF iteration) so that the wave-function can relax
-            without disturbing the chi-well.
+            If ``True`` (default), evolve both Ψ and χ via GOV-01+GOV-02.
+            Set to ``False`` to freeze χ and evolve only Ψ (GOV-01 only).
+            Used by the self-consistent-field eigenmode solver.
+
+        Examples
+        --------
+        Basic run:
+
+        >>> sim.run(steps=5_000)
+        >>> print(sim.metrics())
+
+        With a progress callback:
+
+        >>> def progress(s, step):
+        ...     print(f"step {step}  chi_min={s.chi.min():.3f}")
+        >>> sim.run(10_000, callback=progress)
         """
         # Snapshot previous state for energy calculations
         self._psi_r_prev = self._evolver.get_psi_real().copy()
@@ -761,6 +820,7 @@ class Simulation:
         callback: Callable[[Simulation, int], None] | None = None,
         step_callback: Callable[[Simulation, int], None] | None = None,
         record_metrics: bool = True,
+        evolve_chi: bool = True,
     ) -> list[dict[str, NDArray[np.float32]]]:
         """Run and accumulate field snapshots at regular intervals.
 
@@ -790,6 +850,10 @@ class Simulation:
             Optional callback as in :meth:`run`.
         record_metrics : bool
             Also append metrics to :attr:`history` every report_interval.
+        evolve_chi : bool
+            If ``False``, freeze χ and evolve only Ψ (GOV-01 only).
+            Useful for wave-optics demos where κ≈0 so χ barely moves —
+            skipping GOV-02 gives ~40 % speedup with no physics change.
 
         Returns
         -------
@@ -832,7 +896,7 @@ class Simulation:
                     # temporarily 1, which would fire metrics() on EVERY step
                     # (thousands of GPU->CPU copies). We record metrics once
                     # per snapshot boundary below instead.
-                    self.run(snapshot_every, callback=step_callback, record_metrics=False)
+                    self.run(snapshot_every, callback=step_callback, record_metrics=False, evolve_chi=evolve_chi)
                     if callback is not None:
                         callback(self, self.step)
                     snapshots.append(_take_snap())
@@ -842,7 +906,7 @@ class Simulation:
                         self._history.append(m)
 
                 if remainder > 0:
-                    self.run(remainder, callback=step_callback, record_metrics=False)
+                    self.run(remainder, callback=step_callback, record_metrics=False, evolve_chi=evolve_chi)
                     if callback is not None:
                         callback(self, self.step)
                     snapshots.append(_take_snap())
@@ -857,13 +921,13 @@ class Simulation:
                 # run() fires callback at report_interval, but we always
                 # fire the snapshot callback explicitly after each batch so
                 # it occurs every snapshot_every steps regardless.
-                self.run(snapshot_every, callback=None, record_metrics=record_metrics)
+                self.run(snapshot_every, callback=None, record_metrics=record_metrics, evolve_chi=evolve_chi)
                 if callback is not None:
                     callback(self, self.step)
                 snapshots.append(_take_snap())
 
             if remainder > 0:
-                self.run(remainder, callback=None, record_metrics=record_metrics)
+                self.run(remainder, callback=None, record_metrics=record_metrics, evolve_chi=evolve_chi)
                 if callback is not None:
                     callback(self, self.step)
                 snapshots.append(_take_snap())
@@ -881,12 +945,32 @@ class Simulation:
         return self._interior_mask
 
     def metrics(self) -> dict[str, float]:
-        """Compute snapshot metrics for the current state.
+        """Compute snapshot metrics for the current simulation state.
 
         Returns
         -------
         dict[str, float]
-            Energy components, chi statistics, structure metrics.
+            A flat dictionary with the following keys:
+
+            ``e_kinetic``, ``e_gradient``, ``e_potential``
+                Energy decomposition (Hamiltonian components).
+            ``e_total``
+                Sum of all three energy components.
+            ``chi_min``, ``chi_max``, ``chi_mean``, ``chi_std``
+                Spatial statistics of the χ field (interior masked).
+            ``well_fraction``
+                Fraction of interior cells with χ < ``chi0 − 2``.
+            ``void_fraction``
+                Fraction of interior cells with χ > ``chi0 − 0.5``.
+            ``psi_norm``
+                L² norm of |Ψ|² over the interior.
+            ``step``
+                Present timestep counter (added by :meth:`run`).
+
+        Examples
+        --------
+        >>> m = sim.metrics()
+        >>> print(f"E_total={m['e_total']:.4f}  chi_min={m['chi_min']:.3f}")
         """
         pr = self._evolver.get_psi_real()
         pi = self._evolver.get_psi_imag()

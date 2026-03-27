@@ -159,7 +159,7 @@ class PlanckScale:
     # ------------------------------------------------------------------
 
     @classmethod
-    def at_planck_resolution(cls, grid_size: int = 256, dt: float = DT_DEFAULT) -> "PlanckScale":
+    def at_planck_resolution(cls, grid_size: int = 256, dt: float = DT_DEFAULT) -> PlanckScale:
         """Return a PlanckScale where **1 cell = 1 Planck length** exactly.
 
         Sets ``box_planck_radius = grid_size / 2`` so that::

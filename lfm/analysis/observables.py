@@ -6,8 +6,12 @@ lattice values into quantities you can compare to textbook results.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def momentum_density(
@@ -165,10 +169,7 @@ def confinement_proxy(
 
     chi_ref = float(np.max(chi))
     vals = chi_ref - chi[idx[:, 0], idx[:, 1], idx[:, 2]]
-    if samples > 1:
-        ds = distance / (samples - 1)
-    else:
-        ds = 0.0
+    ds = distance / (samples - 1) if samples > 1 else 0.0
     line_integral = float(np.sum(vals) * ds)
     mean_dep = float(np.mean(vals))
 
@@ -278,7 +279,7 @@ def find_peaks(
         pos = (int(c[0]), int(c[1]), int(c[2]))
         too_close = False
         for s in selected:
-            dist = np.sqrt(sum((a - b) ** 2 for a, b in zip(pos, s)))
+            dist = np.sqrt(sum((a - b) ** 2 for a, b in zip(pos, s, strict=False)))
             if dist < min_separation:
                 too_close = True
                 break
@@ -303,7 +304,7 @@ def measure_separation(
     if len(peaks) < 2:
         return 0.0
     a, b = peaks[0], peaks[1]
-    return float(np.sqrt(sum((ai - bi) ** 2 for ai, bi in zip(a, b))))
+    return float(np.sqrt(sum((ai - bi) ** 2 for ai, bi in zip(a, b, strict=False))))
 
 
 def measure_force(
@@ -584,8 +585,8 @@ def fit_power_law(
 
 def rotation_curve_fit(
     sparc_row: dict,
-    sim_r: "NDArray",
-    sim_v: "NDArray",
+    sim_r: NDArray,
+    sim_v: NDArray,
     tau_range: tuple[float, float] = (5.0, 100.0),
     n_tau: int = 30,
 ) -> dict:

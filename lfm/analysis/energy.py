@@ -15,8 +15,12 @@ lfm_energy_conservation_test.py.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def energy_components(
@@ -61,10 +65,7 @@ def energy_components(
     dpsi_r_dt = (psi_r.astype(np.float64) - psi_r_prev.astype(np.float64)) / dt
 
     # Kinetic: ½(∂Ψ/∂t)²
-    if psi_r.ndim == 4:  # color: (n_colors, N, N, N)
-        kinetic = 0.5 * np.sum(dpsi_r_dt**2, axis=0)
-    else:
-        kinetic = 0.5 * dpsi_r_dt**2
+    kinetic = 0.5 * np.sum(dpsi_r_dt**2, axis=0) if psi_r.ndim == 4 else 0.5 * dpsi_r_dt**2
 
     if psi_i is not None and psi_i_prev is not None:
         dpsi_i_dt = (psi_i.astype(np.float64) - psi_i_prev.astype(np.float64)) / dt

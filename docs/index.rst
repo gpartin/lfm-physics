@@ -35,6 +35,7 @@ coupled wave equations discretised on a 3D cubic lattice.
    api/constants
    api/fields
    api/analysis
+   api/viz
    api/units
    api/io
    api/core

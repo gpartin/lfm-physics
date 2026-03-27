@@ -13,7 +13,6 @@ Block size = 256 threads, 1D grid — optimal for RTX 4060.
 from __future__ import annotations
 
 import numpy as np
-from numpy.typing import NDArray
 
 try:
     import cupy as cp
@@ -23,6 +22,8 @@ except ImportError:
     cp = None
     CUPY_AVAILABLE = False
 
+from typing import TYPE_CHECKING
+
 from lfm.core.backends.kernel_source import (
     EVOLUTION_COMPLEX_KERNEL_SRC,
     EVOLUTION_KERNEL_SRC,
@@ -30,6 +31,9 @@ from lfm.core.backends.kernel_source import (
     PHASE1_KERNEL_SRC,
     SA_DIFFUSION_KERNEL_SRC,
 )
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 # Block size — 256 is optimal for most NVIDIA GPUs
 _BLOCK_SIZE = 256
@@ -110,7 +114,7 @@ class CupyBackend:
         coords = np.arange(N, dtype=np.float32) - center + 0.5
         X, Y, Z = np.meshgrid(coords, coords, coords, indexing="ij")
         R = np.sqrt(X**2 + Y**2 + Z**2)
-        mask = (R > r_freeze).astype(np.float32).ravel()
+        mask = (r_freeze < R).astype(np.float32).ravel()
         return cp.asarray(mask)
 
     def step_real(

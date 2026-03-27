@@ -1,4 +1,23 @@
-"""Post-processing analysis: structure detection, energy, observables."""
+"""Post-processing analysis for LFM simulation output.
+
+This module collects statistics and derived observables from the two
+LFM fields (Ψ and χ):
+
+- **Energy** — kinetic, gradient, potential, and cross-coupling
+  components tracked via :func:`energy_components`.
+- **Structure detection** — χ-well / void / cluster counting via
+  :func:`chi_statistics`.
+- **Orbital mechanics** — Kepler fits, angular momentum, precession
+  rates for N-body experiments.
+- **Gravitational waves** — strain tensor and power spectrum from χ
+  fluctuations.
+- **Colour / QCD probes** — colour variance f_c and confinement
+  metrics for Level-2 multi-component Ψ runs.
+
+All functions accept plain NumPy (or CuPy) arrays and return NumPy
+arrays / plain Python dicts, so they work both on CPU and GPU
+simulations without copying.
+"""
 
 from lfm.analysis.angular_momentum import (
     angular_momentum_density,

@@ -20,10 +20,9 @@ Physics:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
-from numpy.typing import NDArray
 
 from lfm.config import BoundaryType, FieldLevel
 from lfm.constants import CHI0
@@ -34,6 +33,9 @@ from lfm.particles.catalog import (
 )
 from lfm.particles.solver import _energy_in_sphere
 from lfm.simulation import Simulation, SimulationConfig
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 # ---------------------------------------------------------------------------
 # Per-element nuclear potential defaults
@@ -175,7 +177,7 @@ def _combine_chi_wells(*wells: NDArray, chi0: float = CHI0) -> NDArray:
 
 def _fraction_near_center(
     psi_r: NDArray,
-    psi_i: Optional[NDArray],
+    psi_i: NDArray | None,
     center: tuple[float, float, float],
     radius: float,
 ) -> float:
@@ -269,8 +271,8 @@ def _evolve_electron_in_potential(
 def create_atom(
     element: str = "H",
     N: int = 64,
-    nuclear_depth: Optional[float] = None,
-    nuclear_sigma: Optional[float] = None,
+    nuclear_depth: float | None = None,
+    nuclear_sigma: float | None = None,
     steps: int = _ELECTRON_STEPS,
 ) -> AtomState:
     """Create an LFM atom using Approach A (effective nuclear potential).
@@ -341,7 +343,7 @@ def create_atom(
 def create_molecule(
     formula: str = "H2",
     N: int = 128,
-    bond_length: Optional[float] = None,
+    bond_length: float | None = None,
     nuclear_depth: float = 14.0,
     nuclear_sigma: float = 3.0,
     steps: int = _ELECTRON_STEPS,

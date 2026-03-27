@@ -27,8 +27,12 @@ References: Paper 080 Session 143; LFM_CONFINEMENT_MECHANISM.md.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 # ---------------------------------------------------------------------------
 # Smoothed colour variance  (SCV)

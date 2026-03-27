@@ -111,6 +111,7 @@ from lfm.constants import (
     D,
 )
 from lfm.core.backends import get_backend, gpu_available
+from lfm.core.backends.remote_backend import configure_remote
 from lfm.core.evolver import Evolver
 from lfm.experiment import (
     Barrier,
@@ -231,6 +232,7 @@ __all__ = [
     "Simulation",
     "get_backend",
     "gpu_available",
+    "configure_remote",
     # Fields
     "gaussian_soliton",
     "place_solitons",

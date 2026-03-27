@@ -9,10 +9,14 @@ g₀₀ = -(χ/χ₀)²  follows from the GOV-01 dispersion relation.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
 
 from lfm.constants import CHI0
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def effective_metric_00(
@@ -224,7 +228,7 @@ def find_apparent_horizon(
     idx = np.arange(N, dtype=np.float64)
     X, Y, Z = np.meshgrid(idx, idx, idx, indexing="ij")
     R = np.sqrt((X - cx) ** 2 + (Y - cy) ** 2 + (Z - cz) ** 2)
-    shell = (R >= r_horizon) & (R <= r_horizon + 2)
+    shell = (r_horizon <= R) & (r_horizon + 2 >= R)
     if shell.sum() > 0:
         td = float(np.abs(chi_arr[shell]).mean() / chi0)
     else:

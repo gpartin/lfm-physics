@@ -1,4 +1,19 @@
-"""Field initialization: solitons, equilibrium, arrangements."""
+"""Field initialization utilities for LFM simulations.
+
+This module provides functions for placing wave-field sources on the
+lattice (Gaussian solitons, multi-body arrangements, colour-field
+configurations) and for computing the quasi-static χ equilibrium
+(GOV-04 Poisson solve via FFT) that provides consistent initial
+conditions for structure-formation experiments.
+
+Typical usage
+-------------
+Most of these helpers are called indirectly through
+:class:`~lfm.simulation.Simulation`::meth:`place_soliton` and
+:meth:`~lfm.simulation.Simulation.equilibrate`.  Direct access is
+useful when constructing batched initial conditions outside the
+:class:`Simulation` API.
+"""
 
 from lfm.fields.arrangements import (
     disk_positions,

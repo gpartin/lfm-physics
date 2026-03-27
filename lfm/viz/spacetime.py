@@ -17,10 +17,14 @@ Examples
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
 
 from lfm.viz._util import _require_matplotlib
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def spacetime_diagram(
@@ -35,8 +39,8 @@ def spacetime_diagram(
     vmax: float | None = None,
     colorbar: bool = True,
     title: str | None = None,
-    ax: "Axes | None" = None,  # type: ignore[name-defined]  # noqa: F821
-) -> "tuple[Figure, Axes]":  # type: ignore[name-defined]  # noqa: F821
+    ax: Axes | None = None,  # type: ignore[name-defined]  # noqa: F821
+) -> tuple[Figure, Axes]:  # type: ignore[name-defined]  # noqa: F821
     """Plot a χ(x, t) space–time diagram from a snapshot sequence.
 
     Extracts a 1-D pencil at the grid mid-planes (or *center*) from each

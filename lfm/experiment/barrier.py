@@ -25,11 +25,13 @@ otherwise gradually diffuse the barrier away.
 
 Which-path detection
 --------------------
-With ``Slit(detector=True, detector_strength=α)``, every time the
-callback fires the wave amplitude at that slit is multiplied by
-``(1 − α)``.  At α = 1 the slit is a perfect absorber (one-path
-experiment).  At α = 0 the field is untouched (passive observation).
-Intermediate values reproduce partial measurement / decoherence.
+With ``Slit(detector=True, detector_strength=α)`` and a calibrated
+``transit_steps`` (wave-transit time through the slit in leapfrog steps),
+the detector absorbs a fraction γ of Ψ amplitude per step at the slit cells,
+where γ = 1 − (1 − α)^(1/transit_steps).  After one full transit the
+remaining amplitude is (1 − α).  The slit χ value is left at χ₀ (fully
+open) — nothing blocks the wave physically; the detector couples to it
+and removes energy, exactly as a real which-path measurement does.
 
 Example
 -------
@@ -53,11 +55,12 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import numpy as np
-from numpy.typing import NDArray
 
 from lfm.constants import CHI0
 
 if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
     from lfm.simulation import Simulation
 
 __all__ = ["Slit", "Barrier"]
@@ -140,7 +143,7 @@ class Barrier:
 
     def __init__(
         self,
-        sim: "Simulation",
+        sim: Simulation,
         axis: int = 2,
         position: int | None = None,
         height: float | None = None,
@@ -148,6 +151,7 @@ class Barrier:
         slits: list[Slit] | None = None,
         slit_axis: int | None = None,
         absorb: bool = True,
+        transit_steps: int = 10,
     ) -> None:
         N = sim.config.grid_size
         self._sim = sim
@@ -186,6 +190,72 @@ class Barrier:
         self._slit_masks_dev = [
             _td(sm.astype(np.float32)).reshape(N, N, N) for sm in self._slit_masks
         ]
+
+        # ── Pre-build fast chi-enforcement structures ─────────────────────────
+        # The original apply() used element-wise blend operations like
+        #   active[:] = active * (1.0 - bm) + h * bm
+        # which allocate 3-4 temporary N³ arrays per line.  At N=256 COMPLEX
+        # (6+ × 64 MB resident arrays) this caused CuPy memory-pool OOM and
+        # reduced throughput from ~264 steps/s to ~60 steps/s.
+        #
+        # Replacement strategy (two parts):
+        #
+        # CHI ENFORCEMENT — fill+slab approach (~write-only, no source array read):
+        #   1. buf.fill(chi0) — fills entire buffer with background chi.
+        #   2. buf[slab_sl] = height — overwrites barrier slab cells.
+        #   3. For each slit opening: buf[slit_sl] = chi0 / det_chi.
+        # This avoids reading a 64 MB template array; only writes are needed.
+        #
+        # PSI ZEROING — in-place mask multiply (no temporary arrays):
+        #   pr *= psi_barrier_mask  (float32 mask: 0 at barrier, 1 elsewhere)
+        chi0_val = float(sim.config.chi0)
+        h_val = float(self._height)
+        self._chi0_val = chi0_val
+        self._h_val = h_val
+
+        # Pre-compute barrier slab slice (axis-specific)
+        start = max(0, self._pos - self._thick // 2)
+        end = min(N, start + self._thick)
+        slab_sl: list = [slice(None), slice(None), slice(None)]
+        slab_sl[self._axis] = slice(start, end)
+        self._barrier_slab_sl = tuple(slab_sl)
+
+        # Pre-compute per-slit restore slices and target chi values.
+        # ALL slits (including detector slits) restore to chi0 — the slit
+        # stays OPEN.  Which-path detection uses per-step Ψ amplitude
+        # absorption (see _det_scale_masks below), not χ elevation.
+        self._slit_restore_sls: list[tuple[tuple, float]] = []
+        for slit in self._slits:
+            s0 = max(0, slit.center - slit.width // 2)
+            s1 = min(N, s0 + slit.width)
+            sl2: list = [slice(None), slice(None), slice(None)]
+            sl2[self._axis] = slice(start, end)
+            sl2[self._slit_axis] = slice(s0, s1)
+            self._slit_restore_sls.append((tuple(sl2), chi0_val))
+
+        # Pre-compute per-step amplitude-damping scale masks for detector slits.
+        # γ = 1 − (1 − strength)^(1/transit_steps) is the per-step absorption
+        # fraction so that (1 − γ)^transit_steps == (1 − strength), i.e. after
+        # one full slit transit the remaining amplitude equals (1 − strength).
+        # scale_mask = (1 − γ) inside the slit cells, 1.0 everywhere else.
+        # pr *= scale_mask is a single in-place multiply with no temporaries.
+        self._det_scale_masks: list = []
+        for i, slit in enumerate(self._slits):
+            if slit.detector and slit.detector_strength > 0.0:
+                transit = max(1, transit_steps)
+                strength = float(min(1.0, slit.detector_strength))
+                gamma = 1.0 if strength >= 1.0 else 1.0 - (1.0 - strength) ** (1.0 / transit)
+                scale_cpu = np.ones((N, N, N), dtype=np.float32)
+                scale_cpu[self._slit_masks[i]] = float(1.0 - gamma)
+                self._det_scale_masks.append(_td(scale_cpu).reshape(N, N, N))
+            else:
+                self._det_scale_masks.append(None)
+
+        # Inverted float32 barrier mask: 1.0 outside barrier, 0.0 inside.
+        # Used for in-place Ψ zeroing (pr *= mask) — no temporaries.
+        psi_mask_cpu = (~self._barrier_mask).astype(np.float32)
+        self._psi_barrier_mask = _td(psi_mask_cpu).reshape(N, N, N)
+        # ── End pre-build ─────────────────────────────────────────────────────
 
         # Apply the initial barrier
         self.apply()
@@ -230,60 +300,60 @@ class Barrier:
         :meth:`step_callback` to keep the barrier stable against GOV-02
         diffusion.
 
-        Which-path detectors are implemented via χ modification: a
-        detector at strength α sets χ at that slit to
-        ``χ₀ + (height − χ₀) × α``.  At α=1 the slit is opaque
-        (χ = height), at α=0 it is fully transparent (χ = χ₀).
-        The wave is attenuated by GOV-01 evanescence — no Ψ modification
-        is needed, avoiding global-velocity artefacts.
+        Which-path detectors absorb a calibrated fraction of Ψ amplitude
+        at the detector slit cells each step (see ``_det_scale_masks``).
+        The slit χ remains at χ₀ (open); the wave passes through but loses
+        energy to the detector — exactly as a real measurement couples to
+        a particle without physically blocking its path.
         """
-        # All 4 chi buffers must be written so the barrier persists
-        # across leapfrog double-buffer swaps.
+        # Chi enforcement via fill + slab write (write-only, no source read):
         #
-        # IMPORTANT: we replicate the active buffer to all 4 after
-        # modifying barrier/slit cells.  This zeros the chi velocity
-        # (chi_current − chi_prev) everywhere, which prevents the
-        # barrier's high-χ value from radiating outward as a chi-wave
-        # through the GOV-02 wave equation.  Without this, the barrier
-        # χ floods the entire grid within a few hundred steps.
-        active = self._sim._native_chi()  # 3D view of active buf
-        bm = self._barrier_mask_dev  # float32 1/0
-        sm_all = self._full_slit_mask_dev  # float32 1/0
-        h = float(self._height)
-        chi0 = float(self._sim.config.chi0)
-
-        # Set barrier/slit/detector values in the active buffer
-        active[:] = active * (1.0 - bm) + h * bm
-        active[:] = active * (1.0 - sm_all) + chi0 * sm_all
-
-        for slit, sm_dev in zip(self._slits, self._slit_masks_dev):
-            if slit.detector and slit.detector_strength > 0.0:
-                alpha = float(min(1.0, slit.detector_strength))
-                det_chi = chi0 + (h - chi0) * alpha
-                active[:] = active * (1.0 - sm_dev) + det_chi * sm_dev
-
-        # Replicate active to all 4 chi buffers (zero velocity).
-        # One copy is self→self (harmless); avoids complex pointer comparison.
-        chi_bufs = self._sim._native_chi_pair()  # (A, B, prevA, prevB)
-        for buf in chi_bufs:
-            buf[:] = active
+        #   1. buf.fill(chi0) — reset entire buffer to background chi.
+        #   2. buf[slab] = height — elevate entire barrier slab.
+        #   3. Restore slit openings / detector cells to their target chi.
+        #
+        # Writing the same state to all 4 leapfrog buffers zeros chi velocity
+        # everywhere, preventing the barrier from radiating chi-waves through
+        # GOV-02.  fill() is write-only (no source array to read), saving ~256 MB
+        # of memory traffic per step vs the previous memcpy-from-template approach.
+        chi0 = self._chi0_val
+        h = self._h_val
+        for buf in self._sim._native_chi_pair():
+            buf.fill(chi0)
+            buf[self._barrier_slab_sl] = h
+            for sl, v in self._slit_restore_sls:
+                buf[sl] = v
 
         if self._absorb:
             # Zero Ψ inside solid barrier cells (perfect absorber).
+            # In-place multiply by pre-built inverted mask (1 outside, 0 inside)
+            # avoids creating any temporary arrays.
             pr = self._sim._native_psi_real()
-            pr[:] = pr * (1.0 - bm)
+            pr *= self._psi_barrier_mask
 
             pi = self._sim._native_psi_imag()
             if pi is not None:
-                pi[:] = pi * (1.0 - bm)
+                pi *= self._psi_barrier_mask
+
+        # Which-path detector: absorb per-step amplitude fraction at detector
+        # slit cells.  scale_mask = (1-γ) at slit, 1.0 elsewhere — one in-place
+        # multiply per component, no temporary arrays.
+        if any(m is not None for m in self._det_scale_masks):
+            pr = self._sim._native_psi_real()
+            for scale_mask in self._det_scale_masks:
+                if scale_mask is not None:
+                    pr *= scale_mask
+            pi = self._sim._native_psi_imag()
+            if pi is not None:
+                for scale_mask in self._det_scale_masks:
+                    if scale_mask is not None:
+                        pi *= scale_mask
 
     def attenuate_slits(self) -> None:
-        """No-op: which-path detection is now handled via χ in :meth:`apply`.
+        """No-op retained for API compatibility.
 
-        The χ-based mechanism (raising χ at detector slits proportional to
-        ``detector_strength``) naturally attenuates the wave through GOV-01
-        evanescence without requiring any Ψ modification, which avoids the
-        global-velocity artefact that psi-based attenuation causes.
+        Which-path detection is handled by :meth:`apply` via per-step Ψ
+        amplitude scaling at detector slit cells (``_det_scale_masks``).
         """
 
     def measure_slits(self) -> dict[str, float]:
@@ -301,7 +371,7 @@ class Barrier:
 
     # ── Callback ───────────────────────────────────────────────────────
 
-    def step_callback(self, sim: "Simulation", step: int) -> None:
+    def step_callback(self, sim: Simulation, step: int) -> None:
         """Simulation step callback.
 
         Pass this to :meth:`~lfm.Simulation.run` or

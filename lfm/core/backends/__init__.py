@@ -63,7 +63,11 @@ def get_backend(preference: str = "auto") -> NumpyBackend:
             return CupyBackend()  # type: ignore[return-value]
         return NumpyBackend()
 
-    raise ValueError(f"Unknown backend preference '{preference}'. Use 'auto', 'cpu', or 'gpu'.")
+    if preference == "remote":
+        from lfm.core.backends.remote_backend import RemoteBackend
+        return RemoteBackend()  # type: ignore[return-value]
+
+    raise ValueError(f"Unknown backend preference '{preference}'. Use 'auto', 'cpu', 'gpu', or 'remote'.")
 
 
 def gpu_available() -> bool:

@@ -12,7 +12,8 @@ sys.path.insert(0, os.path.abspath(".."))
 project = "lfm-physics"
 copyright = "2026, Greg Partin"
 author = "Greg Partin"
-release = "0.4.1"
+release = "1.2.0"
+version = "1.2"
 
 # -- General configuration ---------------------------------------------------
 

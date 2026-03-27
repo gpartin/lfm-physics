@@ -213,7 +213,7 @@ class SimulationConfig:
         return self.kappa_tube > 0.0
 
     @property
-    def planck_scale(self) -> "PlanckScale":
+    def planck_scale(self) -> PlanckScale:
         """Planck-unit scale for this configuration.
 
         Returns a :class:`~lfm.units.PlanckScale` providing the conversion

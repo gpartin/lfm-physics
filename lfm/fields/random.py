@@ -8,8 +8,12 @@ thermal initialization, and perturbation studies.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def seed_noise(
@@ -43,10 +47,7 @@ def seed_noise(
     if not isinstance(rng, np.random.Generator):
         rng = np.random.default_rng(rng)
 
-    if n_colors == 1:
-        shape = (N, N, N)
-    else:
-        shape = (n_colors, N, N, N)
+    shape = (N, N, N) if n_colors == 1 else (n_colors, N, N, N)
 
     psi_r = (rng.standard_normal(shape) * amplitude).astype(np.float32)
     psi_i = (rng.standard_normal(shape) * amplitude).astype(np.float32)

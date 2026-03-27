@@ -45,6 +45,7 @@ from lfm.experiment.barrier import Barrier, Slit
 from lfm.experiment.detector import DetectorScreen
 from lfm.experiment.dispersion import Dispersion, dispersion
 from lfm.experiment.source import ContinuousSource
+from lfm.experiment.double_slit import double_slit, DoubleSlit
 
 __all__ = [
     "Barrier",
@@ -53,4 +54,6 @@ __all__ = [
     "ContinuousSource",
     "Dispersion",
     "dispersion",
+    "double_slit",
+    "DoubleSlit",
 ]

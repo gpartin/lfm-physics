@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from lfm.simulation import Simulation
 
 
-def save_checkpoint(sim: "Simulation", path: str | Path) -> Path:
+def save_checkpoint(sim: Simulation, path: str | Path) -> Path:
     """Save simulation state to a compressed NumPy archive.
 
     Persists the full simulation state (fields, step counter, config,
@@ -56,7 +56,7 @@ def save_checkpoint(sim: "Simulation", path: str | Path) -> Path:
     return p.resolve()
 
 
-def load_checkpoint(path: str | Path, backend: str = "auto") -> "Simulation":
+def load_checkpoint(path: str | Path, backend: str = "auto") -> Simulation:
     """Restore a simulation from a checkpoint file.
 
     Parameters

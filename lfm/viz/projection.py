@@ -15,10 +15,14 @@ Examples
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
 
 from lfm.viz._util import _require_matplotlib
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def project_field(
@@ -63,8 +67,8 @@ def plot_projection(
     title: str | None = None,
     cmap: str = "inferno",
     colorbar: bool = True,
-    ax: "Axes | None" = None,  # type: ignore[name-defined]  # noqa: F821
-) -> "tuple[Figure, Axes]":  # type: ignore[name-defined]  # noqa: F821
+    ax: Axes | None = None,  # type: ignore[name-defined]  # noqa: F821
+) -> tuple[Figure, Axes]:  # type: ignore[name-defined]  # noqa: F821
     """Plot a column-density projection of a 3-D field.
 
     Parameters

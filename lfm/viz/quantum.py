@@ -16,13 +16,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-from numpy.typing import NDArray
 
 from lfm.viz._util import _require_matplotlib
 
 if TYPE_CHECKING:
     from matplotlib.animation import FuncAnimation
     from matplotlib.figure import Figure
+    from numpy.typing import NDArray
 
 __all__ = [
     "plot_interference_pattern",
@@ -60,7 +60,7 @@ def plot_interference_pattern(
     profile_axis: int = 0,
     figsize: tuple[float, float] = (12, 5),
     save_path: str | None = None,
-) -> "Figure":
+) -> Figure:
     """Plot the time-integrated interference pattern from a :class:`~lfm.experiment.DetectorScreen`.
 
     Shows a 2-D intensity heatmap (left panel) and the marginal fringe
@@ -149,7 +149,7 @@ def animate_double_slit(
     fps: int = 12,
     figsize: tuple[float, float] = (14, 5),
     save_path: str | None = None,
-) -> "FuncAnimation":
+) -> FuncAnimation:
     """Animate a double-slit run as three panels: slice view, pattern build-up, 1-D profile.
 
     Left panel
@@ -216,10 +216,7 @@ def animate_double_slit(
 
     def _detector_slice(arr: NDArray) -> NDArray:
         """Extract the detector plane from a 3-D field."""
-        if detector_position is None:
-            pos = int(N * 0.80)
-        else:
-            pos = detector_position
+        pos = int(N * 0.8) if detector_position is None else detector_position
         idx = [slice(None), slice(None), slice(None)]
         idx[barrier_axis] = pos
         return arr[tuple(idx)]
@@ -337,7 +334,7 @@ def animate_double_slit_3d(
     figsize: tuple[float, float] = (16, 10),
     title: str = "LFM Double-Slit Experiment",
     save_path: str | None = None,
-) -> "FuncAnimation":
+) -> FuncAnimation:
     """Create a 3-D animated movie of the double-slit experiment.
 
     The movie shows the full 3-D wave field as a volumetric point cloud
@@ -473,17 +470,6 @@ def animate_double_slit_3d(
     else:
         frame_idx = list(range(len(snapshots)))
     n_frames = len(frame_idx)
-
-    # ── Source-exclusion zone ──────────────────────────────────────────
-    # The continuous source accumulates energy that dwarfs the propagating
-    # wave.  Exclude a thin slab around the source plane from both the
-    # scatter and the normalisation so the wavefront drives the colour map.
-    _src_lo = max(0, spos - 2)
-    _src_hi = min(N - 1, spos + 2)
-    _src_mask = np.ones((N,) * 3, dtype=bool)
-    _idx_exc = [slice(None)] * 3
-    _idx_exc[prop] = slice(_src_lo, _src_hi + 1)
-    _src_mask[tuple(_idx_exc)] = False
 
     # Reference max (detects completely empty frames)
     global_max = max((float(snapshots[i][field].max()) for i in frame_idx), default=1.0)
@@ -811,13 +797,13 @@ def animate_double_slit_3d(
         # Pre-barrier and post-barrier regions differ in energy by ~1000x.
         # Normalise each zone independently so the emerging wavefront
         # through the slits is as visible as the incoming wave.
-        visible = arr * _src_mask.astype(arr.dtype)
+        visible = arr  # pulsed source — no CW accumulation, show everything
 
-        # Build zone masks: pre (source-excl to barrier) and post (barrier+)
-        _pre_m = np.zeros_like(_src_mask)
-        _post_m = np.zeros_like(_src_mask)
+        # Build zone masks: pre-barrier (full grid to barrier) and post (barrier+)
+        _pre_m = np.zeros((N,) * 3, dtype=bool)
+        _post_m = np.zeros((N,) * 3, dtype=bool)
         _pre_idx = [slice(None)] * 3
-        _pre_idx[prop] = slice(_src_hi + 1, bpos)
+        _pre_idx[prop] = slice(0, bpos)
         _pre_m[tuple(_pre_idx)] = True
         _post_idx = [slice(None)] * 3
         _post_idx[prop] = slice(bpos + _bt, None)
@@ -1013,7 +999,7 @@ def render_3d_volume(
     title: str | None = None,
     figsize: tuple[float, float] = (9, 8),
     save_path: str | None = None,
-) -> "Figure | None":
+) -> Figure | None:
     """3-D volume rendering of a scalar field.
 
     Automatically uses **pyvista** (GPU-accelerated) when available and
@@ -1130,7 +1116,7 @@ def _render_matplotlib(
     title: str | None,
     figsize: tuple[float, float],
     save_path: str | None,
-) -> "Figure":
+) -> Figure:
     """CPU voxel rendering via matplotlib (automatic downsampling)."""
     _require_matplotlib()
     import matplotlib.pyplot as plt
@@ -1140,10 +1126,7 @@ def _render_matplotlib(
     step = max(1, N // 48)  # downsample to ≤ 48³ for performance
 
     small = field[::step, ::step, ::step].astype(float)
-    if threshold is None:
-        thr = float(small.mean() + 2.0 * small.std())
-    else:
-        thr = float(threshold)
+    thr = float(small.mean() + 2.0 * small.std()) if threshold is None else float(threshold)
 
     mask = small >= thr
     norm = Normalize(vmin=float(small.min()), vmax=float(small.max()))
@@ -1179,7 +1162,7 @@ def animate_3d_slices(
     fps: int = 12,
     figsize: tuple[float, float] = (13, 4.5),
     save_path: str | None = None,
-) -> "FuncAnimation":
+) -> FuncAnimation:
     """Animate three orthogonal mid-plane slices of a 3-D scalar field.
 
     Displays three panels side-by-side:
@@ -1254,7 +1237,7 @@ def animate_3d_slices(
     slices_init = [s0, s1, s2]
 
     images = []
-    for ax, sl, ttl in zip(axes, slices_init, titles):
+    for ax, sl, ttl in zip(axes, slices_init, titles, strict=False):
         vmax = float(sl.max()) or 1.0
         im = ax.imshow(sl.T, origin="lower", cmap=colormap, vmin=0.0, vmax=vmax, animated=True)
         fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
@@ -1277,7 +1260,7 @@ def animate_3d_slices(
         snap = snapshots[frame_idx]
         arr = snap[field]
         s0_, s1_, s2_ = _slices(arr)
-        for im, sl in zip(images, [s0_, s1_, s2_]):
+        for im, sl in zip(images, [s0_, s1_, s2_], strict=False):
             im.set_data(sl.T)
             vmax = float(sl.max()) or 1.0
             im.set_clim(0, vmax)

@@ -20,9 +20,12 @@ assumed.  Just a grid, two update rules, and initial noise.
 pip install lfm-physics
 ```
 
-GPU acceleration (NVIDIA, optional):
+GPU acceleration (choose the wheel matching your environment):
 ```bash
-pip install "lfm-physics[gpu]"
+pip install "lfm-physics[gpu-cuda12x]"  # CUDA 12.x (RTX 30/40-series)
+pip install "lfm-physics[gpu-cuda11x]"  # CUDA 11.x (RTX 20-series, Ampere)
+pip install "lfm-physics[gpu-rocm]"     # AMD ROCm 5.x
+pip install "lfm-physics[gpu]"          # alias for gpu-cuda12x
 ```
 
 ## Quick Start
@@ -355,16 +358,30 @@ psi = evo.get_psi_real()
 
 ## GPU Support
 
-The library automatically uses your NVIDIA GPU when CuPy is installed:
+The library automatically uses your GPU when CuPy is installed and a
+compatible accelerator is detected:
 
 ```python
-print(lfm.gpu_available())  # True if CuPy + CUDA detected
+print(lfm.gpu_available())  # True if CuPy + CUDA/ROCm detected
 
 # Force CPU even if GPU is available
 sim = lfm.Simulation(cfg, backend="cpu")
 ```
 
-Typical speedup: **50-200×** for N ≥ 64 grids on modern NVIDIA GPUs.
+Install the correct CuPy wheel for your hardware:
+
+| Hardware | Install command |
+|---|---|
+| NVIDIA CUDA 12.x (RTX 30/40-series) | `pip install "lfm-physics[gpu-cuda12x]"` |
+| NVIDIA CUDA 11.x (RTX 20-series) | `pip install "lfm-physics[gpu-cuda11x]"` |
+| AMD ROCm 5.0 | `pip install "lfm-physics[gpu-rocm]"` |
+| Convenience alias (CUDA 12.x) | `pip install "lfm-physics[gpu]"` |
+
+If you are unsure which CUDA version you have, run `nvcc --version` or
+`nvidia-smi`.  On CPU-only machines, no GPU package is needed; NumPy is
+used automatically.
+
+Typical speedup: **50–200×** for N ≥ 64 grids on modern NVIDIA GPUs.
 
 ## Documentation
 

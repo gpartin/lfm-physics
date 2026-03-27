@@ -36,15 +36,18 @@ Usage::
 from __future__ import annotations
 
 import math
-from typing import Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
-from numpy.typing import NDArray
 
 from lfm.config import BoundaryType, FieldLevel, SimulationConfig
 from lfm.constants import CHI0
-from lfm.particles.solver import SolitonSolution
 from lfm.simulation import Simulation
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+    from lfm.particles.solver import SolitonSolution
 
 # ---------------------------------------------------------------------------
 # Measurement helpers
@@ -172,7 +175,7 @@ def measure_velocity(sim: Simulation) -> NDArray:
 def boost_soliton_solution(
     sol: SolitonSolution,
     velocity: tuple[float, float, float],
-    position: Optional[tuple[int, int, int]] = None,
+    position: tuple[int, int, int] | None = None,
     chi0: float = CHI0,
     c: float = 1.0,
 ) -> Simulation:

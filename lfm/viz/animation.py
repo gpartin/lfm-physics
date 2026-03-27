@@ -41,7 +41,7 @@ def animate_slice(
     title: str | None = None,
     save_path: str | None = None,
     fps: int = 10,
-) -> "FuncAnimation":
+) -> FuncAnimation:
     """Animate a central 2-D slice through a 3-D field over time.
 
     Parameters
@@ -154,7 +154,7 @@ def animate_three_slices(
     interval_ms: int = 100,
     save_path: str | None = None,
     fps: int = 10,
-) -> "FuncAnimation":
+) -> FuncAnimation:
     """Animate three orthogonal mid-plane slices (xy, xz, yz) side-by-side.
 
     Parameters
@@ -206,7 +206,7 @@ def animate_three_slices(
     fig, axes = plt.subplots(1, 3, figsize=(13, 4))
     titles = ["xy  (z-mid)", "xz  (y-mid)", "yz  (x-mid)"]
     ims = []
-    for ax, data, ttl in zip(axes, all_frames[0], titles):
+    for ax, data, ttl in zip(axes, all_frames[0], titles, strict=False):
         im = ax.imshow(data.T, origin="lower", cmap=cmap, vmin=vmin, vmax=vmax, animated=True)
         ax.set_title(ttl)
         plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
@@ -214,7 +214,7 @@ def animate_three_slices(
     step_text = fig.suptitle(f"{field}  step=0")
 
     def _update(i: int) -> tuple:
-        for im, data in zip(ims, all_frames[i]):
+        for im, data in zip(ims, all_frames[i], strict=False):
             im.set_data(data.T)
         step = snapshots[i].get("step", i)
         step_text.set_text(f"{field}  step={step}")
@@ -234,7 +234,7 @@ def animate_three_slices(
     return anim
 
 
-def _save_animation(anim: "FuncAnimation", path: str, fps: int = 10) -> None:
+def _save_animation(anim: FuncAnimation, path: str, fps: int = 10) -> None:
     """Save animation to GIF or MP4 depending on file extension."""
     from pathlib import Path as _Path
 

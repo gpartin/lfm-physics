@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "lfm-physics: Lattice Field Medium Physics Simulation Library"
+abstract: >
+  A Python library implementing the Lattice Field Medium (LFM) framework.
+  Two coupled wave equations on a 3D cubic lattice (GOV-01 + GOV-02) from
+  which gravity, electromagnetism, dark matter, and cosmic structure emerge
+  without any injected forces or assumed constants.
+authors:
+  - family-names: Partin
+    given-names: Greg
+    email: gpartin@gmail.com
+version: "1.2.0"
+date-released: 2026-03-25
+license: MIT
+repository-code: "https://github.com/gpartin/lfm-physics"
+url: "https://lfm-physics.readthedocs.io"
+keywords:
+  - physics
+  - simulation
+  - lattice
+  - field-theory
+  - Klein-Gordon
+  - emergent-physics
+  - dark-matter
+  - cosmology
+preferred-citation:
+  type: software
+  title: "lfm-physics: Lattice Field Medium Physics Simulation Library"
+  authors:
+    - family-names: Partin
+      given-names: Greg
+  version: "1.2.0"
+  date-released: 2026-03-25
+  license: MIT
+  repository-code: "https://github.com/gpartin/lfm-physics"
+  url: "https://lfm-physics.readthedocs.io"

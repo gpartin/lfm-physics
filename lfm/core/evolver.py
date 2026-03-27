@@ -28,11 +28,15 @@ Usage::
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
 
 from lfm.config import FieldLevel, SimulationConfig
 from lfm.core.backends import get_backend
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 class Evolver:
@@ -86,9 +90,7 @@ class Evolver:
         total = self.total
         cfg = self.config
 
-        if cfg.field_level == FieldLevel.REAL:
-            psi_size = total
-        elif cfg.field_level == FieldLevel.COMPLEX:
+        if cfg.field_level == FieldLevel.REAL or cfg.field_level == FieldLevel.COMPLEX:
             psi_size = total
         else:  # COLOR
             psi_size = cfg.n_colors * total
@@ -142,19 +144,36 @@ class Evolver:
         callback : callable, optional
             Called as callback(evolver, step) every report_interval steps.
         freeze_chi : bool
-            If True, chi is held frozen at its value at the start of
-            this call.  Only GOV-01 (Psi update) is applied; the chi
-            arrays are restored to the frozen snapshot after every step.
-            Used by the eigenmode SCF solver.
+            If True, χ is held frozen at its value at the start of this
+            call.  After each kernel step the four χ double-buffers are
+            restored to the snapshot so χ never drifts.  The snapshot is
+            kept **device-resident** (CuPy array on GPU, or NumPy array on
+            CPU) so no PCIe round-trips occur per step.
+            Used by the eigenmode SCF solver and wave-optics experiments.
         """
         cfg = self.config
         report = cfg.report_interval
-        chi_frozen = self.get_chi().copy() if freeze_chi else None
 
-        for i in range(steps):
+        # Build device-resident frozen copies of all four χ double-buffers so
+        # that each restore is a fast device→device memcpy rather than a
+        # CPU→GPU upload (which would add ~4 ms/step at N=256 on PCIe 3.0).
+        if freeze_chi:
+            _cf = [
+                self.chi_A.copy(),
+                self.chi_B.copy(),
+                self.chi_prev_A.copy(),
+                self.chi_prev_B.copy(),
+            ]
+        else:
+            _cf = None
+
+        for _i in range(steps):
             self._step()
-            if freeze_chi:
-                self.set_chi(chi_frozen)
+            if _cf is not None:
+                self.chi_A[:] = _cf[0]
+                self.chi_B[:] = _cf[1]
+                self.chi_prev_A[:] = _cf[2]
+                self.chi_prev_B[:] = _cf[3]
             self.step += 1
 
             if callback is not None and report > 0 and self.step % report == 0:
@@ -438,7 +457,7 @@ class Evolver:
             else:
                 np.copyto(buf, data)
 
-    def get_sa_fields(self) -> "NDArray[np.float32] | None":
+    def get_sa_fields(self) -> NDArray[np.float32] | None:
         """Get S_a auxiliary fields as numpy array, shape (3, N, N, N).
 
         Returns None if SA confinement is not enabled (kappa_tube == 0).

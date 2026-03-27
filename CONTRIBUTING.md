@@ -11,6 +11,18 @@ pip install -e ".[dev]"
 pre-commit install
 ```
 
+For GPU-accelerated development, install the CuPy wheel matching your hardware:
+
+```bash
+pip install -e ".[dev,gpu-cuda12x]"  # NVIDIA CUDA 12.x
+pip install -e ".[dev,gpu-cuda11x]"  # NVIDIA CUDA 11.x
+pip install -e ".[dev,gpu-rocm]"     # AMD ROCm 5.0
+```
+
+The CI pipeline tests the **CPU (NumPy) path only**.  GPU code paths are
+tested manually; if you modify `lfm/core/backends/`, please run
+`pytest tests/ -k gpu` with a CuPy-enabled environment before submitting.
+
 Run the full local quality gate before pushing:
 
 ```bash

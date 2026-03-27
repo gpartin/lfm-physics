@@ -121,7 +121,7 @@ def load_snapshots(path: str | Path) -> list[dict]:
     archive = np.load(str(Path(path)), allow_pickle=False)
     n = int(archive["n_snapshots"])
     steps = archive["steps"]
-    fields = [k for k in archive.keys() if k not in ("steps", "n_snapshots")]
+    fields = [k for k in archive if k not in ("steps", "n_snapshots")]
     return [{"step": int(steps[i]), **{f: archive[f][i] for f in fields}} for i in range(n)]
 
 

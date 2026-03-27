@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from lfm.config import SimulationConfig
 from lfm.simulation import Simulation
+
+if TYPE_CHECKING:
+    from lfm.config import SimulationConfig
 
 
 def sweep(

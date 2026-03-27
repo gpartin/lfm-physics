@@ -26,7 +26,7 @@ def galaxy_summary_plot(
     sparc_row: dict,
     tau: float | None = None,
     ax: Any | None = None,
-) -> tuple["matplotlib.figure.Figure", list["matplotlib.axes.Axes"]]:
+) -> tuple[matplotlib.figure.Figure, list[matplotlib.axes.Axes]]:
     """Two-panel figure: chi-profile slice and rotation-curve comparison.
 
     The left panel shows the radially-averaged chi profile from the

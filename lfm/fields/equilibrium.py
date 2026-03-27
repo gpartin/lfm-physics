@@ -13,10 +13,14 @@ Gaussian blobs radiate >90% of energy before wells form.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
 
 from lfm.constants import CHI0, KAPPA
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def poisson_solve_fft(

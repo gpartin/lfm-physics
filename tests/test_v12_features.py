@@ -295,7 +295,13 @@ class TestBarrierCallback:
         assert (sim.chi[b.mask] > CHI0).all()
 
     def test_callback_calls_attenuate_if_detector(self):
-        """attenuate_slits is a no-op; psi unchanged by callback."""
+        """Detector callback damps ψ amplitude at slit cells by (1−γ) per step.
+
+        With strength=0.5 and transit_steps=10 (Barrier default), γ is set so
+        that (1−γ)^10 = 0.5, giving per-step scale = (1−γ) = 0.5^(1/10).
+        After one callback call the slit mean must equal 5.0 * (1−γ).
+        """
+        import math
         sim = _sim()
         slits = [Slit(center=SLIT_CENTER_A, width=4, detector=True, detector_strength=0.5)]
         b = Barrier(sim, axis=2, position=BARRIER_POS, slits=slits, absorb=False)
@@ -303,7 +309,10 @@ class TestBarrierCallback:
         pr[b.slit_masks[0]] = 5.0
         sim.set_psi_real(pr)
         b.step_callback(sim, 0)
-        assert sim.psi_real[b.slit_masks[0]].mean() == pytest.approx(5.0, rel=1e-5)
+        # transit_steps=10 (Barrier default), strength=0.5
+        gamma = 1.0 - (1.0 - 0.5) ** (1.0 / 10)
+        expected = 5.0 * (1.0 - gamma)
+        assert sim.psi_real[b.slit_masks[0]].mean() == pytest.approx(expected, rel=1e-4)
 
     def test_callback_no_attenuate_without_detector(self):
         sim = _sim()

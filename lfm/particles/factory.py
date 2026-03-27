@@ -25,7 +25,6 @@ Quick usage::
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 import numpy as np
 
@@ -78,14 +77,14 @@ class PlacedParticle:
 
 def create_particle(
     name: str,
-    sim: Optional[Simulation] = None,
+    sim: Simulation | None = None,
     N: int = 64,
-    position: Optional[tuple] = None,
+    position: tuple | None = None,
     velocity: tuple = (0.0, 0.0, 0.0),
     use_eigenmode: bool = True,
     chi0: float = CHI0,
-    sigma: Optional[float] = None,
-    amplitude: Optional[float] = None,
+    sigma: float | None = None,
+    amplitude: float | None = None,
 ) -> PlacedParticle:
     """Create a particle and place it into a simulation.
 

@@ -12,11 +12,15 @@ Production patterns from primordial_soup_v8_four_forces.py:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
 from scipy import ndimage
 
 from lfm.constants import VOID_THRESHOLD, WELL_THRESHOLD
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def chi_statistics(
@@ -127,10 +131,7 @@ def count_clusters(
     int
         Number of connected clusters.
     """
-    if interior_mask is not None:
-        vals = field[interior_mask]
-    else:
-        vals = field.ravel()
+    vals = field[interior_mask] if interior_mask is not None else field.ravel()
 
     if vals.size == 0:
         return 0

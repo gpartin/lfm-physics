@@ -10,8 +10,12 @@ for energy-based L, which is the correct fluid-level quantity (Session 64).
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def angular_momentum_density(

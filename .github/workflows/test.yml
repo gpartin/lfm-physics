@@ -23,7 +23,10 @@ jobs:
           cache-dependency-path: "pyproject.toml"
 
       - name: Install package with dev dependencies
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev]" mypy
+
+      - name: Run mypy type check
+        run: mypy lfm/ --ignore-missing-imports --no-error-summary
 
       - name: Run pre-commit quality gate on changed files
         shell: bash

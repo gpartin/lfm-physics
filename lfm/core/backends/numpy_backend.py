@@ -8,10 +8,14 @@ Uses the 19-point isotropic stencil via np.roll.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
 
 from lfm.core.stencils import laplacian_19pt
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 class NumpyBackend:
@@ -53,7 +57,7 @@ class NumpyBackend:
         coords = np.arange(N, dtype=np.float32) - center + 0.5
         X, Y, Z = np.meshgrid(coords, coords, coords, indexing="ij")
         R = np.sqrt(X**2 + Y**2 + Z**2)
-        mask = (R > r_freeze).astype(np.float32).ravel()
+        mask = (r_freeze < R).astype(np.float32).ravel()
         return mask
 
     def _laplacian_3d(self, flat: NDArray[np.float32], N: int) -> NDArray[np.float32]:

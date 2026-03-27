@@ -10,8 +10,9 @@ Returns a flat dictionary suitable for logging, JSON, or DataFrame rows.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
 
 from lfm.analysis.energy import energy_components
 from lfm.analysis.structure import (
@@ -20,6 +21,9 @@ from lfm.analysis.structure import (
     void_fraction,
     well_fraction,
 )
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def compute_metrics(

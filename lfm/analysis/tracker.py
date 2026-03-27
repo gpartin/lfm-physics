@@ -5,9 +5,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-from numpy.typing import NDArray
 
 if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
     from lfm.simulation import Simulation
 
 
@@ -126,7 +127,7 @@ def detect_collision_events(
     def _pos(p: dict) -> NDArray:
         return np.array([p["x"], p["y"], p["z"]])
 
-    for snap_idx, snap in enumerate(trajectories):
+    for _snap_idx, snap in enumerate(trajectories):
         n = len(snap)
         # Approach detection: any close pair in this snapshot
         for i in range(n):
@@ -307,9 +308,9 @@ def collider_event_display(
         return "+" + "-" * inner + "+"
 
     events = result.get("events", [])
-    n_particles = result.get("n_particles", None)
-    score = result.get("score", None)
-    total_steps = result.get("total_steps", None)
+    n_particles = result.get("n_particles")
+    score = result.get("score")
+    total_steps = result.get("total_steps")
 
     # Header
     hdr_parts = ["LFM Collider Event Display"]

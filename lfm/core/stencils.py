@@ -13,10 +13,14 @@ The 8 corners (distance √3) are NOT included as they worsen isotropy.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
 
 from lfm.constants import STENCIL_CENTER_WEIGHT, STENCIL_EDGE_WEIGHT, STENCIL_FACE_WEIGHT
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def laplacian_19pt(field: NDArray[np.floating]) -> NDArray[np.floating]:

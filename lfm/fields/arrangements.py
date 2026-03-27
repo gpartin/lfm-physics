@@ -7,8 +7,12 @@ Standard spatial arrangements for soliton placement on an N³ lattice.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def tetrahedral_positions(N: int) -> NDArray[np.float64]:
@@ -246,10 +250,7 @@ def disk_velocities(
         Velocity vectors [[vx, vy, vz], ...].
     """
     n = len(positions)
-    if center is None:
-        ctr = positions.mean(axis=0)
-    else:
-        ctr = np.array(center, dtype=np.float64)
+    ctr = positions.mean(axis=0) if center is None else np.array(center, dtype=np.float64)
 
     axes = [i for i in range(3) if i != plane_axis]
     a0, a1 = axes[0], axes[1]

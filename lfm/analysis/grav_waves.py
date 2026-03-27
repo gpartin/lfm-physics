@@ -24,10 +24,14 @@ References
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
 
 from lfm.constants import CHI0
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def gravitational_wave_strain(
@@ -187,12 +191,7 @@ def gw_power(
 
     # Snapshot times (from "step" key if present, else index * dt)
     t_steps = np.array([snap.get("step", i) for i, snap in enumerate(snapshots)], dtype=np.float64)
-    if snapshots[0].get("step", 0) != 0:
-        # steps → times: step * internal_dt, but we don't know internal_dt here;
-        # just use index order scaled by dt
-        t = np.arange(n, dtype=np.float64) * dt
-    else:
-        t = t_steps * dt
+    t = np.arange(n, dtype=np.float64) * dt if snapshots[0].get("step", 0) != 0 else t_steps * dt
 
     return {
         "t": t,

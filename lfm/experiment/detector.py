@@ -41,9 +41,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-from numpy.typing import NDArray
 
 if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
     from lfm.simulation import Simulation
 
 __all__ = ["DetectorScreen"]
@@ -78,7 +79,7 @@ class DetectorScreen:
 
     def __init__(
         self,
-        sim: "Simulation",
+        sim: Simulation,
         axis: int = 2,
         position: int | None = None,
         field: str = "energy_density",
@@ -140,7 +141,7 @@ class DetectorScreen:
         self._frames.append(cp.asnumpy(energy_slice))
         return True
 
-    def step_callback(self, sim: "Simulation", step: int) -> None:
+    def step_callback(self, sim: Simulation, step: int) -> None:
         """Simulation step callback.  Equivalent to calling :meth:`record`.
 
         Register this as the *callback* argument of

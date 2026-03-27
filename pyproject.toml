@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lfm-physics"
-version = "1.2.0"
+version = "1.2.1"
 description = "Lattice Field Medium physics simulation library"
 readme = "README.md"
 license = "MIT"
@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["physics", "simulation", "lattice", "field-theory", "klein-gordon"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
@@ -30,7 +30,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-gpu = ["cupy-cuda12x>=12.0"]
+# GPU accelerated backends — pick the one matching your CUDA/ROCm installation
+gpu = ["cupy-cuda12x>=12.0"]        # alias for gpu-cuda12x (default)
+gpu-cuda12x = ["cupy-cuda12x>=12.0"]
+gpu-cuda11x = ["cupy-cuda11x>=11.0"]
+gpu-rocm = ["cupy-rocm-5-0>=12.0"]
 viz = ["matplotlib>=3.7"]
 all = ["cupy-cuda12x>=12.0", "matplotlib>=3.7"]
 dev = [
@@ -51,6 +55,7 @@ benchmark = [
 
 [project.urls]
 Homepage = "https://github.com/gpartin/lfm-physics"
+Documentation = "https://lfm-physics.readthedocs.io"
 Repository = "https://github.com/gpartin/lfm-physics"
 Issues = "https://github.com/gpartin/lfm-physics/issues"
 
@@ -66,7 +71,8 @@ target-version = "py310"
 line-length = 100
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W"]
+select = ["E", "F", "I", "W", "UP", "B", "SIM", "PIE", "TCH"]
+ignore = ["B008", "B904"]
 
 [tool.ruff.lint.per-file-ignores]
 # CUDA C kernel strings — lines inherently long

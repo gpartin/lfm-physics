@@ -109,7 +109,7 @@ class ContinuousSource:
 
     def __init__(
         self,
-        sim: "Simulation",
+        sim: Simulation,
         *,
         axis: int = 2,
         position: float = 0.25,
@@ -188,15 +188,12 @@ class ContinuousSource:
             Multiply transit time by this to allow pattern accumulation.
         """
         N = self._N
-        if target_z is None:
-            target_z_cell = _resolve(0.75, N)
-        else:
-            target_z_cell = _resolve(target_z, N)
+        target_z_cell = _resolve(0.75, N) if target_z is None else _resolve(target_z, N)
         distance = abs(target_z_cell - self._position_z)
         transit = self.transit_steps(distance)
         return int(transit * (1.0 + buildup_factor))
 
-    def step_callback(self, sim: "Simulation", step: int) -> None:
+    def step_callback(self, sim: Simulation, step: int) -> None:
         """Inject CW source — register with ``run_with_snapshots``.
 
         Uses zero-copy buffer access to avoid GPU↔CPU roundtrips.

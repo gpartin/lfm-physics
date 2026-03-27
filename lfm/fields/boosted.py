@@ -14,11 +14,15 @@ supported by the available χ-well depth.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
 
 from lfm.constants import CHI0
 from lfm.fields.soliton import gaussian_soliton
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def boosted_soliton(
