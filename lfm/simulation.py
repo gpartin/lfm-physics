@@ -896,7 +896,12 @@ class Simulation:
                     # temporarily 1, which would fire metrics() on EVERY step
                     # (thousands of GPU->CPU copies). We record metrics once
                     # per snapshot boundary below instead.
-                    self.run(snapshot_every, callback=step_callback, record_metrics=False, evolve_chi=evolve_chi)
+                    self.run(
+                        snapshot_every,
+                        callback=step_callback,
+                        record_metrics=False,
+                        evolve_chi=evolve_chi,
+                    )
                     if callback is not None:
                         callback(self, self.step)
                     snapshots.append(_take_snap())
@@ -906,7 +911,12 @@ class Simulation:
                         self._history.append(m)
 
                 if remainder > 0:
-                    self.run(remainder, callback=step_callback, record_metrics=False, evolve_chi=evolve_chi)
+                    self.run(
+                        remainder,
+                        callback=step_callback,
+                        record_metrics=False,
+                        evolve_chi=evolve_chi,
+                    )
                     if callback is not None:
                         callback(self, self.step)
                     snapshots.append(_take_snap())
@@ -921,13 +931,23 @@ class Simulation:
                 # run() fires callback at report_interval, but we always
                 # fire the snapshot callback explicitly after each batch so
                 # it occurs every snapshot_every steps regardless.
-                self.run(snapshot_every, callback=None, record_metrics=record_metrics, evolve_chi=evolve_chi)
+                self.run(
+                    snapshot_every,
+                    callback=None,
+                    record_metrics=record_metrics,
+                    evolve_chi=evolve_chi,
+                )
                 if callback is not None:
                     callback(self, self.step)
                 snapshots.append(_take_snap())
 
             if remainder > 0:
-                self.run(remainder, callback=None, record_metrics=record_metrics, evolve_chi=evolve_chi)
+                self.run(
+                    remainder,
+                    callback=None,
+                    record_metrics=record_metrics,
+                    evolve_chi=evolve_chi,
+                )
                 if callback is not None:
                     callback(self, self.step)
                 snapshots.append(_take_snap())

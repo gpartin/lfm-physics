@@ -108,7 +108,7 @@ def matter_power_spectrum(
     energy_density: NDArray,
     n_bins: int = 32,
     k_nyquist_fraction: float = 1.0,
-) -> dict[str, NDArray[np.float64]]:
+) -> dict[str, Any]:
     """Dimensionless matter power spectrum Δ²(k) = k³P(k)/(2π²).
 
     Parameters
