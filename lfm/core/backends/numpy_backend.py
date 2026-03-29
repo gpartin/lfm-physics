@@ -323,17 +323,27 @@ class NumpyBackend:
                 sum_j = np.sum(j_d, axis=0)
                 ccv_term += sum_j_sq - (1.0 / n_colors) * sum_j**2
 
-        # v16: smoothed color variance (SCV) from S_a fields
-        # SCV = Σ_a S_a² - (1/N_c)(Σ_a S_a)²
+        # v17: Helmholtz-smoothed S_a from |Ψ_a|² (replaces v16 Euler diffusion)
+        # S̃_a(k) = γ/(γ + D·k²) · FT[|Ψ_a|²](k)  — quasi-static, unconditionally stable
         scv_term = np.zeros(total, dtype=np.float32)
-        if kappa_tube > 0 and sa_fields_in is not None:
+        if kappa_tube > 0 and sa_fields_out is not None:
+            kx = np.fft.fftfreq(N) * (2.0 * np.pi)
+            ky = np.fft.fftfreq(N) * (2.0 * np.pi)
+            kz = np.fft.rfftfreq(N) * (2.0 * np.pi)
+            k_sq = kx[:, None, None] ** 2 + ky[None, :, None] ** 2 + kz[None, None, :] ** 2
+            h_filter = np.float64(sa_gamma) / (np.float64(sa_gamma) + np.float64(sa_d) * k_sq)
+
             sa_sum = np.zeros(total, dtype=np.float32)
             sa_sq_sum = np.zeros(total, dtype=np.float32)
             for a in range(n_colors):
-                s_a = sa_fields_in[a * total : (a + 1) * total]
-                sa_sum += s_a
-                sa_sq_sum += s_a * s_a
-            scv_term = sa_sq_sum - (1.0 / n_colors) * sa_sum**2
+                psi_sq_hat = np.fft.rfftn(color_energy[a].reshape(N, N, N))
+                sa_3d = np.fft.irfftn(h_filter * psi_sq_hat, s=(N, N, N), axes=(0, 1, 2))
+                sa_flat = np.clip(sa_3d, 0.0, None).astype(np.float32).ravel()
+                np.copyto(sa_fields_out[a * total : (a + 1) * total], sa_flat)
+                sa_sum += sa_flat
+                sa_sq_sum += sa_flat * sa_flat
+            # SCV = Σ_a S_a² - (1/N_c)(Σ_a S_a)²
+            scv_term = sa_sq_sum - (1.0 / n_colors) * sa_sum ** 2
 
         # GOV-02
         lap_chi = self._laplacian_3d(chi, N)
@@ -346,17 +356,6 @@ class NumpyBackend:
         chi_new = 2.0 * chi - chi_prev + dt2 * chi_accel
 
         np.clip(chi_new, -chi0, None, out=chi_new)
-
-        # v16: Euler update for S_a fields
-        # dS_a/dt = D·∇²S_a + γ(|Ψ_a|² − S_a)   [γ-normalized source: equilibrium S_a → |Ψ_a|²]
-        if kappa_tube > 0 and sa_fields_in is not None and sa_fields_out is not None:
-            for a in range(n_colors):
-                s_a = sa_fields_in[a * total : (a + 1) * total]
-                psi_sq_a = color_energy[a]
-                lap_sa = self._laplacian_3d(s_a, N)
-                sa_new = s_a + dt * (sa_d * lap_sa + sa_gamma * (psi_sq_a - s_a))
-                np.clip(sa_new, 0.0, None, out=sa_new)
-                np.copyto(sa_fields_out[a * total : (a + 1) * total], sa_new)
 
         # Frozen boundary
         psi_r_out *= 1.0 - np.tile(boundary_mask, 3)

@@ -250,8 +250,24 @@ class CupyBackend:
         total = N**3
         grid, block = _grid_block(total)
 
-        # S_a: need a valid device pointer even when SA is disabled
-        _sa_in = sa_fields_in if sa_fields_in is not None else cp.zeros(3 * total, dtype=cp.float32)
+        # v17: Helmholtz-smoothed S_a from |Ψ_a|² via FFT (replaces v16 Euler diffusion)
+        if kappa_tube > 0.0 and sa_fields_in is not None:
+            kx = cp.fft.fftfreq(N) * (2.0 * cp.pi)
+            ky = cp.fft.fftfreq(N) * (2.0 * cp.pi)
+            kz = cp.fft.rfftfreq(N) * (2.0 * cp.pi)
+            k_sq = kx[:, None, None] ** 2 + ky[None, :, None] ** 2 + kz[None, None, :] ** 2
+            h_filter = cp.float64(sa_gamma) / (cp.float64(sa_gamma) + cp.float64(sa_d) * k_sq)
+
+            _sa_in = cp.zeros(3 * total, dtype=cp.float32)
+            for a in range(3):
+                s = slice(a * total, (a + 1) * total)
+                psi_sq_a = psi_r_in[s] * psi_r_in[s] + psi_i_in[s] * psi_i_in[s]
+                psi_sq_hat = cp.fft.rfftn(psi_sq_a.reshape(N, N, N))
+                sa_3d = cp.fft.irfftn(h_filter * psi_sq_hat, s=(N, N, N))
+                cp.clip(sa_3d, 0.0, None, out=sa_3d)
+                _sa_in[s] = sa_3d.ravel().astype(cp.float32)
+        else:
+            _sa_in = sa_fields_in if sa_fields_in is not None else cp.zeros(3 * total, dtype=cp.float32)
 
         self._kernel_color(
             grid,
@@ -285,23 +301,9 @@ class CupyBackend:
             ),
         )
 
-        # S_a diffusion step (v16 flux-tube confinement)
-        if kappa_tube > 0.0 and sa_fields_in is not None and sa_fields_out is not None:
-            # |Ψ_a|² per color, computed from just-updated output fields
-            psi_sq_colors = psi_r_out * psi_r_out + psi_i_out * psi_i_out
-            self._kernel_sa_diffusion(
-                grid,
-                block,
-                (
-                    sa_fields_in,
-                    psi_sq_colors,
-                    sa_fields_out,
-                    np.int32(N),
-                    np.float32(dt),
-                    np.float32(sa_d),
-                    np.float32(sa_gamma),
-                ),
-            )
+        # v17: copy Helmholtz-smoothed S_a to output buffer
+        if kappa_tube > 0.0 and sa_fields_out is not None:
+            cp.copyto(sa_fields_out, _sa_in)
 
         # No synchronize() here — syncs lazily on first CPU read.
 

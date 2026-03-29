@@ -82,6 +82,7 @@ from lfm.analysis import (
     well_fraction,
 )
 from lfm.config import BoundaryType, FieldLevel, SimulationConfig
+from lfm.config_presets import full_physics, gravity_em, gravity_only
 from lfm.constants import (
     AGE_UNIVERSE_GYR,
     ALPHA_EM,
@@ -301,6 +302,10 @@ __all__ = [
     "SimulationConfig",
     "FieldLevel",
     "BoundaryType",
+    # Config presets
+    "gravity_only",
+    "gravity_em",
+    "full_physics",
     # Backends & Simulation
     "Evolver",
     "Simulation",
