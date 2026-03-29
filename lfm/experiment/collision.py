@@ -35,10 +35,9 @@ Results
 from __future__ import annotations
 
 import math
-import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -52,6 +51,7 @@ from lfm.experiment.common import (
 
 if TYPE_CHECKING:
     from matplotlib.figure import Figure
+
     import lfm as _lfm_t
 
 __all__ = [
@@ -175,7 +175,7 @@ class CollisionResult(ExperimentResult):
         metrics: list[dict],
         label: str,
         N: int,
-        geometry: "_CollisionGeometry",
+        geometry: _CollisionGeometry,
         particle_a_name: str,
         particle_b_name: str,
         initial_energy: float,
@@ -250,7 +250,7 @@ class CollisionResult(ExperimentResult):
         *,
         figsize: tuple[float, float] = (16, 10),
         title: str | None = None,
-    ) -> "Figure":
+    ) -> Figure:
         """Return a summary figure with 4 panels.
 
         1. Energy density slices at key moments (before / during / after)
@@ -259,7 +259,6 @@ class CollisionResult(ExperimentResult):
         4. Radial energy profile at final snapshot
         """
         import matplotlib.pyplot as plt
-
         from matplotlib.gridspec import GridSpec
 
         fig = plt.figure(figsize=figsize, facecolor="white")
@@ -383,6 +382,7 @@ class CollisionResult(ExperimentResult):
             Maps output type to path written.
         """
         import matplotlib.pyplot as plt
+
         from lfm.viz.collision import animate_collision_3d
 
         out = Path(directory) if directory else Path(".")
@@ -433,7 +433,7 @@ def _build_collision_sim(
     particle_a_name: str,
     particle_b_name: str,
     verbose: bool = False,
-) -> "_lfm_t.Simulation":
+) -> _lfm_t.Simulation:
     """Create and populate the simulation for a collision.
 
     Uses eigenmode relaxation + phase-gradient boost for physically
@@ -448,11 +448,11 @@ def _build_collision_sim(
     5. Superpose Ψ fields linearly; Poisson-solve combined χ
     6. Inject into Simulation via field setters (bypasses place_soliton)
     """
-    import lfm
-    from lfm.particles import get_particle
-    from lfm.particles.solver import relax_eigenmode, boost_fields
-    from lfm.constants import KAPPA
     import warnings
+
+    from lfm.constants import KAPPA
+    from lfm.particles import get_particle
+    from lfm.particles.solver import boost_fields, relax_eigenmode
 
     part_a = get_particle(particle_a_name)
     part_b = get_particle(particle_b_name)
@@ -473,7 +473,9 @@ def _build_collision_sim(
     )
     if not sol.converged:
         warnings.warn(
-            f"Eigenmode relaxation did not converge (chi_min={sol.chi_min:.3f}). Using best result."
+            "Eigenmode relaxation did not converge "
+            f"(chi_min={sol.chi_min:.3f}). Using best result.",
+            stacklevel=2,
         )
     if verbose:
         print(

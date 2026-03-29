@@ -66,6 +66,9 @@ packages = ["lfm"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
+markers = [
+    "gpu: requires NVIDIA GPU with CuPy installed (skipped in CPU-only CI)",
+]
 
 [tool.ruff]
 target-version = "py310"
