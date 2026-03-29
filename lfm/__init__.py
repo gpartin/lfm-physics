@@ -120,10 +120,14 @@ from lfm.core.backends.remote_backend import configure_remote
 from lfm.core.evolver import Evolver
 from lfm.experiment import (
     Barrier,
+    CollisionResult,
     ContinuousSource,
     DetectorScreen,
     Dispersion,
+    ExperimentConfig,
+    ExperimentResult,
     Slit,
+    collision,
     dispersion,
 )
 from lfm.fields import (
@@ -249,6 +253,7 @@ from lfm.planning import (
 from lfm.simulation import Simulation
 from lfm.sweep import sweep, sweep_2d
 from lfm.units import CosmicScale, PlanckScale
+from lfm.viz.collision import animate_collision_3d
 from lfm.viz.quantum import animate_3d_slices, animate_double_slit_3d
 
 __all__ = [
@@ -319,6 +324,10 @@ __all__ = [
     "ContinuousSource",
     "Dispersion",
     "dispersion",
+    "collision",
+    "CollisionResult",
+    "ExperimentConfig",
+    "ExperimentResult",
     # Planning
     "FeasibilityReport",
     "UseCaseName",
@@ -406,6 +415,7 @@ __all__ = [
     "load_snapshots",
     # Visualization
     "animate_3d_slices",
+    "animate_collision_3d",
     "animate_double_slit_3d",
     # Particle catalog (Phase 1)
     "Particle",

@@ -202,7 +202,7 @@ def create_particle(
                 chi0=chi0,
             )
             out_sim = Simulation(config)
-            out_sim.equilibrate()  # flat equilibrium before placing particle
+            # No equilibrate() here — framework auto-equilibrates on run()
 
         grid_N = out_sim.config.grid_size
         half = float(grid_N // 2)
@@ -226,7 +226,7 @@ def create_particle(
                 chi0=chi0,
             )
             out_sim = Simulation(config2)
-            out_sim.equilibrate()
+            # No equilibrate() here — framework auto-equilibrates on run()
 
         out_sim.place_soliton(
             position=final_pos,
@@ -317,7 +317,7 @@ def create_two_particles(
         chi0=chi0,
     )
     shared_sim = Simulation(config)
-    shared_sim.equilibrate()
+    # No equilibrate() here — framework auto-equilibrates on run()
 
     half = N // 2
     offset = separation // 2
@@ -469,7 +469,7 @@ def create_collision(
         chi0=chi0,
     )
     sim = Simulation(config)
-    sim.equilibrate()
+    # No equilibrate() here — framework auto-equilibrates on run()
 
     half = N // 2
     offset = sep // 2

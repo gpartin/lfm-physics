@@ -247,6 +247,15 @@ def _save_animation(anim: FuncAnimation, path: str, fps: int = 10) -> None:
                 f"Could not save GIF to '{path}'.  Install Pillow: pip install Pillow"
             ) from exc
     elif ext in (".mp4", ".webm", ".avi"):
+        # Try imageio-ffmpeg bundled binary first, then system ffmpeg
+        try:
+            import imageio_ffmpeg
+            import matplotlib
+            matplotlib.rcParams["animation.ffmpeg_path"] = (
+                imageio_ffmpeg.get_ffmpeg_exe()
+            )
+        except ImportError:
+            pass
         try:
             anim.save(path, writer="ffmpeg", fps=fps)
         except Exception as exc:  # pragma: no cover

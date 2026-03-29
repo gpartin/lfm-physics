@@ -42,10 +42,12 @@ Typical double-slit usage::
 """
 
 from lfm.experiment.barrier import Barrier, Slit
+from lfm.experiment.collision import collision, CollisionResult
+from lfm.experiment.common import ExperimentConfig, ExperimentResult, midplane_slice
 from lfm.experiment.detector import DetectorScreen
 from lfm.experiment.dispersion import Dispersion, dispersion
-from lfm.experiment.source import ContinuousSource
 from lfm.experiment.double_slit import double_slit, DoubleSlit
+from lfm.experiment.source import ContinuousSource
 
 __all__ = [
     "Barrier",
@@ -56,4 +58,9 @@ __all__ = [
     "dispersion",
     "double_slit",
     "DoubleSlit",
+    "collision",
+    "CollisionResult",
+    "ExperimentConfig",
+    "ExperimentResult",
+    "midplane_slice",
 ]

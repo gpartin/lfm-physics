@@ -71,6 +71,11 @@ class Simulation:
         self._psi_r_prev: NDArray[np.float32] | None = None
         self._psi_i_prev: NDArray[np.float32] | None = None
 
+        # State tracking — prevents misuse like equilibrating before placing
+        # solitons, or forgetting to equilibrate entirely.
+        self._solitons_placed: bool = False
+        self._equilibrated: bool = False
+
     @property
     def step(self) -> int:
         """Current simulation step."""
@@ -356,6 +361,9 @@ class Simulation:
                     prev_i = current_i + pi_prev
                     self._evolver.set_psi_imag_prev(prev_i)
 
+        self._solitons_placed = True
+        self._equilibrated = False  # needs re-equilibration after new soliton
+
     def place_solitons(
         self,
         positions: list[tuple[float, float, float]],
@@ -410,6 +418,9 @@ class Simulation:
             current_i = self._evolver.get_psi_imag()
             if current_i is not None:
                 self._evolver.set_psi_imag(current_i + pi)
+
+        self._solitons_placed = True
+        self._equilibrated = False
 
     def place_plane_wave(
         self,
@@ -521,7 +532,9 @@ class Simulation:
         background.
 
         Call :meth:`equilibrate` once after all initial solitons have
-        been placed and before the first :meth:`run`.
+        been placed and before the first :meth:`run`.  If you forget,
+        :meth:`run` and :func:`~lfm.experiment.common.gpu_snapshot_loop`
+        will call it automatically.
 
         Examples
         --------
@@ -531,6 +544,15 @@ class Simulation:
         >>> sim.equilibrate()           # χ-well forms around the soliton
         >>> print(sim.chi.min())        # should be < 19 (chi0)
         """
+        import warnings
+
+        if not self._solitons_placed:
+            warnings.warn(
+                "equilibrate() called before any solitons were placed — "
+                "χ will stay flat at χ₀.  Call place_soliton() first.",
+                stacklevel=2,
+            )
+
         pr = self._evolver.get_psi_real()
         pi = self._evolver.get_psi_imag()
 
@@ -548,6 +570,26 @@ class Simulation:
             boundary_mask=bmask,
         )
         self._evolver.set_chi(chi)
+        self._equilibrated = True
+
+    def _auto_equilibrate(self) -> None:
+        """Run equilibration automatically if solitons were placed but
+        ``equilibrate()`` was never called.
+
+        Called by :meth:`run` and
+        :func:`~lfm.experiment.common.gpu_snapshot_loop` so that
+        experiments cannot accidentally evolve a flat-χ grid.
+        """
+        if self._solitons_placed and not self._equilibrated:
+            import warnings
+
+            warnings.warn(
+                "Solitons were placed but equilibrate() was never called — "
+                "auto-equilibrating χ now.  Call sim.equilibrate() explicitly "
+                "to silence this warning.",
+                stacklevel=3,
+            )
+            self.equilibrate()
 
     def place_barrier(
         self,
@@ -730,6 +772,8 @@ class Simulation:
         ...     print(f"step {step}  chi_min={s.chi.min():.3f}")
         >>> sim.run(10_000, callback=progress)
         """
+        self._auto_equilibrate()
+
         # Snapshot previous state for energy calculations
         self._psi_r_prev = self._evolver.get_psi_real().copy()
         pi = self._evolver.get_psi_imag()
@@ -789,6 +833,10 @@ class Simulation:
         evolver = self._evolver
         dt = self.config.dt
         base_step = self.step
+
+        # run_driven overwrites chi externally; equilibration is irrelevant
+        # but we still mark it to avoid a stale warning on a later run()
+        self._equilibrated = True
 
         # Snapshot state before this driven run
         self._psi_r_prev = evolver.get_psi_real().copy()
@@ -866,6 +914,8 @@ class Simulation:
         >>> snaps = sim.run_with_snapshots(5000, snapshot_every=200)
         >>> lfm.animate_slice(snaps, save_path="chi_evolution.gif")
         """
+        self._auto_equilibrate()
+
         if fields is None:
             fields = ["chi"]
 

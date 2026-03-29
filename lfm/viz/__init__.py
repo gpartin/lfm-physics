@@ -21,6 +21,7 @@ Quick usage::
 """
 
 from lfm.viz.animation import animate_slice, animate_three_slices
+from lfm.viz.collision import animate_collision_3d
 from lfm.viz.evolution import plot_energy_components, plot_evolution
 from lfm.viz.fields import plot_isosurface
 from lfm.viz.galaxy import galaxy_summary_plot
@@ -48,6 +49,7 @@ __all__ = [
     # animations
     "animate_slice",
     "animate_three_slices",
+    "animate_collision_3d",
     # projections
     "project_field",
     "plot_projection",
