@@ -30,9 +30,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+from scipy.optimize import curve_fit
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
+    from lfm.particles.solver import SolitonSolution
 
 # ---------------------------------------------------------------------------
 # Smoothed colour variance  (SCV)
@@ -329,3 +331,334 @@ def string_tension(
             "fit_dchi": d_fit.tolist(),
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Potential shape fitting  (Yukawa / Coulomb / Cornell)
+# ---------------------------------------------------------------------------
+
+
+def fit_yukawa(
+    r: NDArray,
+    V_r: NDArray,
+) -> tuple[float, float, float, dict]:
+    """Fit V(r) = A * exp(-m * r) / r  (screened Coulomb / Yukawa).
+
+    Expected for LFM with mass gap χ₀ = 19: screening mass m ≈ χ₀ = 19
+    in lattice units, ξ = 1/m ≈ 0.053 cells.
+
+    Parameters
+    ----------
+    r : 1-D array of floats
+        Separations (lattice units).
+    V_r : 1-D array of floats
+        Potential values V(r).
+
+    Returns
+    -------
+    A, m, r2, info : float, float, float, dict
+        Amplitude, screening mass, coefficient of determination, and
+        ``info`` dict with ``popt``, ``pcov``, ``residuals``.
+    """
+    r = np.asarray(r, dtype=float)
+    V = np.asarray(V_r, dtype=float)
+
+    if len(r) < 3:
+        return 0.0, 0.0, 0.0, {"error": "not enough points"}
+
+    def _model(x, A, m):
+        return A * np.exp(-m * x) / (x + 1e-30)
+
+    V_sign = float(np.sign(V[np.abs(V).argmax()])) or 1.0
+    p0 = [V_sign * float(np.abs(V * r).mean()), 0.5]
+    bounds = ([-np.inf, 1e-6], [np.inf, np.inf])
+
+    try:
+        popt, pcov = curve_fit(_model, r, V, p0=p0, bounds=bounds, maxfev=5000)
+        A_fit, m_fit = float(popt[0]), float(popt[1])
+    except Exception:  # noqa: BLE001
+        return 0.0, 0.0, 0.0, {"error": "fit failed"}
+
+    residuals = V - _model(r, *popt)
+    ss_res = float((residuals**2).sum())
+    ss_tot = float(((V - V.mean()) ** 2).sum()) + 1e-30
+    r2 = max(0.0, 1.0 - ss_res / ss_tot)
+
+    return (
+        A_fit,
+        m_fit,
+        r2,
+        {"popt": popt.tolist(), "pcov": pcov.tolist(), "residuals": residuals.tolist()},
+    )
+
+
+def fit_coulomb(
+    r: NDArray,
+    V_r: NDArray,
+) -> tuple[float, float, float, dict]:
+    """Fit V(r) = A / r + B  (pure Coulomb / massless gauge boson).
+
+    Expected if LFM colour interaction is mediated by a massless field,
+    like QED or tree-level gluon exchange.
+
+    Parameters
+    ----------
+    r, V_r : 1-D arrays of floats
+
+    Returns
+    -------
+    A, B, r2, info : float, float, float, dict
+    """
+    r = np.asarray(r, dtype=float)
+    V = np.asarray(V_r, dtype=float)
+
+    if len(r) < 2:
+        return 0.0, 0.0, 0.0, {"error": "not enough points"}
+
+    # Linear regression on V vs 1/r
+    inv_r = 1.0 / (r + 1e-30)
+    X = np.column_stack([inv_r, np.ones_like(inv_r)])
+    try:
+        coeffs, residuals_arr, _, _ = np.linalg.lstsq(X, V, rcond=None)
+        A_fit, B_fit = float(coeffs[0]), float(coeffs[1])
+    except Exception:  # noqa: BLE001
+        return 0.0, 0.0, 0.0, {"error": "fit failed"}
+
+    V_pred = A_fit * inv_r + B_fit
+    residuals = V - V_pred
+    ss_res = float((residuals**2).sum())
+    ss_tot = float(((V - V.mean()) ** 2).sum()) + 1e-30
+    r2 = max(0.0, 1.0 - ss_res / ss_tot)
+
+    return A_fit, B_fit, r2, {"residuals": residuals.tolist()}
+
+
+def fit_cornell(
+    r: NDArray,
+    V_r: NDArray,
+) -> tuple[float, float, float, float, dict]:
+    """Fit V(r) = -A/r + sigma*r + C  (Cornell potential — QCD confinement).
+
+    Expected if LFM generates linear flux tubes (string tension σ > 0).
+    The standard QCD Cornell potential combines one-gluon exchange (−A/r)
+    with a linear confining term (σ·r).
+
+    Parameters
+    ----------
+    r, V_r : 1-D arrays of floats
+
+    Returns
+    -------
+    A, sigma, C, r2, info : float, float, float, float, dict
+        Coulomb coefficient, string tension, offset, R², and info dict.
+    """
+    r = np.asarray(r, dtype=float)
+    V = np.asarray(V_r, dtype=float)
+
+    if len(r) < 3:
+        return 0.0, 0.0, 0.0, 0.0, {"error": "not enough points"}
+
+    def _model(x, A, sigma, C):
+        return -A / (x + 1e-30) + sigma * x + C
+
+    p0 = [1.0, 0.1, float(V.mean())]
+
+    try:
+        popt, pcov = curve_fit(_model, r, V, p0=p0, maxfev=5000)
+        A_fit, sigma_fit, C_fit = float(popt[0]), float(popt[1]), float(popt[2])
+    except Exception:  # noqa: BLE001
+        return 0.0, 0.0, 0.0, 0.0, {"error": "fit failed"}
+
+    residuals = V - _model(r, *popt)
+    ss_res = float((residuals**2).sum())
+    ss_tot = float(((V - V.mean()) ** 2).sum()) + 1e-30
+    r2 = max(0.0, 1.0 - ss_res / ss_tot)
+
+    return (
+        A_fit,
+        sigma_fit,
+        C_fit,
+        r2,
+        {"popt": popt.tolist(), "pcov": pcov.tolist(), "residuals": residuals.tolist()},
+    )
+
+
+def classify_potential(
+    r: NDArray,
+    V_r: NDArray,
+) -> dict:
+    """Classify V(r) as Yukawa, Coulomb, or Cornell by best-fit R².
+
+    Runs all three fits and returns the highest-R² winner, along with
+    the full parameter sets for all three models.
+
+    Parameters
+    ----------
+    r, V_r : 1-D arrays of floats
+
+    Returns
+    -------
+    dict with keys:
+        ``best_fit``   — ``'yukawa'``, ``'coulomb'``, or ``'cornell'``
+        ``r2``         — R² of the best fit
+        ``yukawa``     — dict with ``A``, ``m``, ``r2``
+        ``coulomb``    — dict with ``A``, ``B``, ``r2``
+        ``cornell``    — dict with ``A``, ``sigma``, ``C``, ``r2``
+        ``verdict``    — brief interpretation string
+    """
+    A_y, m_y, r2_y, _ = fit_yukawa(r, V_r)
+    A_c, B_c, r2_c, _ = fit_coulomb(r, V_r)
+    A_cn, sig_cn, C_cn, r2_cn, _ = fit_cornell(r, V_r)
+
+    # ------------------------------------------------------------------
+    # Cornell confinement guard: Cornell can win on R² even when V(r)
+    # remains negative throughout the measured range.  True confinement
+    # requires V to actually rise above zero somewhere in the data.
+    # If every measured V < 0, the potential is screened (Yukawa-like),
+    # not confining.
+    # ------------------------------------------------------------------
+    cornell_confined = bool(sig_cn > 0 and np.any(V_r > 0))
+
+    candidates = [("yukawa", r2_y), ("coulomb", r2_c)]
+    if cornell_confined:
+        candidates.append(("cornell", r2_cn))
+
+    best_name, best_r2 = max(candidates, key=lambda x: x[1])
+    # Always include cornell in output for reference, even when not selected
+    best_r2 = max(best_r2, r2_cn) if best_name == "cornell" else best_r2
+
+    verdicts = {
+        "yukawa": f"Yukawa screened (m ≈ {m_y:.3f}): LFM mass-gap screening — NOT confined",
+        "coulomb": "Coulomb 1/r: massless-gauge-boson exchange — NOT confined",
+        "cornell": f"Cornell (σ ≈ {sig_cn:.4f}): linear confinement — STRING TENSION PRESENT",
+    }
+
+    return {
+        "best_fit": best_name,
+        "r2": best_r2,
+        "yukawa": {"A": A_y, "m": m_y, "r2": r2_y},
+        "coulomb": {"A": A_c, "B": B_c, "r2": r2_c},
+        "cornell": {"A": A_cn, "sigma": sig_cn, "C": C_cn, "r2": r2_cn,
+                    "confined": cornell_confined},
+        "verdict": verdicts[best_name],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Static quark–quark interaction potential  V(r) = E_total(r) − 2·E_self
+# ---------------------------------------------------------------------------
+
+
+def static_interaction_potential(
+    sol: "SolitonSolution",
+    separations: NDArray,
+    axis: int = 0,
+    chi0: float = 19.0,
+    kappa: float = 1.0 / 63.0,
+    c: float = 1.0,
+) -> dict:
+    """Measure the static two-body interaction potential V(r).
+
+    Uses the Born-Oppenheimer / quenched approximation:
+
+    1. Fix two copies of ``sol`` at separation ``r`` along ``axis``
+       by rolling the arrays (periodic-lattice displacement).
+    2. Poisson-equilibrate χ from the total |Ψ_A + Ψ_B|².
+    3. Compute the total static energy E_total(r).
+    4. V(r) = E_total(r) − 2 · E_self
+
+    The potential shape distinguishes the three LFM interpretations:
+
+    * **Yukawa**  V ~ A·e^{−m·r}/r  ← LFM prediction (screened by mass gap χ₀)
+    * **Coulomb** V ~ A/r            ← massless-gluon exchange
+    * **Cornell** V ~ −A/r + σ·r    ← QCD linear confinement
+
+    Parameters
+    ----------
+    sol : SolitonSolution
+        Solved single-particle eigenmode.  Must have ``psi_r``, ``chi``,
+        and optionally ``psi_i`` arrays of shape (N, N, N).
+    separations : 1-D array-like of ints
+        Centre-to-centre separations in lattice cells (must each be < N).
+    axis : int
+        Spatial axis along which to separate the particles (0 = x).
+    chi0 : float
+        Background χ (default 19).
+    kappa : float
+        Coupling constant (default 1/63).
+    c : float
+        Wave speed (default 1.0 lattice units).
+
+    Returns
+    -------
+    dict with keys:
+        ``r``         — separation array (float)
+        ``V_r``       — interaction potential at each r (float array)
+        ``E_total``   — total two-body energy at each r
+        ``E_self``    — single-particle self-energy (scalar)
+        ``N``         — lattice size used
+    """
+    from lfm.analysis.energy import total_energy as _total_energy
+    from lfm.fields.equilibrium import equilibrate_chi
+
+    psi_r = np.asarray(sol.psi_r, dtype=np.float64)
+    psi_i = np.asarray(sol.psi_i, dtype=np.float64) if sol.psi_i is not None else None
+    chi_sol = np.asarray(sol.chi, dtype=np.float32)
+
+    # Determine if this is a multi-colour (Level 2) particle
+    # Level 2: psi_r.shape = (3, N, N, N) → roll axis = axis+1
+    # Level 0/1: psi_r.shape = (N, N, N) → roll axis = axis
+    multi_color = psi_r.ndim == 4
+    roll_axis = axis + 1 if multi_color else axis
+    N = int(psi_r.shape[roll_axis])
+
+    # E_self: static energy of the isolated soliton (zero KE → prev = current)
+    E_self = _total_energy(psi_r, psi_r, chi_sol.astype(np.float64), dt=1.0, c=c,
+                           psi_i=psi_i, psi_i_prev=psi_i)
+
+    seps = np.asarray(separations, dtype=int)
+    V_arr = np.zeros(len(seps), dtype=np.float64)
+    E_total_arr = np.zeros(len(seps), dtype=np.float64)
+
+    for i, r in enumerate(seps):
+        r = int(r)
+        half = r // 2
+
+        if r >= N:
+            V_arr[i] = np.nan
+            E_total_arr[i] = np.nan
+            continue
+
+        # Roll copies along chosen axis: A left, B right
+        psi_A_r = np.roll(psi_r, -half, axis=roll_axis)
+        psi_B_r = np.roll(psi_r, +half, axis=roll_axis)
+        psi_tot_r = psi_A_r + psi_B_r
+
+        psi_tot_i = None
+        if psi_i is not None:
+            psi_A_i = np.roll(psi_i, -half, axis=roll_axis)
+            psi_B_i = np.roll(psi_i, +half, axis=roll_axis)
+            psi_tot_i = psi_A_i + psi_B_i
+
+        # Total |Ψ|² collapsed to (N,N,N) for the Poisson solver
+        psi_sq = psi_tot_r**2
+        if psi_tot_i is not None:
+            psi_sq = psi_sq + psi_tot_i**2
+        if psi_sq.ndim == 4:          # multi-colour: sum over colour axis
+            psi_sq = psi_sq.sum(axis=0)
+
+        chi_eq = equilibrate_chi(psi_sq.astype(np.float32), chi0=chi0, kappa=kappa)
+
+        # Static energy (zero KE: prev = current)
+        E_tot = _total_energy(psi_tot_r, psi_tot_r, chi_eq.astype(np.float64), dt=1.0, c=c,
+                              psi_i=psi_tot_i, psi_i_prev=psi_tot_i)
+        E_total_arr[i] = E_tot
+        V_arr[i] = E_tot - 2.0 * E_self
+
+    return {
+        "r": seps.astype(float),
+        "V_r": V_arr,
+        "E_total": E_total_arr,
+        "E_self": E_self,
+        "N": N,
+    }

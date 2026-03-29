@@ -250,3 +250,269 @@ def create_particle(
         velocity=velocity,
         energy=energy,
     )
+
+
+# ---------------------------------------------------------------------------
+# Two-particle convenience constructor
+# ---------------------------------------------------------------------------
+
+
+def create_two_particles(
+    name_a: str,
+    name_b: str,
+    separation: int = 16,
+    N: int = 64,
+    axis: int = 0,
+    velocity_a: tuple = (0.0, 0.0, 0.0),
+    velocity_b: tuple = (0.0, 0.0, 0.0),
+    chi0: float = CHI0,
+) -> tuple[PlacedParticle, PlacedParticle]:
+    """Place two particles in a shared simulation for two-body experiments.
+
+    Both particles are placed as Gaussian seeds in a single N³ simulation.
+    This is the fastest route to a two-body system and suitable for
+    scattering, two-body dynamics, and static potential measurements.
+
+    The pair is centred in the grid:
+      - particle A at (centre − separation/2) along ``axis``
+      - particle B at (centre + separation/2) along ``axis``
+
+    Parameters
+    ----------
+    name_a, name_b : str
+        Particle names from the catalog (e.g. ``"up_quark"``).
+    separation : int
+        Centre-to-centre distance in lattice cells.  Must be
+        < N − 2·sigma to avoid overlap artefacts.
+    N : int
+        Grid size per axis.
+    axis : int
+        Spatial axis for the separation (0 = x, 1 = y, 2 = z).
+    velocity_a, velocity_b : tuple(float, float, float)
+        Initial velocities in units of c.
+    chi0 : float
+        Background χ value.
+
+    Returns
+    -------
+    tuple(PlacedParticle, PlacedParticle)
+        Both :class:`PlacedParticle` instances share the same ``.sim``.
+
+    Examples
+    --------
+    >>> pa, pb = create_two_particles("up_quark", "up_quark", separation=12)
+    >>> pa.sim.run(2000)   # evolves both together
+    """
+    particle_a = get_particle(name_a)
+    particle_b = get_particle(name_b)
+
+    # Choose field level: take the higher of the two particles
+    fl_int = max(particle_a.field_level, particle_b.field_level)
+    fl = FieldLevel(fl_int)
+
+    config = SimulationConfig(
+        grid_size=N,
+        field_level=fl,
+        boundary_type=BoundaryType.FROZEN,
+        chi0=chi0,
+    )
+    shared_sim = Simulation(config)
+    shared_sim.equilibrate()
+
+    half = N // 2
+    offset = separation // 2
+
+    # Build 3-D position tuples
+    pos_a_list = [float(half)] * 3
+    pos_b_list = [float(half)] * 3
+    pos_a_list[axis] = float(half - offset)
+    pos_b_list[axis] = float(half + offset)
+    pos_a = tuple(pos_a_list)  # type: ignore[arg-type]
+    pos_b = tuple(pos_b_list)  # type: ignore[arg-type]
+
+    amp_a = amplitude_for_particle(particle_a, N)
+    sig_a = sigma_for_particle(particle_a, N)
+    amp_b = amplitude_for_particle(particle_b, N)
+    sig_b = sigma_for_particle(particle_b, N)
+
+    phase_a = float(getattr(particle_a, "phase", 0.0))
+    phase_b = float(getattr(particle_b, "phase", 0.0))
+
+    v_mag_a = float(np.sqrt(sum(v**2 for v in velocity_a)))
+    v_mag_b = float(np.sqrt(sum(v**2 for v in velocity_b)))
+
+    shared_sim.place_soliton(pos_a, amplitude=amp_a, sigma=sig_a, phase=phase_a,
+                              velocity=velocity_a if v_mag_a > 0 else None)
+    shared_sim.place_soliton(pos_b, amplitude=amp_b, sigma=sig_b, phase=phase_b,
+                              velocity=velocity_b if v_mag_b > 0 else None)
+
+    try:
+        m = shared_sim.metrics()
+        total_energy_val = float(m.get("energy_total", 0.0))
+    except Exception:
+        total_energy_val = 0.0
+
+    placed_a = PlacedParticle(
+        sim=shared_sim,
+        particle=particle_a,
+        position=pos_a,
+        velocity=velocity_a,
+        energy=total_energy_val,
+    )
+    placed_b = PlacedParticle(
+        sim=shared_sim,
+        particle=particle_b,
+        position=pos_b,
+        velocity=velocity_b,
+        energy=total_energy_val,
+    )
+    return placed_a, placed_b
+
+
+# ---------------------------------------------------------------------------
+# Collision factory
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class CollisionSetup:
+    """Result of :func:`create_collision`.
+
+    Attributes
+    ----------
+    sim : Simulation
+        Simulation containing both particles aimed at each other.
+    particle_a, particle_b : Particle
+        Particle specifications from the catalog.
+    pos_a, pos_b : tuple[float, float, float]
+        Initial centre positions in grid coordinates.
+    vel_a, vel_b : tuple[float, float, float]
+        Velocities in units of c.
+    cm_energy : float
+        Centre-of-mass energy as the sum of rest energies plus kinetic
+        contribution from the imposed velocities.
+    """
+
+    sim: Simulation
+    particle_a: Particle
+    particle_b: Particle
+    pos_a: tuple
+    pos_b: tuple
+    vel_a: tuple
+    vel_b: tuple
+    cm_energy: float
+
+
+def create_collision(
+    name_a: str,
+    name_b: str,
+    speed: float = 0.05,
+    N: int = 64,
+    separation: int | None = None,
+    axis: int = 0,
+    chi0: float = CHI0,
+) -> CollisionSetup:
+    """Set up a head-on particle collision in a shared simulation.
+
+    Both particles are placed as Gaussian seeds moving *toward* each other
+    symmetrically along ``axis``.  This is the standard entry point for
+    particle-smasher experiments.
+
+    Parameters
+    ----------
+    name_a, name_b : str
+        Particle names from the catalog.
+    speed : float
+        Speed of each particle (in units of c).  Both particles start with
+        this magnitude, moving inward toward each other.  Must be in (0, 0.8].
+    N : int
+        Grid size per axis.
+    separation : int or None
+        Centre-to-centre distance in lattice cells.  If ``None``,
+        defaults to ``N // 2`` (half the grid — enough room to accelerate
+        and collide at centre).
+    axis : int
+        Spatial axis along which particles approach (0=x, 1=y, 2=z).
+    chi0 : float
+        Background χ value.
+
+    Returns
+    -------
+    CollisionSetup
+        Ready-to-run simulation with both particles aimed at each other.
+        Call ``setup.sim.run(steps)`` to evolve the collision.
+
+    Examples
+    --------
+    >>> setup = create_collision("proton", "antiproton", speed=0.06, N=128)
+    >>> setup.sim.run(10_000)
+    >>> print(setup.sim.metrics())
+    """
+    if not 0 < speed <= 0.8:
+        raise ValueError(f"speed must be in (0, 0.8], got {speed}")
+
+    particle_a = get_particle(name_a)
+    particle_b = get_particle(name_b)
+
+    sep = separation if separation is not None else N // 2
+
+    # Choose field level: take the higher of the two particles
+    fl_int = max(particle_a.field_level, particle_b.field_level)
+    # Collision always needs at least COMPLEX for boost phase gradients
+    fl_int = max(fl_int, 1)
+    fl = FieldLevel(fl_int)
+
+    config = SimulationConfig(
+        grid_size=N,
+        field_level=fl,
+        boundary_type=BoundaryType.FROZEN,
+        chi0=chi0,
+    )
+    sim = Simulation(config)
+    sim.equilibrate()
+
+    half = N // 2
+    offset = sep // 2
+
+    pos_a_list = [float(half)] * 3
+    pos_b_list = [float(half)] * 3
+    pos_a_list[axis] = float(half - offset)
+    pos_b_list[axis] = float(half + offset)
+    pos_a = tuple(pos_a_list)
+    pos_b = tuple(pos_b_list)
+
+    amp_a = amplitude_for_particle(particle_a, N)
+    sig_a = sigma_for_particle(particle_a, N)
+    amp_b = amplitude_for_particle(particle_b, N)
+    sig_b = sigma_for_particle(particle_b, N)
+
+    phase_a = float(getattr(particle_a, "phase", 0.0))
+    phase_b = float(getattr(particle_b, "phase", 0.0))
+
+    # Velocities: A moves toward B (+axis), B moves toward A (-axis)
+    vel_a = [0.0, 0.0, 0.0]
+    vel_b = [0.0, 0.0, 0.0]
+    vel_a[axis] = +speed
+    vel_b[axis] = -speed
+    vel_a_t = tuple(vel_a)
+    vel_b_t = tuple(vel_b)
+
+    sim.place_soliton(pos_a, amplitude=amp_a, sigma=sig_a, phase=phase_a,
+                       velocity=vel_a_t)
+    sim.place_soliton(pos_b, amplitude=amp_b, sigma=sig_b, phase=phase_b,
+                       velocity=vel_b_t)
+
+    # Rough CM energy estimate: rest masses + kinetic in lattice units
+    # E_cm ≈ m_a + m_b  (rest energy dominant at v << c)
+    cm_energy = float(particle_a.mass_ratio + particle_b.mass_ratio)
+
+    return CollisionSetup(
+        sim=sim,
+        particle_a=particle_a,
+        particle_b=particle_b,
+        pos_a=pos_a,
+        pos_b=pos_b,
+        vel_a=vel_a_t,
+        vel_b=vel_b_t,
+        cm_energy=cm_energy,
+    )

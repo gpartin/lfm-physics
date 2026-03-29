@@ -125,7 +125,7 @@ def _energy_in_sphere(
     float
         Sum of |Psi|^2 within the sphere (proxy for soliton energy).
     """
-    N = psi_r.shape[0]
+    N = psi_r.shape[-1]  # works for both (N,N,N) and (3,N,N,N)
     cx, cy, cz = center
 
     # Build radial mask
@@ -136,9 +136,16 @@ def _energy_in_sphere(
     r2 = xx**2 + yy**2 + zz**2
     mask = r2 <= radius**2
 
-    e2 = psi_r**2
+    # Sum |Ψ|² over colour components if multi-colour
+    if psi_r.ndim == 4:
+        e2 = np.sum(psi_r**2, axis=0)
+    else:
+        e2 = psi_r**2
     if psi_i is not None:
-        e2 = e2 + psi_i**2
+        if psi_i.ndim == 4:
+            e2 = e2 + np.sum(psi_i**2, axis=0)
+        else:
+            e2 = e2 + psi_i**2
 
     return float(np.sum(e2[mask]))
 

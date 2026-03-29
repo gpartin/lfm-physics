@@ -88,6 +88,7 @@ class Particle:
     category: str
     stable: bool
     antiparticle: str | None
+    quark_content: tuple[str, ...] | None = None
 
     @property
     def mass_eV(self) -> float:
@@ -316,6 +317,7 @@ PROTON = Particle(
     category="baryon",
     stable=True,
     antiparticle="antiproton",
+    quark_content=("up", "up", "down"),
 )
 
 ANTIPROTON = Particle(
@@ -333,6 +335,7 @@ ANTIPROTON = Particle(
     category="baryon",
     stable=True,
     antiparticle="proton",
+    quark_content=("anti-up", "anti-up", "anti-down"),
 )
 
 NEUTRON = Particle(
@@ -350,6 +353,7 @@ NEUTRON = Particle(
     category="baryon",
     stable=False,
     antiparticle="antineutron",
+    quark_content=("up", "down", "down"),
 )
 
 ANTINEUTRON = Particle(
@@ -367,6 +371,7 @@ ANTINEUTRON = Particle(
     category="baryon",
     stable=False,
     antiparticle="neutron",
+    quark_content=("anti-up", "anti-down", "anti-down"),
 )
 
 # ---------------------------------------------------------------------------
@@ -390,26 +395,1112 @@ PHOTON = Particle(
 )
 
 # ---------------------------------------------------------------------------
+# Tier 5: Antiquarks (CPT partners of Tier 2 quarks)
+# ---------------------------------------------------------------------------
+
+ANTI_UP_QUARK = Particle(
+    name="anti-up",
+    symbol="u~",
+    mass_ratio=7.8,
+    charge=-2.0 / 3.0,
+    phase=math.pi,
+    spin=0.5,
+    color="r",
+    field_level=2,
+    l=2,
+    tau=0,
+    generation=1,
+    category="quark",
+    stable=False,
+    antiparticle="up",
+)
+
+ANTI_DOWN_QUARK = Particle(
+    name="anti-down",
+    symbol="d~",
+    mass_ratio=15.7,
+    charge=+1.0 / 3.0,
+    phase=math.pi,
+    spin=0.5,
+    color="b",
+    field_level=2,
+    l=3,
+    tau=0,
+    generation=1,
+    category="quark",
+    stable=False,
+    antiparticle="down",
+)
+
+ANTI_STRANGE_QUARK = Particle(
+    name="anti-strange",
+    symbol="s~",
+    mass_ratio=186.0,
+    charge=+1.0 / 3.0,
+    phase=math.pi,
+    spin=0.5,
+    color="g",
+    field_level=2,
+    l=14,
+    tau=1,
+    generation=2,
+    category="quark",
+    stable=False,
+    antiparticle="strange",
+)
+
+ANTI_CHARM_QUARK = Particle(
+    name="anti-charm",
+    symbol="c~",
+    mass_ratio=2485.0,
+    charge=-2.0 / 3.0,
+    phase=math.pi,
+    spin=0.5,
+    color="r",
+    field_level=2,
+    l=50,
+    tau=2,
+    generation=2,
+    category="quark",
+    stable=False,
+    antiparticle="charm",
+)
+
+# ---------------------------------------------------------------------------
+# Tier 6: Bottom and Top quarks + antiparticles
+# ---------------------------------------------------------------------------
+# Bottom: ~4.18 GeV / 0.511 MeV = 8180
+# Top: ~173.0 GeV / 0.511 MeV = 338,600
+
+BOTTOM_QUARK = Particle(
+    name="bottom",
+    symbol="b",
+    mass_ratio=8180.0,
+    charge=-1.0 / 3.0,
+    phase=0.0,
+    spin=0.5,
+    color="g",
+    field_level=2,
+    l=90,
+    tau=3,
+    generation=3,
+    category="quark",
+    stable=False,
+    antiparticle="anti-bottom",
+)
+
+ANTI_BOTTOM_QUARK = Particle(
+    name="anti-bottom",
+    symbol="b~",
+    mass_ratio=8180.0,
+    charge=+1.0 / 3.0,
+    phase=math.pi,
+    spin=0.5,
+    color="g",
+    field_level=2,
+    l=90,
+    tau=3,
+    generation=3,
+    category="quark",
+    stable=False,
+    antiparticle="bottom",
+)
+
+TOP_QUARK = Particle(
+    name="top",
+    symbol="t",
+    mass_ratio=338600.0,
+    charge=+2.0 / 3.0,
+    phase=0.0,
+    spin=0.5,
+    color="r",
+    field_level=2,
+    l=582,
+    tau=3,
+    generation=3,
+    category="quark",
+    stable=False,
+    antiparticle="anti-top",
+)
+
+ANTI_TOP_QUARK = Particle(
+    name="anti-top",
+    symbol="t~",
+    mass_ratio=338600.0,
+    charge=-2.0 / 3.0,
+    phase=math.pi,
+    spin=0.5,
+    color="r",
+    field_level=2,
+    l=582,
+    tau=3,
+    generation=3,
+    category="quark",
+    stable=False,
+    antiparticle="top",
+)
+
+# ---------------------------------------------------------------------------
+# Tier 7: Neutrinos (nearly massless, neutral, REAL field level)
+# ---------------------------------------------------------------------------
+# Neutrino masses (upper bounds): nu_e < 0.8 eV, nu_mu < 0.17 MeV, nu_tau < 18.2 MeV
+# Using best-fit squared mass differences:
+#   nu_1 ~ 0, nu_2 ~ 0.0086 eV, nu_3 ~ 0.050 eV
+# mass_ratio = m_nu / m_e: all < 0.0001
+# For practical simulation: use small but nonzero mass_ratio.
+
+ELECTRON_NEUTRINO = Particle(
+    name="electron_neutrino",
+    symbol="nu_e",
+    mass_ratio=0.000004,  # ~2 eV upper bound / 511000 eV
+    charge=0.0,
+    phase=0.0,
+    spin=0.5,
+    color=None,
+    field_level=0,
+    l=0,
+    tau=0,
+    generation=1,
+    category="lepton",
+    stable=True,
+    antiparticle="anti_electron_neutrino",
+)
+
+ANTI_ELECTRON_NEUTRINO = Particle(
+    name="anti_electron_neutrino",
+    symbol="nu_e~",
+    mass_ratio=0.000004,
+    charge=0.0,
+    phase=math.pi,
+    spin=0.5,
+    color=None,
+    field_level=0,
+    l=0,
+    tau=0,
+    generation=1,
+    category="lepton",
+    stable=True,
+    antiparticle="electron_neutrino",
+)
+
+MUON_NEUTRINO = Particle(
+    name="muon_neutrino",
+    symbol="nu_mu",
+    mass_ratio=0.000017,
+    charge=0.0,
+    phase=0.0,
+    spin=0.5,
+    color=None,
+    field_level=0,
+    l=0,
+    tau=0,
+    generation=2,
+    category="lepton",
+    stable=True,
+    antiparticle="anti_muon_neutrino",
+)
+
+ANTI_MUON_NEUTRINO = Particle(
+    name="anti_muon_neutrino",
+    symbol="nu_mu~",
+    mass_ratio=0.000017,
+    charge=0.0,
+    phase=math.pi,
+    spin=0.5,
+    color=None,
+    field_level=0,
+    l=0,
+    tau=0,
+    generation=2,
+    category="lepton",
+    stable=True,
+    antiparticle="muon_neutrino",
+)
+
+TAU_NEUTRINO = Particle(
+    name="tau_neutrino",
+    symbol="nu_tau",
+    mass_ratio=0.000030,
+    charge=0.0,
+    phase=0.0,
+    spin=0.5,
+    color=None,
+    field_level=0,
+    l=0,
+    tau=0,
+    generation=3,
+    category="lepton",
+    stable=True,
+    antiparticle="anti_tau_neutrino",
+)
+
+ANTI_TAU_NEUTRINO = Particle(
+    name="anti_tau_neutrino",
+    symbol="nu_tau~",
+    mass_ratio=0.000030,
+    charge=0.0,
+    phase=math.pi,
+    spin=0.5,
+    color=None,
+    field_level=0,
+    l=0,
+    tau=0,
+    generation=3,
+    category="lepton",
+    stable=True,
+    antiparticle="tau_neutrino",
+)
+
+# ---------------------------------------------------------------------------
+# Tier 8: Gauge Bosons (W+, W-, Z0, gluon)
+# ---------------------------------------------------------------------------
+# W boson: 80.379 GeV / 0.511 MeV = 157,298
+# Z boson: 91.188 GeV / 0.511 MeV = 178,450
+
+W_PLUS = Particle(
+    name="w_plus",
+    symbol="W+",
+    mass_ratio=157298.0,
+    charge=+1.0,
+    phase=math.pi,
+    spin=1.0,
+    color=None,
+    field_level=1,
+    l=396,
+    tau=0,
+    generation=0,
+    category="boson",
+    stable=False,
+    antiparticle="w_minus",
+)
+
+W_MINUS = Particle(
+    name="w_minus",
+    symbol="W-",
+    mass_ratio=157298.0,
+    charge=-1.0,
+    phase=0.0,
+    spin=1.0,
+    color=None,
+    field_level=1,
+    l=396,
+    tau=0,
+    generation=0,
+    category="boson",
+    stable=False,
+    antiparticle="w_plus",
+)
+
+Z_BOSON = Particle(
+    name="z_boson",
+    symbol="Z0",
+    mass_ratio=178450.0,
+    charge=0.0,
+    phase=0.0,
+    spin=1.0,
+    color=None,
+    field_level=0,
+    l=422,
+    tau=0,
+    generation=0,
+    category="boson",
+    stable=False,
+    antiparticle=None,  # self-conjugate
+)
+
+GLUON = Particle(
+    name="gluon",
+    symbol="g",
+    mass_ratio=0.0,
+    charge=0.0,
+    phase=0.0,
+    spin=1.0,
+    color="r",
+    field_level=2,
+    l=0,
+    tau=0,
+    generation=0,
+    category="boson",
+    stable=True,
+    antiparticle=None,  # self-conjugate (color/anticolor)
+)
+
+# ---------------------------------------------------------------------------
+# Tier 9: Higgs Boson
+# ---------------------------------------------------------------------------
+# Higgs: 125.25 GeV / 0.511 MeV = 245,100
+# In LFM: chi-field oscillation mode (Mexican hat), omega_H ~ 19.30
+
+HIGGS = Particle(
+    name="higgs",
+    symbol="H0",
+    mass_ratio=245100.0,
+    charge=0.0,
+    phase=0.0,
+    spin=0.0,
+    color=None,
+    field_level=0,
+    l=495,
+    tau=0,
+    generation=0,
+    category="boson",
+    stable=False,
+    antiparticle=None,  # self-conjugate
+)
+
+# ---------------------------------------------------------------------------
+# Tier 10: Light Mesons (quark-antiquark composites)
+# ---------------------------------------------------------------------------
+# Mesons are qq-bar bound states. quark_content specifies constituents.
+# field_level = COMPLEX for charged, REAL for neutral.
+# In LFM: these are two-soliton bound states in a shared chi-well.
+
+PION_PLUS = Particle(
+    name="pion_plus",
+    symbol="pi+",
+    mass_ratio=273.13,
+    charge=+1.0,
+    phase=math.pi,
+    spin=0.0,
+    color=None,
+    field_level=1,
+    l=16,
+    tau=0,
+    generation=1,
+    category="meson",
+    stable=False,
+    antiparticle="pion_minus",
+    quark_content=("up", "anti-down"),
+)
+
+PION_MINUS = Particle(
+    name="pion_minus",
+    symbol="pi-",
+    mass_ratio=273.13,
+    charge=-1.0,
+    phase=0.0,
+    spin=0.0,
+    color=None,
+    field_level=1,
+    l=16,
+    tau=0,
+    generation=1,
+    category="meson",
+    stable=False,
+    antiparticle="pion_plus",
+    quark_content=("anti-up", "down"),
+)
+
+PION_ZERO = Particle(
+    name="pion_zero",
+    symbol="pi0",
+    mass_ratio=263.89,
+    charge=0.0,
+    phase=0.0,
+    spin=0.0,
+    color=None,
+    field_level=0,
+    l=16,
+    tau=0,
+    generation=1,
+    category="meson",
+    stable=False,
+    antiparticle=None,  # self-conjugate
+    quark_content=("up", "anti-up"),  # simplified; actually (uu-bar - dd-bar)/sqrt(2)
+)
+
+KAON_PLUS = Particle(
+    name="kaon_plus",
+    symbol="K+",
+    mass_ratio=966.12,
+    charge=+1.0,
+    phase=math.pi,
+    spin=0.0,
+    color=None,
+    field_level=1,
+    l=31,
+    tau=0,
+    generation=2,
+    category="meson",
+    stable=False,
+    antiparticle="kaon_minus",
+    quark_content=("up", "anti-strange"),
+)
+
+KAON_MINUS = Particle(
+    name="kaon_minus",
+    symbol="K-",
+    mass_ratio=966.12,
+    charge=-1.0,
+    phase=0.0,
+    spin=0.0,
+    color=None,
+    field_level=1,
+    l=31,
+    tau=0,
+    generation=2,
+    category="meson",
+    stable=False,
+    antiparticle="kaon_plus",
+    quark_content=("anti-up", "strange"),
+)
+
+KAON_ZERO = Particle(
+    name="kaon_zero",
+    symbol="K0",
+    mass_ratio=974.55,
+    charge=0.0,
+    phase=0.0,
+    spin=0.0,
+    color=None,
+    field_level=0,
+    l=31,
+    tau=0,
+    generation=2,
+    category="meson",
+    stable=False,
+    antiparticle="anti_kaon_zero",
+    quark_content=("down", "anti-strange"),
+)
+
+ANTI_KAON_ZERO = Particle(
+    name="anti_kaon_zero",
+    symbol="K0~",
+    mass_ratio=974.55,
+    charge=0.0,
+    phase=math.pi,
+    spin=0.0,
+    color=None,
+    field_level=0,
+    l=31,
+    tau=0,
+    generation=2,
+    category="meson",
+    stable=False,
+    antiparticle="kaon_zero",
+    quark_content=("anti-down", "strange"),
+)
+
+ETA_MESON = Particle(
+    name="eta",
+    symbol="eta",
+    mass_ratio=1073.2,
+    charge=0.0,
+    phase=0.0,
+    spin=0.0,
+    color=None,
+    field_level=0,
+    l=32,
+    tau=0,
+    generation=1,
+    category="meson",
+    stable=False,
+    antiparticle=None,  # self-conjugate
+    quark_content=("up", "anti-up"),  # simplified flavor singlet
+)
+
+RHO_MESON = Particle(
+    name="rho",
+    symbol="rho0",
+    mass_ratio=1513.4,
+    charge=0.0,
+    phase=0.0,
+    spin=1.0,
+    color=None,
+    field_level=0,
+    l=38,
+    tau=0,
+    generation=1,
+    category="meson",
+    stable=False,
+    antiparticle=None,  # self-conjugate
+    quark_content=("up", "anti-up"),
+)
+
+# ---------------------------------------------------------------------------
+# Tier 11: Charm Mesons (D mesons, J/psi)
+# ---------------------------------------------------------------------------
+# D+: cd-bar, 1869.65 MeV / 0.511 MeV = 3659
+# D0: cu-bar, 1864.84 MeV / 0.511 MeV = 3650
+# J/psi: cc-bar, 3096.9 MeV / 0.511 MeV = 6060
+
+D_PLUS = Particle(
+    name="d_plus",
+    symbol="D+",
+    mass_ratio=3659.0,
+    charge=+1.0,
+    phase=math.pi,
+    spin=0.0,
+    color=None,
+    field_level=1,
+    l=60,
+    tau=0,
+    generation=2,
+    category="meson",
+    stable=False,
+    antiparticle="d_minus",
+    quark_content=("charm", "anti-down"),
+)
+
+D_MINUS = Particle(
+    name="d_minus",
+    symbol="D-",
+    mass_ratio=3659.0,
+    charge=-1.0,
+    phase=0.0,
+    spin=0.0,
+    color=None,
+    field_level=1,
+    l=60,
+    tau=0,
+    generation=2,
+    category="meson",
+    stable=False,
+    antiparticle="d_plus",
+    quark_content=("anti-charm", "down"),
+)
+
+D_ZERO = Particle(
+    name="d_zero",
+    symbol="D0",
+    mass_ratio=3650.0,
+    charge=0.0,
+    phase=0.0,
+    spin=0.0,
+    color=None,
+    field_level=0,
+    l=60,
+    tau=0,
+    generation=2,
+    category="meson",
+    stable=False,
+    antiparticle="anti_d_zero",
+    quark_content=("charm", "anti-up"),
+)
+
+ANTI_D_ZERO = Particle(
+    name="anti_d_zero",
+    symbol="D0~",
+    mass_ratio=3650.0,
+    charge=0.0,
+    phase=math.pi,
+    spin=0.0,
+    color=None,
+    field_level=0,
+    l=60,
+    tau=0,
+    generation=2,
+    category="meson",
+    stable=False,
+    antiparticle="d_zero",
+    quark_content=("anti-charm", "up"),
+)
+
+J_PSI = Particle(
+    name="j_psi",
+    symbol="J/psi",
+    mass_ratio=6060.0,
+    charge=0.0,
+    phase=0.0,
+    spin=1.0,
+    color=None,
+    field_level=0,
+    l=77,
+    tau=0,
+    generation=2,
+    category="meson",
+    stable=False,
+    antiparticle=None,  # self-conjugate
+    quark_content=("charm", "anti-charm"),
+)
+
+# ---------------------------------------------------------------------------
+# Tier 12: Bottom Mesons (B mesons, Upsilon)
+# ---------------------------------------------------------------------------
+# B+: ub-bar, 5279.34 MeV / 0.511 MeV = 10,332
+# B0: db-bar, 5279.66 MeV / 0.511 MeV = 10,332
+# Upsilon: bb-bar, 9460.3 MeV / 0.511 MeV = 18,514
+
+B_PLUS = Particle(
+    name="b_plus",
+    symbol="B+",
+    mass_ratio=10332.0,
+    charge=+1.0,
+    phase=math.pi,
+    spin=0.0,
+    color=None,
+    field_level=1,
+    l=101,
+    tau=0,
+    generation=3,
+    category="meson",
+    stable=False,
+    antiparticle="b_minus",
+    quark_content=("up", "anti-bottom"),
+)
+
+B_MINUS = Particle(
+    name="b_minus",
+    symbol="B-",
+    mass_ratio=10332.0,
+    charge=-1.0,
+    phase=0.0,
+    spin=0.0,
+    color=None,
+    field_level=1,
+    l=101,
+    tau=0,
+    generation=3,
+    category="meson",
+    stable=False,
+    antiparticle="b_plus",
+    quark_content=("anti-up", "bottom"),
+)
+
+B_ZERO = Particle(
+    name="b_zero",
+    symbol="B0",
+    mass_ratio=10332.0,
+    charge=0.0,
+    phase=0.0,
+    spin=0.0,
+    color=None,
+    field_level=0,
+    l=101,
+    tau=0,
+    generation=3,
+    category="meson",
+    stable=False,
+    antiparticle="anti_b_zero",
+    quark_content=("down", "anti-bottom"),
+)
+
+ANTI_B_ZERO = Particle(
+    name="anti_b_zero",
+    symbol="B0~",
+    mass_ratio=10332.0,
+    charge=0.0,
+    phase=math.pi,
+    spin=0.0,
+    color=None,
+    field_level=0,
+    l=101,
+    tau=0,
+    generation=3,
+    category="meson",
+    stable=False,
+    antiparticle="b_zero",
+    quark_content=("anti-down", "bottom"),
+)
+
+UPSILON = Particle(
+    name="upsilon",
+    symbol="Y(1S)",
+    mass_ratio=18514.0,
+    charge=0.0,
+    phase=0.0,
+    spin=1.0,
+    color=None,
+    field_level=0,
+    l=136,
+    tau=0,
+    generation=3,
+    category="meson",
+    stable=False,
+    antiparticle=None,  # self-conjugate
+    quark_content=("bottom", "anti-bottom"),
+)
+
+# ---------------------------------------------------------------------------
+# Tier 13: Strange Baryons
+# ---------------------------------------------------------------------------
+# Lambda: uds, 1115.68 MeV / 0.511 MeV = 2183
+# Sigma+: uus, 1189.37 MeV / 0.511 MeV = 2328
+# Sigma-: dds, 1197.45 MeV / 0.511 MeV = 2343
+# Xi-: dss, 1321.71 MeV / 0.511 MeV = 2587
+
+LAMBDA_BARYON = Particle(
+    name="lambda_baryon",
+    symbol="Lambda0",
+    mass_ratio=2183.0,
+    charge=0.0,
+    phase=0.0,
+    spin=0.5,
+    color=None,
+    field_level=0,
+    l=46,
+    tau=1,
+    generation=2,
+    category="baryon",
+    stable=False,
+    antiparticle="anti_lambda_baryon",
+    quark_content=("up", "down", "strange"),
+)
+
+ANTI_LAMBDA_BARYON = Particle(
+    name="anti_lambda_baryon",
+    symbol="Lambda0~",
+    mass_ratio=2183.0,
+    charge=0.0,
+    phase=math.pi,
+    spin=0.5,
+    color=None,
+    field_level=0,
+    l=46,
+    tau=1,
+    generation=2,
+    category="baryon",
+    stable=False,
+    antiparticle="lambda_baryon",
+    quark_content=("anti-up", "anti-down", "anti-strange"),
+)
+
+SIGMA_PLUS = Particle(
+    name="sigma_plus",
+    symbol="Sigma+",
+    mass_ratio=2328.0,
+    charge=+1.0,
+    phase=math.pi,
+    spin=0.5,
+    color=None,
+    field_level=1,
+    l=48,
+    tau=1,
+    generation=2,
+    category="baryon",
+    stable=False,
+    antiparticle="anti_sigma_minus",
+    quark_content=("up", "up", "strange"),
+)
+
+SIGMA_MINUS = Particle(
+    name="sigma_minus",
+    symbol="Sigma-",
+    mass_ratio=2343.0,
+    charge=-1.0,
+    phase=0.0,
+    spin=0.5,
+    color=None,
+    field_level=1,
+    l=48,
+    tau=1,
+    generation=2,
+    category="baryon",
+    stable=False,
+    antiparticle="anti_sigma_plus",
+    quark_content=("down", "down", "strange"),
+)
+
+ANTI_SIGMA_PLUS = Particle(
+    name="anti_sigma_plus",
+    symbol="Sigma+~",
+    mass_ratio=2343.0,
+    charge=+1.0,
+    phase=math.pi,
+    spin=0.5,
+    color=None,
+    field_level=1,
+    l=48,
+    tau=1,
+    generation=2,
+    category="baryon",
+    stable=False,
+    antiparticle="sigma_minus",
+    quark_content=("anti-down", "anti-down", "anti-strange"),
+)
+
+ANTI_SIGMA_MINUS = Particle(
+    name="anti_sigma_minus",
+    symbol="Sigma-~",
+    mass_ratio=2328.0,
+    charge=-1.0,
+    phase=0.0,
+    spin=0.5,
+    color=None,
+    field_level=1,
+    l=48,
+    tau=1,
+    generation=2,
+    category="baryon",
+    stable=False,
+    antiparticle="sigma_plus",
+    quark_content=("anti-up", "anti-up", "anti-strange"),
+)
+
+XI_MINUS = Particle(
+    name="xi_minus",
+    symbol="Xi-",
+    mass_ratio=2587.0,
+    charge=-1.0,
+    phase=0.0,
+    spin=0.5,
+    color=None,
+    field_level=1,
+    l=50,
+    tau=1,
+    generation=2,
+    category="baryon",
+    stable=False,
+    antiparticle="anti_xi_plus",
+    quark_content=("down", "strange", "strange"),
+)
+
+ANTI_XI_PLUS = Particle(
+    name="anti_xi_plus",
+    symbol="Xi+~",
+    mass_ratio=2587.0,
+    charge=+1.0,
+    phase=math.pi,
+    spin=0.5,
+    color=None,
+    field_level=1,
+    l=50,
+    tau=1,
+    generation=2,
+    category="baryon",
+    stable=False,
+    antiparticle="xi_minus",
+    quark_content=("anti-down", "anti-strange", "anti-strange"),
+)
+
+OMEGA_BARYON = Particle(
+    name="omega_baryon",
+    symbol="Omega-",
+    mass_ratio=3277.0,
+    charge=-1.0,
+    phase=0.0,
+    spin=1.5,
+    color=None,
+    field_level=1,
+    l=57,
+    tau=1,
+    generation=2,
+    category="baryon",
+    stable=False,
+    antiparticle="anti_omega_baryon",
+    quark_content=("strange", "strange", "strange"),
+)
+
+ANTI_OMEGA_BARYON = Particle(
+    name="anti_omega_baryon",
+    symbol="Omega+~",
+    mass_ratio=3277.0,
+    charge=+1.0,
+    phase=math.pi,
+    spin=1.5,
+    color=None,
+    field_level=1,
+    l=57,
+    tau=1,
+    generation=2,
+    category="baryon",
+    stable=False,
+    antiparticle="omega_baryon",
+    quark_content=("anti-strange", "anti-strange", "anti-strange"),
+)
+
+# ---------------------------------------------------------------------------
+# Tier 14: Heavy Baryons (charm, bottom)
+# ---------------------------------------------------------------------------
+# Lambda_c+: udc, 2286.46 MeV / 0.511 MeV = 4475
+# Xi_c+: usc, 2467.87 MeV / 0.511 MeV = 4830
+# Lambda_b0: udb, 5619.60 MeV / 0.511 MeV = 10,998
+
+LAMBDA_C = Particle(
+    name="lambda_c",
+    symbol="Lambda_c+",
+    mass_ratio=4475.0,
+    charge=+1.0,
+    phase=math.pi,
+    spin=0.5,
+    color=None,
+    field_level=1,
+    l=66,
+    tau=2,
+    generation=2,
+    category="baryon",
+    stable=False,
+    antiparticle="anti_lambda_c",
+    quark_content=("up", "down", "charm"),
+)
+
+ANTI_LAMBDA_C = Particle(
+    name="anti_lambda_c",
+    symbol="Lambda_c-~",
+    mass_ratio=4475.0,
+    charge=-1.0,
+    phase=0.0,
+    spin=0.5,
+    color=None,
+    field_level=1,
+    l=66,
+    tau=2,
+    generation=2,
+    category="baryon",
+    stable=False,
+    antiparticle="lambda_c",
+    quark_content=("anti-up", "anti-down", "anti-charm"),
+)
+
+XI_C_PLUS = Particle(
+    name="xi_c_plus",
+    symbol="Xi_c+",
+    mass_ratio=4830.0,
+    charge=+1.0,
+    phase=math.pi,
+    spin=0.5,
+    color=None,
+    field_level=1,
+    l=69,
+    tau=2,
+    generation=2,
+    category="baryon",
+    stable=False,
+    antiparticle="anti_xi_c_minus",
+    quark_content=("up", "strange", "charm"),
+)
+
+ANTI_XI_C_MINUS = Particle(
+    name="anti_xi_c_minus",
+    symbol="Xi_c-~",
+    mass_ratio=4830.0,
+    charge=-1.0,
+    phase=0.0,
+    spin=0.5,
+    color=None,
+    field_level=1,
+    l=69,
+    tau=2,
+    generation=2,
+    category="baryon",
+    stable=False,
+    antiparticle="xi_c_plus",
+    quark_content=("anti-up", "anti-strange", "anti-charm"),
+)
+
+LAMBDA_B = Particle(
+    name="lambda_b",
+    symbol="Lambda_b0",
+    mass_ratio=10998.0,
+    charge=0.0,
+    phase=0.0,
+    spin=0.5,
+    color=None,
+    field_level=0,
+    l=104,
+    tau=3,
+    generation=3,
+    category="baryon",
+    stable=False,
+    antiparticle="anti_lambda_b",
+    quark_content=("up", "down", "bottom"),
+)
+
+ANTI_LAMBDA_B = Particle(
+    name="anti_lambda_b",
+    symbol="Lambda_b0~",
+    mass_ratio=10998.0,
+    charge=0.0,
+    phase=math.pi,
+    spin=0.5,
+    color=None,
+    field_level=0,
+    l=104,
+    tau=3,
+    generation=3,
+    category="baryon",
+    stable=False,
+    antiparticle="lambda_b",
+    quark_content=("anti-up", "anti-down", "anti-bottom"),
+)
+
+# ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
 PARTICLES: dict[str, Particle] = {
     p.name: p
     for p in [
+        # Tier 1: Leptons
         ELECTRON,
         POSITRON,
         MUON,
         ANTIMUON,
         TAU,
         ANTITAU,
+        # Tier 5: Antiquarks
+        ANTI_UP_QUARK,
+        ANTI_DOWN_QUARK,
+        ANTI_STRANGE_QUARK,
+        ANTI_CHARM_QUARK,
+        # Tier 2: Quarks
         UP_QUARK,
         DOWN_QUARK,
         STRANGE_QUARK,
         CHARM_QUARK,
+        # Tier 6: Bottom/Top quarks
+        BOTTOM_QUARK,
+        ANTI_BOTTOM_QUARK,
+        TOP_QUARK,
+        ANTI_TOP_QUARK,
+        # Tier 7: Neutrinos
+        ELECTRON_NEUTRINO,
+        ANTI_ELECTRON_NEUTRINO,
+        MUON_NEUTRINO,
+        ANTI_MUON_NEUTRINO,
+        TAU_NEUTRINO,
+        ANTI_TAU_NEUTRINO,
+        # Tier 3: Nucleons
         PROTON,
         ANTIPROTON,
         NEUTRON,
         ANTINEUTRON,
+        # Tier 4+8: Bosons
         PHOTON,
+        W_PLUS,
+        W_MINUS,
+        Z_BOSON,
+        GLUON,
+        HIGGS,
+        # Tier 10: Light Mesons
+        PION_PLUS,
+        PION_MINUS,
+        PION_ZERO,
+        KAON_PLUS,
+        KAON_MINUS,
+        KAON_ZERO,
+        ANTI_KAON_ZERO,
+        ETA_MESON,
+        RHO_MESON,
+        # Tier 11: Charm Mesons
+        D_PLUS,
+        D_MINUS,
+        D_ZERO,
+        ANTI_D_ZERO,
+        J_PSI,
+        # Tier 12: Bottom Mesons
+        B_PLUS,
+        B_MINUS,
+        B_ZERO,
+        ANTI_B_ZERO,
+        UPSILON,
+        # Tier 13: Strange Baryons
+        LAMBDA_BARYON,
+        ANTI_LAMBDA_BARYON,
+        SIGMA_PLUS,
+        SIGMA_MINUS,
+        ANTI_SIGMA_PLUS,
+        ANTI_SIGMA_MINUS,
+        XI_MINUS,
+        ANTI_XI_PLUS,
+        OMEGA_BARYON,
+        ANTI_OMEGA_BARYON,
+        # Tier 14: Heavy Baryons
+        LAMBDA_C,
+        ANTI_LAMBDA_C,
+        XI_C_PLUS,
+        ANTI_XI_C_MINUS,
+        LAMBDA_B,
+        ANTI_LAMBDA_B,
     ]
 }
 

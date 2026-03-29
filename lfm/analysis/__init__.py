@@ -28,10 +28,15 @@ from lfm.analysis.color import (
     color_variance,
 )
 from lfm.analysis.confinement import (
+    classify_potential,
     color_current_variance,
+    fit_cornell,
+    fit_coulomb,
+    fit_yukawa,
     flux_tube_profile,
     measure_chi_midpoint,
     smoothed_color_variance,
+    static_interaction_potential,
     string_tension,
 )
 from lfm.analysis.cosmology import (
