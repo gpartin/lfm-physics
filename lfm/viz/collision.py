@@ -36,7 +36,7 @@ __all__ = ["animate_collision_3d"]
 
 
 def _require_matplotlib() -> None:
-    import importlib
+    import importlib.util
 
     if importlib.util.find_spec("matplotlib") is None:
         raise ImportError(
