@@ -149,7 +149,7 @@ def animate_collision_3d(
     if len(snapshots) > max_frames:
         # Quadratic spacing: dense early (approach + collision), sparser late
         t = np.linspace(0.0, 1.0, max_frames)
-        raw_idx = np.round((t ** 2) * (len(snapshots) - 1)).astype(int)
+        raw_idx = np.round((t**2) * (len(snapshots) - 1)).astype(int)
         frame_idx = list(dict.fromkeys(raw_idx.tolist()))
     else:
         frame_idx = list(range(len(snapshots)))
@@ -169,12 +169,15 @@ def animate_collision_3d(
     # ── Figure layout ──────────────────────────────────────────────────
     fig = plt.figure(figsize=figsize, facecolor="#080810")
     gs = fig.add_gridspec(
-        2, 3,
+        2,
+        3,
         height_ratios=[3, 1],
         hspace=0.22,
         wspace=0.28,
-        left=0.04, right=0.97,
-        top=0.91, bottom=0.05,
+        left=0.04,
+        right=0.97,
+        top=0.91,
+        bottom=0.05,
     )
 
     ax_3d = fig.add_subplot(gs[0, :], projection="3d", computed_zorder=False)
@@ -215,24 +218,41 @@ def animate_collision_3d(
     # ── Draw initial particle positions ────────────────────────────────
     if pos_a is not None:
         ax_3d.scatter(
-            [pos_a[prop]], [pos_a[t1]], [pos_a[t2]],
-            marker="x", s=120, c="#4488ff", linewidths=2, zorder=10,
+            [pos_a[prop]],
+            [pos_a[t1]],
+            [pos_a[t2]],
+            marker="x",
+            s=120,
+            c="#4488ff",
+            linewidths=2,
+            zorder=10,
         )
-        ax_3d.text(pos_a[prop], pos_a[t1], pos_a[t2] + 3, "A",
-                   color="#4488ff", fontsize=8, ha="center")
+        ax_3d.text(
+            pos_a[prop], pos_a[t1], pos_a[t2] + 3, "A", color="#4488ff", fontsize=8, ha="center"
+        )
     if pos_b is not None:
         ax_3d.scatter(
-            [pos_b[prop]], [pos_b[t1]], [pos_b[t2]],
-            marker="x", s=120, c="#ff4444", linewidths=2, zorder=10,
+            [pos_b[prop]],
+            [pos_b[t1]],
+            [pos_b[t2]],
+            marker="x",
+            s=120,
+            c="#ff4444",
+            linewidths=2,
+            zorder=10,
         )
-        ax_3d.text(pos_b[prop], pos_b[t1], pos_b[t2] + 3, "B",
-                   color="#ff4444", fontsize=8, ha="center")
+        ax_3d.text(
+            pos_b[prop], pos_b[t1], pos_b[t2] + 3, "B", color="#ff4444", fontsize=8, ha="center"
+        )
 
     # ── Initialise 2-D panels ──────────────────────────────────────────
     # Chi cross-section along collision axis through centre
     chi_line_data = np.full(N, 19.0)
     (line_chi,) = ax_chi.plot(
-        range(N), chi_line_data, color="#3b82f6", lw=1.5,
+        range(N),
+        chi_line_data,
+        color="#3b82f6",
+        lw=1.5,
     )
     ax_chi.set_xlim(0, N)
     ax_chi.set_ylim(0, 20)
@@ -247,8 +267,12 @@ def animate_collision_3d(
     slc[t2] = mid
     ed_plane = ed_init[tuple(slc)]
     im_ed = ax_ed.imshow(
-        ed_plane.T, origin="lower", cmap="inferno", aspect="auto",
-        vmin=0, vmax=max(float(ed_plane.max()), 1e-10),
+        ed_plane.T,
+        origin="lower",
+        cmap="inferno",
+        aspect="auto",
+        vmin=0,
+        vmax=max(float(ed_plane.max()), 1e-10),
     )
     ax_ed.set_title("|Ψ|² cross-section", fontsize=9, pad=4)
     ax_ed.set_xlabel("Collision axis", fontsize=7)
@@ -257,7 +281,10 @@ def animate_collision_3d(
     # Radial energy profile from centre
     max_r = int(N * 0.45)
     (line_rad,) = ax_rad.plot(
-        range(max_r), np.zeros(max_r), color="#22c55e", lw=1.4,
+        range(max_r),
+        np.zeros(max_r),
+        color="#22c55e",
+        lw=1.4,
     )
     ax_rad.set_xlim(0, max_r)
     ax_rad.set_ylim(0, 1)
@@ -292,6 +319,7 @@ def animate_collision_3d(
         # Try to convert cupy → numpy
         try:
             import cupy
+
             if isinstance(arr, cupy.ndarray):
                 arr = cupy.asnumpy(arr)
         except ImportError:
@@ -345,8 +373,13 @@ def animate_collision_3d(
 
         dx, dy, dz = _disp_coords(coords)
         _scatter[0] = ax_3d.scatter(
-            dx, dy, dz,
-            c=colors, s=sizes, depthshade=True, linewidths=0,
+            dx,
+            dy,
+            dz,
+            c=colors,
+            s=sizes,
+            depthshade=True,
+            linewidths=0,
         )
 
         # Camera rotation
@@ -362,6 +395,7 @@ def animate_collision_3d(
         if chi_snap is not None:
             try:
                 import cupy as _cp
+
                 if isinstance(chi_snap, _cp.ndarray):
                     chi_snap = _cp.asnumpy(chi_snap)
             except ImportError:
@@ -379,13 +413,10 @@ def animate_collision_3d(
             phase_text.set_color("#22cc88")
 
         step_text.set_text(f"Step {step}")
-        info_text.set_text(
-            f"{len(coords):,} pts   frame {frame_num + 1}/{n_frames}"
-        )
+        info_text.set_text(f"{len(coords):,} pts   frame {frame_num + 1}/{n_frames}")
 
         # ── Chi cross-section panel ────────────────────────────────────
         if chi_snap is not None:
-            chi_idx = [mid] * 3  # start at centre
             chi_line = np.empty(N, dtype=np.float64)
             for k in range(N):
                 idx: list[Any] = [mid, mid, mid]
@@ -397,11 +428,11 @@ def animate_collision_3d(
             ax_chi.set_ylim(chi_lo, chi_hi)
 
         # ── Energy density cross-section ───────────────────────────────
-        ed_arr = abs_arr if _is_signed else arr
         # Re-fetch full field (we may have sub-sampled for scatter)
         full_abs = np.abs(snap[field]) if _is_signed else snap[field]
         try:
             import cupy as _cp2
+
             if isinstance(full_abs, _cp2.ndarray):
                 full_abs = _cp2.asnumpy(full_abs)
         except ImportError:
@@ -413,10 +444,12 @@ def animate_collision_3d(
         im_ed.set_clim(0, max(float(ed_plane.max()), 1e-10))
 
         # ── Radial energy profile (vectorised) ─────────────────────────
-        full_ed = full_abs ** 2 if _is_signed else full_abs
+        full_ed = full_abs**2 if _is_signed else full_abs
         bins = _dist_bins
         radial_e = np.bincount(
-            bins.ravel(), weights=full_ed.ravel(), minlength=max_r + 1,
+            bins.ravel(),
+            weights=full_ed.ravel(),
+            minlength=max_r + 1,
         )[:max_r].astype(np.float64)
         line_rad.set_ydata(radial_e)
         ax_rad.set_ylim(0, max(float(radial_e.max()), 1e-10) * 1.1)
@@ -425,7 +458,8 @@ def animate_collision_3d(
 
     # ── Create animation ───────────────────────────────────────────────
     anim = FuncAnimation(
-        fig, _update,
+        fig,
+        _update,
         frames=n_frames,
         interval=int(1000 / fps),
         blit=False,

@@ -61,29 +61,30 @@ __all__ = [
 
 # ── Default constants ──────────────────────────────────────────────────────
 _CHI0: float = 19.0
-_DT: float = 0.005               # small dt for accurate phase-gradient tracking
-_DEFAULT_SPEED: float = 0.10      # within Nyquist; max safe ~0.13c for χ₀=19
-_DEFAULT_AMPLITUDE: float = 3.0   # shallow chi-wells → solitons actually move
-_SIGMA_FRAC: float = 0.04        # soliton width as fraction of N
-_MIN_SIGMA: float = 5.0          # floor: sig<5 → Peierls-Nabarro pinning
-_SEPARATION_FRAC: float = 0.65   # particles start near edges, fly inward
-_BOUNDARY_FRAC: float = 0.10     # absorbing sponge layer fraction
+_DT: float = 0.005  # small dt for accurate phase-gradient tracking
+_DEFAULT_SPEED: float = 0.10  # within Nyquist; max safe ~0.13c for χ₀=19
+_DEFAULT_AMPLITUDE: float = 3.0  # shallow chi-wells → solitons actually move
+_SIGMA_FRAC: float = 0.04  # soliton width as fraction of N
+_MIN_SIGMA: float = 5.0  # floor: sig<5 → Peierls-Nabarro pinning
+_SEPARATION_FRAC: float = 0.65  # particles start near edges, fly inward
+_BOUNDARY_FRAC: float = 0.10  # absorbing sponge layer fraction
 
 
 # ── Geometry ───────────────────────────────────────────────────────────────
+
 
 @dataclass(frozen=True)
 class _CollisionGeometry:
     """Pre-computed positions for one collision experiment."""
 
     N: int
-    axis: int               # collision axis (0=x, 1=y, 2=z)
+    axis: int  # collision axis (0=x, 1=y, 2=z)
     pos_a: tuple[int, ...]  # particle A centre
     pos_b: tuple[int, ...]  # particle B centre
-    separation: int         # centre-to-centre distance (cells)
-    sigma: float            # Gaussian soliton width (cells)
-    amplitude: float        # soliton peak amplitude
-    speed: float            # approach speed per particle (units of c)
+    separation: int  # centre-to-centre distance (cells)
+    sigma: float  # Gaussian soliton width (cells)
+    amplitude: float  # soliton peak amplitude
+    speed: float  # approach speed per particle (units of c)
     chi0: float
     total_steps: int
     snap_every: int
@@ -223,6 +224,7 @@ class CollisionResult(ExperimentResult):
                 return 0.0
             try:
                 import cupy
+
                 if isinstance(ed, cupy.ndarray):
                     ed = cupy.asnumpy(ed)
             except ImportError:
@@ -234,8 +236,8 @@ class CollisionResult(ExperimentResult):
 
         # Compare peak vs last 10% of snapshots
         n = len(self.snapshots)
-        late = energies[max(0, n - n // 10):]
-        e_late = np.mean(late) if late else e_peak
+        late = energies[max(0, n - n // 10) :]
+        e_late = float(np.mean(late)) if late else e_peak
 
         if e_peak <= 0:
             return 0.0
@@ -276,9 +278,17 @@ class CollisionResult(ExperimentResult):
             indices = list(range(n))
 
         n_panels = len(indices)
-        gs = GridSpec(2, max(n_panels, 3), figure=fig,
-                      hspace=0.35, wspace=0.35,
-                      top=0.92, bottom=0.08, left=0.06, right=0.97)
+        gs = GridSpec(
+            2,
+            max(n_panels, 3),
+            figure=fig,
+            hspace=0.35,
+            wspace=0.35,
+            top=0.92,
+            bottom=0.08,
+            left=0.06,
+            right=0.97,
+        )
 
         # ── Row 1: Energy density slices along collision axis ──────────
         for i, idx in enumerate(indices):
@@ -344,9 +354,12 @@ class CollisionResult(ExperimentResult):
         if self.chi_min_history:
             info_lines.append(f"χ_min final: {self.chi_min_history[-1]:.2f}")
         ax_info.text(
-            0.1, 0.5, "\n".join(info_lines),
+            0.1,
+            0.5,
+            "\n".join(info_lines),
             transform=ax_info.transAxes,
-            fontsize=11, family="monospace",
+            fontsize=11,
+            family="monospace",
             verticalalignment="center",
         )
         ax_info.set_title("Experiment summary", fontsize=10)
@@ -460,13 +473,11 @@ def _build_collision_sim(
     )
     if not sol.converged:
         warnings.warn(
-            f"Eigenmode relaxation did not converge "
-            f"(chi_min={sol.chi_min:.3f}). Using best result."
+            f"Eigenmode relaxation did not converge (chi_min={sol.chi_min:.3f}). Using best result."
         )
     if verbose:
         print(
-            f"  Eigenmode ready: chi_min={sol.chi_min:.3f}  "
-            f"omega={sol.eigenvalue:.4f}",
+            f"  Eigenmode ready: chi_min={sol.chi_min:.3f}  omega={sol.eigenvalue:.4f}",
             flush=True,
         )
 
@@ -502,12 +513,20 @@ def _build_collision_sim(
     vel_b_t: tuple[float, float, float] = (vel_b[0], vel_b[1], vel_b[2])
 
     pr_a, pi_a, prp_a, pip_a, _ = boost_fields(
-        E_a, chi_a, vel_a_t,
-        dt=_DT, omega=sol.eigenvalue, chi0=geo.chi0,
+        E_a,
+        chi_a,
+        vel_a_t,
+        dt=_DT,
+        omega=sol.eigenvalue,
+        chi0=geo.chi0,
     )
     pr_b, pi_b, prp_b, pip_b, _ = boost_fields(
-        E_b, chi_b, vel_b_t,
-        dt=_DT, omega=sol.eigenvalue, chi0=geo.chi0,
+        E_b,
+        chi_b,
+        vel_b_t,
+        dt=_DT,
+        omega=sol.eigenvalue,
+        chi0=geo.chi0,
     )
 
     # ── Step 4: Apply charge phase (matter/antimatter) ─────────────
@@ -515,8 +534,7 @@ def _build_collision_sim(
         if abs(phase) < 1e-10:
             return pr, pi
         c, s = math.cos(phase), math.sin(phase)
-        return (pr * c - pi * s).astype(np.float32), \
-               (pr * s + pi * c).astype(np.float32)
+        return (pr * c - pi * s).astype(np.float32), (pr * s + pi * c).astype(np.float32)
 
     pr_a, pi_a = _apply_phase(pr_a, pi_a, phase_a)
     prp_a, pip_a = _apply_phase(prp_a, pip_a, phase_a)
@@ -537,7 +555,7 @@ def _build_collision_sim(
     K2[0, 0, 0] = 1.0  # avoid DC division
 
     def _poisson_chi(pr, pi):
-        e2 = pr.astype(np.float64)**2 + pi.astype(np.float64)**2
+        e2 = pr.astype(np.float64) ** 2 + pi.astype(np.float64) ** 2
         dchi_hat = -kappa * np.fft.fftn(e2) / K2
         dchi_hat[0, 0, 0] = 0.0
         chi = (geo.chi0 + np.fft.ifftn(dchi_hat).real).astype(np.float32)
@@ -589,6 +607,7 @@ def _run_physics(
     # Record initial energy before any evolution
     try:
         import cupy
+
         xp = cupy if isinstance(sim.energy_density, cupy.ndarray) else np
     except ImportError:
         xp = np
@@ -710,7 +729,11 @@ def collision(
 
     # ── Single-pass: physics + movie capture ───────────────────────────
     snaps, metrics, initial_energy, movie_snaps = _run_physics(
-        geo, particle_a, particle_b, verbose=verbose, animate=animate,
+        geo,
+        particle_a,
+        particle_b,
+        verbose=verbose,
+        animate=animate,
     )
 
     if verbose and metrics:
