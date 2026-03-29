@@ -61,12 +61,13 @@ __all__ = [
 
 # ── Default constants ──────────────────────────────────────────────────────
 _CHI0: float = 19.0
-_DT: float = 0.02
-_DEFAULT_SPEED: float = 0.30      # fast head-on collision, visually dramatic
-_DEFAULT_AMPLITUDE: float = 8.0   # deep chi-wells, well above structure threshold
+_DT: float = 0.005               # small dt for accurate phase-gradient tracking
+_DEFAULT_SPEED: float = 0.10      # within Nyquist; max safe ~0.13c for χ₀=19
+_DEFAULT_AMPLITUDE: float = 3.0   # shallow chi-wells → solitons actually move
 _SIGMA_FRAC: float = 0.04        # soliton width as fraction of N
-_SEPARATION_FRAC: float = 0.80   # start near opposite walls for dramatic collision
-_BOUNDARY_FRAC: float = 0.12     # sponge layer fraction
+_MIN_SIGMA: float = 5.0          # floor: sig<5 → Peierls-Nabarro pinning
+_SEPARATION_FRAC: float = 0.65   # particles start near edges, fly inward
+_BOUNDARY_FRAC: float = 0.10     # absorbing sponge layer fraction
 
 
 # ── Geometry ───────────────────────────────────────────────────────────────
@@ -102,7 +103,7 @@ def _compute_geometry(
     """Auto-compute collision geometry from grid size."""
     mid = N // 2
     sep = max(8, int(N * _SEPARATION_FRAC))
-    sigma = max(3.0, N * _SIGMA_FRAC)
+    sigma = max(_MIN_SIGMA, N * _SIGMA_FRAC)
 
     # Position both particles along collision axis, centred in transverse
     pos_a = [mid] * 3
@@ -206,15 +207,13 @@ class CollisionResult(ExperimentResult):
     def annihilation_fraction(self) -> float:
         """Fraction of initial localized energy that has been radiated.
 
-        Computed from early vs late energy in the central region.
+        Uses peak central-zone energy (at collision) vs late energy.
         A value near 1.0 means near-complete annihilation.
         """
         if not self.snapshots:
             return 0.0
 
         N = self.N
-        geo = self.geometry
-        # Define "collision zone" as central 1/4 of the grid
         lo = N // 4
         hi = 3 * N // 4
 
@@ -230,17 +229,17 @@ class CollisionResult(ExperimentResult):
                 pass
             return float(ed[lo:hi, lo:hi, lo:hi].sum())
 
-        # Compare first 10% and last 10% of snapshots
+        energies = [_central_energy(s) for s in self.snapshots]
+        e_peak = max(energies) if energies else 0.0
+
+        # Compare peak vs last 10% of snapshots
         n = len(self.snapshots)
-        early = self.snapshots[: max(1, n // 10)]
-        late = self.snapshots[max(0, n - n // 10):]
+        late = energies[max(0, n - n // 10):]
+        e_late = np.mean(late) if late else e_peak
 
-        e_early = np.mean([_central_energy(s) for s in early])
-        e_late = np.mean([_central_energy(s) for s in late])
-
-        if e_early <= 0:
+        if e_peak <= 0:
             return 0.0
-        return max(0.0, min(1.0, 1.0 - e_late / e_early))
+        return float(max(0.0, min(1.0, 1.0 - e_late / e_peak)))
 
     # ── Outputs ────────────────────────────────────────────────────────
 
@@ -420,18 +419,135 @@ def _build_collision_sim(
     geo: _CollisionGeometry,
     particle_a_name: str,
     particle_b_name: str,
+    verbose: bool = False,
 ) -> "_lfm_t.Simulation":
-    """Create and populate the simulation for a collision."""
+    """Create and populate the simulation for a collision.
+
+    Uses eigenmode relaxation + phase-gradient boost for physically
+    correct initial momentum (solitons actually move).
+
+    Algorithm
+    ---------
+    1. Relax eigenmode ONCE at grid centre via Poisson-relaxation cycling
+    2. Roll the converged fields to particle A and B positions
+    3. Apply charge phase (matter θ=0, antimatter θ=π)
+    4. Boost each with ``boost_fields()`` (complex phase gradient)
+    5. Superpose Ψ fields linearly; Poisson-solve combined χ
+    6. Inject into Simulation via field setters (bypasses place_soliton)
+    """
     import lfm
     from lfm.particles import get_particle
+    from lfm.particles.solver import relax_eigenmode, boost_fields
+    from lfm.constants import KAPPA
+    import warnings
 
     part_a = get_particle(particle_a_name)
     part_b = get_particle(particle_b_name)
 
-    # Determine field level from particles (at least COMPLEX for phase)
+    # Field level: at least COMPLEX for phase-gradient boost
     fl_int = max(part_a.field_level, part_b.field_level, 1)
     fl_map = {0: "real", 1: "complex", 2: "color"}
 
+    # ── Step 1: Relax eigenmode ONCE at grid centre ────────────────
+    if verbose:
+        print("  Relaxing eigenmode...", flush=True)
+    sol = relax_eigenmode(
+        N=geo.N,
+        amplitude=geo.amplitude,
+        sigma=geo.sigma,
+        chi0=geo.chi0,
+        verbose=verbose,
+    )
+    if not sol.converged:
+        warnings.warn(
+            f"Eigenmode relaxation did not converge "
+            f"(chi_min={sol.chi_min:.3f}). Using best result."
+        )
+    if verbose:
+        print(
+            f"  Eigenmode ready: chi_min={sol.chi_min:.3f}  "
+            f"omega={sol.eigenvalue:.4f}",
+            flush=True,
+        )
+
+    # ── Step 2: Roll eigenmode to each particle position ───────────
+    center = geo.N // 2
+    E_template = sol.psi_r
+    dchi_template = sol.chi - np.float32(geo.chi0)
+
+    def _roll_to(arr: np.ndarray, pos: tuple) -> np.ndarray:
+        out = arr
+        for ax in range(3):
+            shift = int(pos[ax]) - center
+            if shift != 0:
+                out = np.roll(out, shift, axis=ax)
+        return out
+
+    E_a = _roll_to(E_template, geo.pos_a)
+    chi_a = np.float32(geo.chi0) + _roll_to(dchi_template, geo.pos_a)
+
+    E_b = _roll_to(E_template, geo.pos_b)
+    chi_b = np.float32(geo.chi0) + _roll_to(dchi_template, geo.pos_b)
+
+    # ── Step 3: Boost each particle ────────────────────────────────
+    phase_a = float(getattr(part_a, "phase", 0.0))
+    phase_b = float(getattr(part_b, "phase", 0.0))
+
+    vel_a = [0.0, 0.0, 0.0]
+    vel_b = [0.0, 0.0, 0.0]
+    vel_a[geo.axis] = +geo.speed
+    vel_b[geo.axis] = -geo.speed
+
+    vel_a_t: tuple[float, float, float] = (vel_a[0], vel_a[1], vel_a[2])
+    vel_b_t: tuple[float, float, float] = (vel_b[0], vel_b[1], vel_b[2])
+
+    pr_a, pi_a, prp_a, pip_a, _ = boost_fields(
+        E_a, chi_a, vel_a_t,
+        dt=_DT, omega=sol.eigenvalue, chi0=geo.chi0,
+    )
+    pr_b, pi_b, prp_b, pip_b, _ = boost_fields(
+        E_b, chi_b, vel_b_t,
+        dt=_DT, omega=sol.eigenvalue, chi0=geo.chi0,
+    )
+
+    # ── Step 4: Apply charge phase (matter/antimatter) ─────────────
+    def _apply_phase(pr, pi, phase):
+        if abs(phase) < 1e-10:
+            return pr, pi
+        c, s = math.cos(phase), math.sin(phase)
+        return (pr * c - pi * s).astype(np.float32), \
+               (pr * s + pi * c).astype(np.float32)
+
+    pr_a, pi_a = _apply_phase(pr_a, pi_a, phase_a)
+    prp_a, pip_a = _apply_phase(prp_a, pip_a, phase_a)
+    pr_b, pi_b = _apply_phase(pr_b, pi_b, phase_b)
+    prp_b, pip_b = _apply_phase(prp_b, pip_b, phase_b)
+
+    # ── Step 5: Superpose Ψ fields ────────────────────────────────
+    psi_r_curr = pr_a + pr_b
+    psi_i_curr = pi_a + pi_b
+    psi_r_prev = prp_a + prp_b
+    psi_i_prev = pip_a + pip_b
+
+    # ── Step 6: Poisson-solve combined χ ───────────────────────────
+    kappa = KAPPA
+    kx = np.fft.fftfreq(geo.N) * 2.0 * np.pi
+    KX, KY, KZ = np.meshgrid(kx, kx, kx, indexing="ij")
+    K2 = KX**2 + KY**2 + KZ**2
+    K2[0, 0, 0] = 1.0  # avoid DC division
+
+    def _poisson_chi(pr, pi):
+        e2 = pr.astype(np.float64)**2 + pi.astype(np.float64)**2
+        dchi_hat = -kappa * np.fft.fftn(e2) / K2
+        dchi_hat[0, 0, 0] = 0.0
+        chi = (geo.chi0 + np.fft.ifftn(dchi_hat).real).astype(np.float32)
+        np.clip(chi, 0.1, geo.chi0, out=chi)
+        return chi
+
+    chi_curr = _poisson_chi(psi_r_curr, psi_i_curr)
+    chi_prev = _poisson_chi(psi_r_prev, psi_i_prev)
+
+    # ── Step 7: Create simulation and inject fields ────────────────
     cfg = ExperimentConfig(
         N=geo.N,
         chi0=geo.chi0,
@@ -445,33 +561,16 @@ def _build_collision_sim(
     )
     sim = build_sim(cfg)
 
-    # Phase: antimatter has phase=π, matter has phase=0
-    phase_a = float(getattr(part_a, "phase", 0.0))
-    phase_b = float(getattr(part_b, "phase", 0.0))
+    # Inject pre-computed fields (bypasses place_soliton entirely)
+    sim.set_psi_real(psi_r_curr)
+    sim.set_psi_imag(psi_i_curr)
+    sim.set_psi_real_prev(psi_r_prev)
+    sim.set_psi_imag_prev(psi_i_prev)
+    sim._evolver.set_chi_current(chi_curr)
+    sim._evolver.set_chi_prev(chi_prev)
 
-    # Velocity vectors: A moves +axis, B moves -axis → head-on
-    vel_a = [0.0, 0.0, 0.0]
-    vel_b = [0.0, 0.0, 0.0]
-    vel_a[geo.axis] = +geo.speed
-    vel_b[geo.axis] = -geo.speed
-
-    sim.place_soliton(
-        position=geo.pos_a,
-        amplitude=geo.amplitude,
-        sigma=geo.sigma,
-        phase=phase_a,
-        velocity=tuple(vel_a),
-    )
-    sim.place_soliton(
-        position=geo.pos_b,
-        amplitude=geo.amplitude,
-        sigma=geo.sigma,
-        phase=phase_b,
-        velocity=tuple(vel_b),
-    )
-
-    # No need to call sim.equilibrate() manually — the framework
-    # auto-equilibrates on first evolution if solitons were placed.
+    # Mark as fully prepared so auto-equilibrate is skipped
+    sim._equilibrated = True
 
     return sim
 
@@ -485,7 +584,7 @@ def _run_physics(
     animate: bool = False,
 ) -> tuple[list[dict], list[dict], float, list[dict]]:
     """Run physics + optional movie capture in a single pass."""
-    sim = _build_collision_sim(geo, particle_a, particle_b)
+    sim = _build_collision_sim(geo, particle_a, particle_b, verbose=verbose)
 
     # Record initial energy before any evolution
     try:
@@ -520,12 +619,12 @@ def _run_movie_pass(
     sim = _build_collision_sim(geo, particle_a, particle_b)
 
     # Capture initial frame
-    frames: list[dict] = [{"step": 0, "psi_real": sim.psi_real.copy()}]
+    frames: list[dict] = [{"step": 0, "energy_density": sim.energy_density.copy()}]
 
     snaps = sim.run_with_snapshots(
         steps=geo.movie_steps,
         snapshot_every=geo.movie_snap_every,
-        fields=["psi_real"],
+        fields=["energy_density"],
     )
     frames.extend(snaps)
     return frames

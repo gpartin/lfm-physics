@@ -106,6 +106,12 @@ Activates v15-style CCV term in GOV-02."""
 DT_DEFAULT: float = 0.02
 """Default timestep. Safe for both CFL and Mexican hat resolution."""
 
+DT_MOTION: float = 0.005
+"""Recommended timestep for moving solitons (4× finer than default).
+
+Leapfrog integration of boosted solitons requires smaller dt to
+maintain > 80% velocity retention across all particle types."""
+
 C_DEFAULT: float = 1.0
 """Wave speed in natural lattice units."""
 

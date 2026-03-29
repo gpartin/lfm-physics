@@ -90,6 +90,7 @@ from lfm.constants import (
     CHI0,
     D_ST,
     DT_DEFAULT,
+    DT_MOTION,
     E_AMPLITUDE_BY_GRID,
     EPSILON_CC,
     EPSILON_W,
@@ -239,8 +240,11 @@ from lfm.particles import (
     measure_momentum_density,
     measure_velocity,
     nuclear_chi_well,
+    relax_eigenmode,
     sigma_for_particle,
     solve_eigenmode,
+    ylm_seed,
+    boost_fields,
 )
 from lfm.planning import (
     FeasibilityReport,
@@ -278,6 +282,7 @@ __all__ = [
     "N_GENERATIONS",
     "N_EFOLDINGS",
     "DT_DEFAULT",
+    "DT_MOTION",
     "E_AMPLITUDE_BY_GRID",
     # S_a v16 constants
     "SA_GAMMA",
@@ -504,6 +509,10 @@ __all__ = [
     # Phase 2: Eigenmode solver
     "SolitonSolution",
     "solve_eigenmode",
+    # Phase 3: Relaxation solver + boost
+    "relax_eigenmode",
+    "ylm_seed",
+    "boost_fields",
     # Phase 3: Particle motion
     "boost_soliton_solution",
     "measure_center_of_energy",

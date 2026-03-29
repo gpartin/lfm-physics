@@ -61,10 +61,10 @@ _parser.add_argument("--grid", type=int, default=None, metavar="N",
 _parser.add_argument("--particles", nargs=2, default=["proton", "antiproton"],
                      metavar=("A", "B"),
                      help="Two particle names from catalog (default: proton antiproton)")
-_parser.add_argument("--speed", type=float, default=0.30,
-                     help="Approach speed per particle in units of c (default: 0.30)")
-_parser.add_argument("--amplitude", type=float, default=8.0,
-                     help="Soliton peak amplitude (default: 8.0)")
+_parser.add_argument("--speed", type=float, default=0.10,
+                     help="Approach speed per particle in units of c (default: 0.10)")
+_parser.add_argument("--amplitude", type=float, default=3.0,
+                     help="Soliton peak amplitude (default: 3.0, motion-safe)")
 _parser.add_argument("--no-anim", action="store_true",
                      help="Skip 3-D movie capture (faster)")
 args = _parser.parse_args()

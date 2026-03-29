@@ -251,6 +251,7 @@ DOUBLE_SLIT_PHYSICS_REPORT.md
 
 # --- Internal research directories (belong in Papers repo, not public) ---
 /paper_experiments/
+/experiments/
 /tools/
 /research/
 

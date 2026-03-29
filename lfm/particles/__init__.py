@@ -112,7 +112,13 @@ from lfm.particles.motion import (
     measure_momentum_density,
     measure_velocity,
 )
-from lfm.particles.solver import SolitonSolution, solve_eigenmode
+from lfm.particles.solver import (
+    SolitonSolution,
+    boost_fields,
+    relax_eigenmode,
+    solve_eigenmode,
+    ylm_seed,
+)
 
 __all__ = [
     "Particle",
@@ -203,6 +209,10 @@ __all__ = [
     # Phase 2: Eigenmode solver
     "SolitonSolution",
     "solve_eigenmode",
+    # Phase 3: Relaxation solver + boost
+    "relax_eigenmode",
+    "ylm_seed",
+    "boost_fields",
     # Phase 3: Particle motion
     "boost_soliton_solution",
     "measure_center_of_energy",

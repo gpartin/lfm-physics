@@ -30,6 +30,8 @@ if TYPE_CHECKING:
     from lfm.experiment.barrier import Barrier
     from lfm.experiment.detector import DetectorScreen
     from lfm.experiment.source import ContinuousSource
+    from lfm.particles.catalog import Particle
+    from lfm.particles.solver import SolitonSolution
 
 import numpy as np
 
@@ -75,6 +77,11 @@ class Simulation:
         # solitons, or forgetting to equilibrate entirely.
         self._solitons_placed: bool = False
         self._equilibrated: bool = False
+
+        # Velocity boosts registered by place_soliton().
+        # Each entry is (velocity, envelope²_field) so equilibrate() can
+        # compute the advective shift dχ/dt = −v·∇χ for moving wells.
+        self._velocity_boosts: list[tuple[tuple[float, float, float], NDArray]] = []
 
     @property
     def step(self) -> int:
@@ -265,6 +272,224 @@ class Simulation:
 
     # ── Field initialization ──────────────────────────────
 
+    def place_particle(
+        self,
+        name: "str | Particle",
+        position: tuple[float, float, float] | None = None,
+        velocity: tuple[float, float, float] | None = None,
+        amplitude: float | None = None,
+        sigma: float | None = None,
+    ) -> "SolitonSolution":
+        """Place a particle with proper eigenmode physics and optional motion.
+
+        This is the recommended way to add particles to a simulation.
+        It handles everything automatically:
+
+        1. **Eigenmode relaxation** — solves for a self-consistent bound
+           state (standing wave in its own χ-well) using alternating
+           Poisson / imaginary-time relaxation.
+        2. **Phase-gradient boost** — encodes momentum as a spatial phase
+           gradient Ψ → Ψ·exp(ik·x), giving the soliton a nonzero
+           group velocity.
+        3. **Charge phase** — applies the particle's intrinsic phase
+           (θ = 0 for matter, θ = π for antimatter).
+        4. **Superposition** — adds to any existing field, so you can
+           place multiple particles by calling this method repeatedly.
+        5. **χ equilibration** is deferred to :meth:`equilibrate` (called
+           automatically by :meth:`run`), which Poisson-solves χ from
+           the combined |Ψ|² of all placed particles.
+
+        Parameters
+        ----------
+        name : str or Particle
+            Particle name (``"electron"``, ``"proton"``, ``"positron"``,
+            etc.) or a :class:`~lfm.particles.catalog.Particle` instance.
+        position : (x, y, z) or None
+            Centre in grid coordinates. Defaults to grid centre.
+        velocity : (vx, vy, vz) or None
+            Velocity in units of c (e.g. ``(0, 0, 0.1)`` for 0.1c along z).
+            If ``None`` the particle is placed at rest.
+        amplitude : float or None
+            Override the eigenmode seed amplitude. If ``None``, chosen
+            automatically: shallow well (3.0) for moving particles,
+            catalog default for stationary ones.
+        sigma : float or None
+            Override the eigenmode seed width. If ``None``, chosen
+            automatically: ≥ 5 cells for moving particles to avoid
+            lattice pinning.
+
+        Returns
+        -------
+        SolitonSolution
+            The converged eigenmode (before boost/roll). Useful for
+            inspecting χ_min, eigenvalue ω, convergence, etc.
+
+        Examples
+        --------
+        Electron at rest in the centre:
+
+        >>> sim.place_particle("electron")
+
+        Proton–antiproton collision:
+
+        >>> sim.place_particle("proton",   (32, 32, 24), velocity=(0, 0, 0.1))
+        >>> sim.place_particle("antiproton", (32, 32, 40), velocity=(0, 0, -0.1))
+        >>> sim.run(steps=10_000)
+        """
+        import math as _math
+
+        from lfm.particles.catalog import (
+            Particle,
+            amplitude_for_particle,
+            get_particle,
+            sigma_for_particle,
+        )
+        from lfm.particles.solver import boost_fields, relax_eigenmode
+
+        # --- Resolve particle ---
+        if isinstance(name, str):
+            particle: Particle = get_particle(name)
+        else:
+            particle = name
+
+        N = self.config.grid_size
+        center = N // 2
+        chi0 = self.config.chi0
+        kappa = self.config.kappa
+        dt = self.config.dt
+
+        if position is None:
+            position = (float(center), float(center), float(center))
+
+        has_velocity = (
+            velocity is not None
+            and sum(v**2 for v in velocity) > 1e-20
+        )
+
+        # --- Choose amplitude and sigma ---
+        # Moving particles need shallow wells to avoid Peierls-Nabarro
+        # lattice pinning.  Stationary particles use deeper catalog defaults.
+        _MOTION_AMP = 0.5
+        _MOTION_SIGMA_MIN = 12.0
+
+        if amplitude is None:
+            if has_velocity:
+                amplitude = _MOTION_AMP
+            else:
+                amplitude = amplitude_for_particle(particle, N)
+
+        if sigma is None:
+            if has_velocity:
+                sigma = max(_MOTION_SIGMA_MIN, N / 5.3)
+            else:
+                sigma = sigma_for_particle(particle, N)
+                sigma = max(sigma, 5.0)
+
+        # --- Validate timestep for motion ---
+        if has_velocity:
+            from lfm.constants import DT_MOTION
+
+            if dt > DT_MOTION * 1.01:
+                import warnings
+
+                warnings.warn(
+                    f"Moving particles need a fine timestep for accurate "
+                    f"motion.  Current dt={dt} but recommended "
+                    f"dt={DT_MOTION}.  Create the simulation with "
+                    f"SimulationConfig(dt={DT_MOTION}) for reliable "
+                    f"velocity retention (>80%).",
+                    stacklevel=2,
+                )
+
+        # --- Ensure complex field level for moving or charged particles ---
+        needs_complex = has_velocity or abs(particle.phase) > 1e-10
+        if needs_complex and self.config.field_level == FieldLevel.REAL:
+            raise ValueError(
+                "Moving or charged particles require field_level=COMPLEX. "
+                "Create the simulation with "
+                "SimulationConfig(field_level=FieldLevel.COMPLEX)."
+            )
+
+        # --- Step 1: Relax eigenmode at grid centre ---
+        sol = relax_eigenmode(
+            N=N,
+            amplitude=amplitude,
+            sigma=sigma,
+            chi0=chi0,
+            kappa=kappa,
+        )
+
+        # --- Step 2: Roll eigenmode to target position ---
+        E = sol.psi_r.copy()
+        for ax in range(3):
+            shift = int(position[ax]) - center
+            if shift != 0:
+                E = np.roll(E, shift, axis=ax)
+
+        chi_local = np.full_like(E, chi0)
+        dchi = sol.chi - np.float32(chi0)
+        for ax in range(3):
+            shift = int(position[ax]) - center
+            if shift != 0:
+                dchi = np.roll(dchi, shift, axis=ax)
+        chi_local = np.float32(chi0) + dchi
+
+        # --- Step 3: Boost if moving ---
+        if has_velocity:
+            assert velocity is not None  # mypy narrowing
+            pr_c, pi_c, pr_p, pi_p, _ = boost_fields(
+                E, chi_local, velocity,
+                dt=dt, omega=sol.eigenvalue, chi0=chi0,
+            )
+        else:
+            pr_c = E
+            pi_c = np.zeros_like(E)
+            # Stationary eigenmode: ψ(−Δt) = ψ(0)·cos(ωΔt)
+            if sol.eigenvalue and sol.eigenvalue > 0:
+                cos_wdt = float(_math.cos(sol.eigenvalue * dt))
+                pr_p = (E * cos_wdt).astype(np.float32)
+            else:
+                pr_p = E.copy()
+            pi_p = np.zeros_like(E)
+
+        # --- Step 4: Apply charge phase ---
+        phase = float(particle.phase)
+        if abs(phase) > 1e-10:
+            cos_p = _math.cos(phase)
+            sin_p = _math.sin(phase)
+            pr_c2 = (pr_c * cos_p - pi_c * sin_p).astype(np.float32)
+            pi_c2 = (pr_c * sin_p + pi_c * cos_p).astype(np.float32)
+            pr_p2 = (pr_p * cos_p - pi_p * sin_p).astype(np.float32)
+            pi_p2 = (pr_p * sin_p + pi_p * cos_p).astype(np.float32)
+            pr_c, pi_c, pr_p, pi_p = pr_c2, pi_c2, pr_p2, pi_p2
+
+        # --- Step 5: Superpose onto existing fields ---
+        # Current buffers (t = 0)
+        old_r = self._evolver.get_psi_real()
+        self._evolver.set_psi_real_current(old_r + pr_c)
+
+        old_r_prev = self._evolver.get_psi_real_prev()
+        self._evolver.set_psi_real_prev(old_r_prev + pr_p)
+
+        if self.config.field_level != FieldLevel.REAL:
+            old_i = self._evolver.get_psi_imag()
+            if old_i is not None:
+                self._evolver.set_psi_imag_current(old_i + pi_c)
+            old_i_prev = self._evolver.get_psi_imag_prev()
+            if old_i_prev is not None:
+                self._evolver.set_psi_imag_prev(old_i_prev + pi_p)
+
+        # --- Step 6: Record state for equilibrate() ---
+        self._solitons_placed = True
+        self._equilibrated = False
+
+        if has_velocity:
+            assert velocity is not None  # mypy narrowing
+            envelope_sq = pr_c ** 2 + pi_c ** 2
+            self._velocity_boosts.append((velocity, envelope_sq))
+
+        return sol
+
     def place_soliton(
         self,
         position: tuple[float, float, float],
@@ -301,20 +526,36 @@ class Simulation:
         >>> sim.place_soliton((32, 22, 32), amplitude=4.0, phase=0.0)     # e⁻
         >>> sim.place_soliton((32, 42, 32), amplitude=4.0, phase=3.1416)  # e⁺
 
-        Moving soliton with velocity 0.3c along the x-axis:
+        Moving soliton with velocity 0.1c along the x-axis:
 
         >>> sim.place_soliton((32, 32, 32), amplitude=5.0,
-        ...                   velocity=(0.3, 0.0, 0.0))
+        ...                   velocity=(0.1, 0.0, 0.0))
         """
         N = self.config.grid_size
         amp = amplitude if amplitude is not None else self.config.e_amplitude
         sig = sigma if sigma is not None else self.config.sigma
 
         if velocity is not None:
-            # Velocity boost: spatial phase k·(∂r − r₀), k = χ₀·v/c
+            import math as _math
+
             vx, vy, vz = velocity
             chi0 = self.config.chi0
             c = self.config.c
+            dt = self.config.dt
+
+            # Nyquist guard: carrier k must not exceed 80% of lattice Nyquist
+            speed = _math.sqrt(vx**2 + vy**2 + vz**2)
+            k_carrier = chi0 * speed / c
+            k_nyquist = _math.pi
+            if k_carrier > 0.8 * k_nyquist:
+                v_max = 0.8 * k_nyquist * c / chi0
+                raise ValueError(
+                    f"Velocity |v|={speed:.4f}c gives carrier "
+                    f"k={k_carrier:.2f} rad/cell, exceeding 80% of Nyquist "
+                    f"limit ({0.8 * k_nyquist:.2f} rad/cell). "
+                    f"Maximum safe speed is {v_max:.4f}c."
+                )
+
             kx = chi0 * vx / c
             ky = chi0 * vy / c
             kz = chi0 * vz / c
@@ -322,19 +563,30 @@ class Simulation:
             x = np.arange(N, dtype=np.float32)
             X, Y, Z = np.meshgrid(x, x, x, indexing="ij")
             px, py, pz = position
+
+            # --- t = 0: envelope centred at r₀ ---
             r2 = (X - px) ** 2 + (Y - py) ** 2 + (Z - pz) ** 2
             envelope = (amp * np.exp(-r2 / (2.0 * sig**2))).astype(np.float32)
             phase_grid = (phase + kx * (X - px) + ky * (Y - py) + kz * (Z - pz)).astype(np.float32)
             pr = (envelope * np.cos(phase_grid)).astype(np.float32)
             pi = (envelope * np.sin(phase_grid)).astype(np.float32)
 
-            # Ψ(t=−Δt) = envelope × exp(i(k·(r−r₀) + ω·Δt))
-            # This gives dΨ/dt = −iω·Ψ at t=0, correctly initialising the
-            # traveling wave so the leapfrog propagates the packet forward.
+            # --- t = −Δt: envelope shifted back by v·Δt ---
+            # Both the Gaussian centre AND the phase reference point move
+            # back by one timestep so that |Ψ_prev|² is centred at
+            # r₀ − v·Δt.  This gives the χ-well a nonzero time derivative
+            # after equilibration (the well tracks the soliton).
+            px_prev = px - vx * dt
+            py_prev = py - vy * dt
+            pz_prev = pz - vz * dt
+            r2_prev = (X - px_prev) ** 2 + (Y - py_prev) ** 2 + (Z - pz_prev) ** 2
+            envelope_prev = (amp * np.exp(-r2_prev / (2.0 * sig**2))).astype(np.float32)
             omega = float(np.sqrt(kx**2 + ky**2 + kz**2 + chi0**2))
-            phase_prev = (phase_grid + omega * self.config.dt).astype(np.float32)
-            pr_prev = (envelope * np.cos(phase_prev)).astype(np.float32)
-            pi_prev = (envelope * np.sin(phase_prev)).astype(np.float32)
+            phase_prev = (
+                phase + kx * (X - px_prev) + ky * (Y - py_prev) + kz * (Z - pz_prev) + omega * dt
+            ).astype(np.float32)
+            pr_prev = (envelope_prev * np.cos(phase_prev)).astype(np.float32)
+            pi_prev = (envelope_prev * np.sin(phase_prev)).astype(np.float32)
         else:
             pr, pi = gaussian_soliton(N, position, amp, sig, phase)
             pr_prev = pr
@@ -363,6 +615,12 @@ class Simulation:
 
         self._solitons_placed = True
         self._equilibrated = False  # needs re-equilibration after new soliton
+
+        # Record velocity boost so equilibrate() can initialise dχ/dt ≠ 0.
+        if velocity is not None:
+            # envelope² is the |Ψ|² contribution of this soliton alone
+            # (used as weight to localise the velocity field).
+            self._velocity_boosts.append(((vx, vy, vz), envelope ** 2))
 
     def place_solitons(
         self,
@@ -561,7 +819,7 @@ class Simulation:
         if self.config.boundary_type == BoundaryType.FROZEN:
             bmask = ~make_interior_mask(self.config.grid_size, self.config.boundary_fraction)
 
-        chi = equilibrate_from_fields(
+        chi_eq = equilibrate_from_fields(
             pr,
             pi,
             chi0=self.config.chi0,
@@ -569,7 +827,40 @@ class Simulation:
             e0_sq=self.config.e0_sq,
             boundary_mask=bmask,
         )
-        self._evolver.set_chi(chi)
+
+        if self._velocity_boosts:
+            # Moving solitons: set chi_current = chi_eq, then compute
+            # chi_prev via advective shift dχ/dt = −v·∇χ  so the well
+            # co-moves with the soliton from the very first leapfrog step.
+            self._evolver.set_chi_current(chi_eq)
+
+            # Gradient of the equilibrium chi field
+            grad_x = np.gradient(chi_eq, axis=0).astype(np.float32)
+            grad_y = np.gradient(chi_eq, axis=1).astype(np.float32)
+            grad_z = np.gradient(chi_eq, axis=2).astype(np.float32)
+
+            # Build density-weighted velocity field from all boosted solitons:
+            #   v(r) = Σ_i v_i·ρ_i(r) / Σ_i ρ_i(r)
+            N = self.config.grid_size
+            v_dot_grad = np.zeros((N, N, N), dtype=np.float32)
+            for (vx, vy, vz), rho in self._velocity_boosts:
+                v_dot_grad += rho * (vx * grad_x + vy * grad_y + vz * grad_z)
+            total_rho: np.ndarray = sum(rho for _, rho in self._velocity_boosts)  # type: ignore[assignment]
+            mask = total_rho > 1e-10 * total_rho.max()
+            v_dot_grad[mask] /= total_rho[mask]
+            v_dot_grad[~mask] = 0.0
+
+            # chi_prev = chi_eq + dt·(v·∇χ)  (note sign: prev is one step
+            # BEFORE current, so the well was shifted backward)
+            dt = self.config.dt
+            chi_prev = chi_eq + dt * v_dot_grad
+            self._evolver.set_chi_prev(chi_prev)
+
+            self._velocity_boosts.clear()
+        else:
+            # Static solitons: old behaviour, chi_prev = chi_current.
+            self._evolver.set_chi(chi_eq)
+
         self._equilibrated = True
 
     def _auto_equilibrate(self) -> None:

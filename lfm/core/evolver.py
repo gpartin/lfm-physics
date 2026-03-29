@@ -321,6 +321,28 @@ class Evolver:
             return flat.reshape(self.config.n_colors, self.N, self.N, self.N)
         return flat.reshape(self.N, self.N, self.N)
 
+    def get_psi_real_prev(self) -> NDArray[np.float32]:
+        """Get previous-timestep Ψ_real as numpy, same shape as get_psi_real."""
+        if self._use_buffer_A:
+            flat = self.backend.to_numpy(self.psi_r_prev_A)
+        else:
+            flat = self.backend.to_numpy(self.psi_r_prev_B)
+        if self.config.field_level == FieldLevel.COLOR:
+            return flat.reshape(self.config.n_colors, self.N, self.N, self.N)
+        return flat.reshape(self.N, self.N, self.N)
+
+    def get_psi_imag_prev(self) -> NDArray[np.float32] | None:
+        """Get previous-timestep Ψ_imag. None for REAL field level."""
+        if not self._has_imag:
+            return None
+        if self._use_buffer_A:
+            flat = self.backend.to_numpy(self.psi_i_prev_A)
+        else:
+            flat = self.backend.to_numpy(self.psi_i_prev_B)
+        if self.config.field_level == FieldLevel.COLOR:
+            return flat.reshape(self.config.n_colors, self.N, self.N, self.N)
+        return flat.reshape(self.N, self.N, self.N)
+
     def get_energy_density(self) -> NDArray[np.float32]:
         """Compute |Ψ|² = Σₐ(Pr² + Pi²), shape (N, N, N)."""
         pr = self.get_psi_real()
@@ -443,7 +465,7 @@ class Evolver:
             np.copyto(buf, data)
 
     def set_chi(self, arr: NDArray) -> None:
-        """Set χ field on both buffers. Shape (N, N, N)."""
+        """Set χ field on all four buffers (current + prev). Shape (N, N, N)."""
         flat = arr.astype(np.float32).ravel()
         data = self.backend.from_numpy(flat)
         for buf in [self.chi_A, self.chi_B]:
@@ -451,6 +473,31 @@ class Evolver:
                 buf[:] = data
             else:
                 np.copyto(buf, data)
+        for buf in [self.chi_prev_A, self.chi_prev_B]:
+            if hasattr(buf, "copy_"):
+                buf[:] = data
+            else:
+                np.copyto(buf, data)
+
+    def set_chi_current(self, arr: NDArray) -> None:
+        """Set *only* the current-timestep χ buffers."""
+        flat = arr.astype(np.float32).ravel()
+        data = self.backend.from_numpy(flat)
+        for buf in [self.chi_A, self.chi_B]:
+            if hasattr(buf, "copy_"):
+                buf[:] = data
+            else:
+                np.copyto(buf, data)
+
+    def set_chi_prev(self, arr: NDArray) -> None:
+        """Set *only* the previous-timestep χ buffers.
+
+        Call after :meth:`set_chi_current` to give the χ field a nonzero
+        time derivative (dχ/dt ≠ 0), essential for moving the χ-well of
+        a velocity-boosted soliton.
+        """
+        flat = arr.astype(np.float32).ravel()
+        data = self.backend.from_numpy(flat)
         for buf in [self.chi_prev_A, self.chi_prev_B]:
             if hasattr(buf, "copy_"):
                 buf[:] = data
