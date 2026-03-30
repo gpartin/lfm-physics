@@ -22,6 +22,15 @@ if TYPE_CHECKING:
 
     from lfm.simulation import Simulation
 
+
+def _psi_imag_or_zeros(sim: Simulation) -> NDArray[np.floating]:
+    """Return ``sim.psi_imag`` or a zero array of matching shape."""
+    pi = sim.psi_imag
+    if pi is not None:
+        return pi
+    return np.zeros_like(sim.psi_real)
+
+
 # ── Snapshot measurements ──────────────────────────────────────────────
 
 
@@ -62,12 +71,13 @@ def measure_color_fraction(
     """
     from lfm.analysis.color import color_variance
 
-    result = color_variance(sim.psi_real, sim.psi_imag)
+    psi_i = _psi_imag_or_zeros(sim)
+    result = color_variance(sim.psi_real, psi_i)
     fc: NDArray = result["f_c"]  # type: ignore[assignment]
     if point is not None:
         return float(fc[point])
     # Average over region where |Ψ|² is significant
-    psi_sq = sim.psi_real**2 + sim.psi_imag**2
+    psi_sq = sim.psi_real**2 + psi_i**2
     if psi_sq.ndim == 4:
         psi_sq = psi_sq.sum(axis=0)
     mask = psi_sq > 0.01 * psi_sq.max()
@@ -88,7 +98,7 @@ def measure_phase_winding(
     """
     from lfm.analysis.phase import phase_field
 
-    theta = phase_field(sim.psi_real, sim.psi_imag)
+    theta = phase_field(sim.psi_real, _psi_imag_or_zeros(sim))
     if theta.ndim == 4:
         theta = theta[0]  # first color component
     cx, cy, cz = center
@@ -124,7 +134,8 @@ def measure_chi_at_peak(sim: Simulation) -> float:
     """χ value at the brightest |Ψ|² peak (effective mass of the soliton)."""
     from lfm.analysis.observables import find_peaks
 
-    psi_sq = sim.psi_real**2 + sim.psi_imag**2
+    psi_i = _psi_imag_or_zeros(sim)
+    psi_sq = sim.psi_real**2 + psi_i**2
     if psi_sq.ndim == 4:
         psi_sq = psi_sq.sum(axis=0)
     peaks = find_peaks(psi_sq, n=1)
@@ -186,7 +197,7 @@ def measure_lifetime(
     """
     i, j, k = probe
     psi_r = sim.psi_real
-    psi_i = sim.psi_imag
+    psi_i = _psi_imag_or_zeros(sim)
     idx = (0, i, j, k) if psi_r.ndim == 4 else (i, j, k)
     initial = float(psi_r[idx] ** 2 + psi_i[idx] ** 2)
     if initial < 1e-30:
@@ -198,7 +209,8 @@ def measure_lifetime(
         batch = min(sample_interval, steps - total_run)
         sim.run(steps=batch, record_metrics=False)
         total_run += batch
-        current = float(sim.psi_real[idx] ** 2 + sim.psi_imag[idx] ** 2)
+        psi_i = _psi_imag_or_zeros(sim)
+        current = float(sim.psi_real[idx] ** 2 + psi_i[idx] ** 2)
         if current < threshold:
             return total_run
 
@@ -219,7 +231,8 @@ def measure_scattering_angle(
     positions: list[list[tuple[int, int, int]]] = []
     for _ in range(steps // max(sample_interval, 1)):
         sim.run(steps=sample_interval, record_metrics=False)
-        psi_sq = sim.psi_real**2 + sim.psi_imag**2
+        psi_i = _psi_imag_or_zeros(sim)
+        psi_sq = sim.psi_real**2 + psi_i**2
         if psi_sq.ndim == 4:
             psi_sq = psi_sq.sum(axis=0)
         peaks = find_peaks(psi_sq, n=2, min_separation=3)

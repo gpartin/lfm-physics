@@ -66,21 +66,37 @@ Everything in LFM follows from two coupled wave equations evaluated on a
 Ψⁿ⁺¹ = 2Ψⁿ − Ψⁿ⁻¹ + Δt²[ c²∇²Ψⁿ − (χⁿ)²Ψⁿ ]
 ```
 
-**GOV-02** — substrate field equation (complete, v14):
+**GOV-02** — substrate field equation (complete, v17):
 
 ```
 χⁿ⁺¹ = 2χⁿ − χⁿ⁻¹ + Δt²[ c²∇²χⁿ
         − κ(Σₐ|Ψₐⁿ|² + ε_W·jⁿ − E₀²)          ← gravity + weak
         − 4λ_H·χⁿ((χⁿ)² − χ₀²)                  ← Higgs self-interaction
-        − κ_c·f_c·Σₐ|Ψₐⁿ|² ]                     ← color screening
+        − κ_c·f_c·Σₐ|Ψₐⁿ|²                       ← color screening (v14)
+        − ε_cc·χ²·(Ψₐ − Ψ̄)  (in GOV-01)         ← cross-color coupling (v15)
+        − κ_string·CCV·Σₐ|Ψₐⁿ|²                  ← color current variance (v16)
+        − κ_tube·SCV·Σₐ|Ψₐⁿ|² ]                  ← flux tube confinement (v17)
 ```
+
+**S_a auxiliary** — Helmholtz-smoothed color density (v17):
+
+```
+(γ + D·k²) S̃ₐ(k) = γ · FT[|Ψₐ|²](k)
+
+SCV = [Σₐ S̃ₐ² / (Σₐ S̃ₐ)²] − 1/3     (smoothed color variance)
+```
+
+All five S_a parameters are derived from χ₀ = 19:
+γ = ε_W = 0.1, L = β₀ = 7, D = γL² = 4.9, κ_tube = 30κ ≈ 0.476.
 
 | Term | Force | What it does |
 |------|-------|--------------|
 | `κ·Σ\|Ψ\|²` | **Gravity** | Energy density creates χ wells — waves curve toward low χ |
 | `ε_W·j` | **Weak** | Momentum current j breaks parity symmetry in χ |
 | `4λ_H·χ(χ²−χ₀²)` | **Higgs** | Mexican-hat potential makes χ₀ = 19 a dynamical attractor |
-| `κ_c·f_c·Σ\|Ψ\|²` | **Strong** | Color variance f_c gives extra χ deepening for non-singlet states |
+| `κ_c·f_c·Σ\|Ψ\|²` | **Strong (screening)** | Color variance f_c gives extra χ deepening for non-singlet states |
+| `ε_cc·χ²·(Ψₐ−Ψ̄)` | **Strong (mixing)** | Cross-color coupling: equalises colors, favours hadrons over quarks |
+| `κ_tube·SCV` | **Strong (confinement)** | Helmholtz-smoothed color variance → linear potential between quarks |
 | Phase interference | **EM** | Same phase → constructive → repel; opposite → destructive → attract |
 
 ### Field Levels
@@ -92,13 +108,14 @@ Everything in LFM follows from two coupled wave equations evaluated on a
 | `COLOR` | Ψₐ ∈ ℂ³ | 3 complex | All four | Full multi-force simulations |
 
 ```python
-# Gravity-only cosmology (fastest)
+# Config presets (recommended) — one call, all parameters set correctly:
+cfg = lfm.gravity_only(grid_size=128)   # Real E, κ only
+cfg = lfm.gravity_em(grid_size=64)      # Complex Ψ, κ + phase
+cfg = lfm.full_physics(grid_size=64)    # Color Ψₐ, all v17 terms
+
+# Or manual field-level selection:
 cfg = lfm.SimulationConfig(grid_size=128, field_level=lfm.FieldLevel.REAL)
-
-# Electromagnetism + gravity
 cfg = lfm.SimulationConfig(grid_size=64, field_level=lfm.FieldLevel.COMPLEX)
-
-# All four forces
 cfg = lfm.SimulationConfig(grid_size=64, field_level=lfm.FieldLevel.COLOR)
 ```
 
@@ -110,9 +127,14 @@ cfg = lfm.SimulationConfig(grid_size=64, field_level=lfm.FieldLevel.COLOR)
 | `KAPPA` | κ | 1/63 ≈ 0.0159 | Unit coupling on 4³ − 1 = 63 modes |
 | `LAMBDA_H` | λ_H | 4/31 ≈ 0.129 | z₂ lattice geometry |
 | `EPSILON_W` | ε_W | 2/(χ₀+1) = 0.1 | Weak mixing angle factorisation |
-| `KAPPA_C` | κ_c | κ/3 = 1/189 | Color variance coupling |
+| `KAPPA_C` | κ_c | κ/3 = 1/189 | Color variance coupling (v14) |
 | `ALPHA_S` | α_s | 2/17 ≈ 0.118 | Strong coupling at M_Z |
-| `EPSILON_CC` | ε_cc | 2/17 | Cross-color coupling (GOV-01 v15) |
+| `EPSILON_CC` | ε_cc | 2/17 | Cross-color coupling (v15) |
+| `KAPPA_STRING` | κ_string | κ_c = 1/189 | CCV string coupling (v16) |
+| `KAPPA_TUBE` | κ_tube | 30κ ≈ 0.476 | SCV flux tube coupling (v17) |
+| `SA_GAMMA` | γ | ε_W = 0.1 | Helmholtz decay rate |
+| `SA_L` | L | β₀ = 7 | Flux tube coherence length |
+| `SA_D` | D | γL² = 4.9 | Helmholtz diffusion coefficient |
 | `ALPHA_EM` | α | 11/(480π) ≈ 1/137.1 | Fine-structure constant |
 | `OMEGA_LAMBDA` | Ω_Λ | 13/19 ≈ 0.684 | Dark energy fraction |
 | `OMEGA_MATTER` | Ω_m | 6/19 ≈ 0.316 | Matter fraction |
@@ -150,21 +172,23 @@ python 14_strong_force.py       # all four forces active
 
 ## Particle Physics
 
-The `lfm.particles` sub-package provides a catalog of 15 Standard-Model-like
-particles, an SCF eigenmode solver, and a one-call factory that drops a
+The `lfm.particles` sub-package provides a catalog of 69 particles
+(all Standard Model fermions, gauge bosons, and common hadrons),
+an SCF eigenmode solver, and a one-call factory that drops a
 physically correct soliton into a ready-to-run simulation.
 
 ### Particle Catalog
 
 ```python
-import lfm
+from lfm.particles.catalog import PARTICLES, get_particle
 
-# List all 15 particles with quantum numbers
-for name, p in lfm.PARTICLE_CATALOG.items():
-    print(f"{name:12s}  mass_ratio={p.mass_ratio:.1f}  l={p.l}  gen={p.generation}")
-# electron, positron, muon, antimuon, tau, antitau
-# up, down, strange, charm, bottom, top
-# proton, neutron, pion
+# List all 69 particles with quantum numbers
+for name, p in PARTICLES.items():
+    print(f"{name:16s}  mass_ratio={p.mass_ratio:10.1f}  l={p.l}  charge={p.charge}")
+# electron, positron, muon, antimuon, tau, antitau,
+# up, down, strange, charm, bottom, top (+ antiparticles),
+# proton, neutron, pion±/⁰, kaon, D, B, Λ, Σ, Ξ, Ω, ...
+# W±, Z, Higgs, photon, gluon, neutrinos
 ```
 
 See [examples/24_particle_catalog.py](examples/24_particle_catalog.py) for the full table.
