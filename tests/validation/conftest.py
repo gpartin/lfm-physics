@@ -34,9 +34,10 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
 # Default grid / step budget — small enough for fast CI.
 GRID = 32
+GRID_TWO = 48  # Larger grid for two-particle interaction tests.
 STEPS = 500  # Enough to confirm soliton survival (profiled: retention >9× at 500).
 WARMUP = 2  # Steps needed so that psi_real_prev is populated.
-BACKEND = "cpu"  # Force NumPy — avoids CuPy DLL issues in CI.
+BACKEND = "auto"  # Use GPU when available (CuPy + CUDA libs installed).
 
 
 # ---------------------------------------------------------------------------
