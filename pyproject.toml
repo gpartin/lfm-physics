@@ -68,6 +68,8 @@ testpaths = ["tests"]
 addopts = "-v --tb=short"
 markers = [
     "gpu: requires NVIDIA GPU with CuPy installed (skipped in CPU-only CI)",
+    "slow: long-running tests (e.g. full 69-particle sweep)",
+    "validation: particle-validation test suite (Phase 1+)",
 ]
 
 [tool.ruff]

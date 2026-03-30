@@ -208,7 +208,7 @@ For each particle: place it alone, evolve GOV-01/GOV-02, measure if it persists 
 
 ### Task 1.1: Electron Stability & Mass
 **File**: `tests/validation/test_electron.py`
-**Status**: [ ] TODO
+**Status**: [x] DONE
 **Depends on**: Phase 0
 
 **Setup**: `gravity_em()` config, place electron (phase=0, field_level=1) at center of N=64 grid.
@@ -227,7 +227,7 @@ For each particle: place it alone, evolve GOV-01/GOV-02, measure if it persists 
 
 ### Task 1.2: Positron Stability & Charge Sign
 **File**: `tests/validation/test_positron.py`
-**Status**: [ ] TODO
+**Status**: [x] DONE
 **Depends on**: Task 1.1
 
 Same as electron but with phase=π. Verify:
@@ -242,7 +242,7 @@ Same as electron but with phase=π. Verify:
 
 ### Task 1.3: Muon Stability & Mass Ratio
 **File**: `tests/validation/test_muon.py`
-**Status**: [ ] TODO
+**Status**: [x] DONE
 **Depends on**: Task 1.1
 
 **Setup**: `gravity_em()` config, place muon (l=14, significantly heavier than electron).
@@ -258,7 +258,7 @@ Same as electron but with phase=π. Verify:
 
 ### Task 1.4: Neutrino (Massless/Near-Massless Stability)
 **File**: `tests/validation/test_neutrino.py`
-**Status**: [ ] TODO
+**Status**: [x] DONE
 **Depends on**: Task 1.1
 
 **Setup**: `gravity_only()` config (neutrino is neutral), place neutrino (l=0, near-massless).
@@ -274,7 +274,7 @@ Same as electron but with phase=π. Verify:
 
 ### Task 1.5: Proton Stability
 **File**: `tests/validation/test_proton.py`
-**Status**: [ ] TODO
+**Status**: [x] DONE
 **Depends on**: Phase 0
 
 **Setup**: `gravity_em()` config (proton is composite but simulated as single soliton at level 1).
@@ -289,7 +289,7 @@ Same as electron but with phase=π. Verify:
 
 ### Task 1.6: Neutron Stability (Should Decay!)
 **File**: `tests/validation/test_neutron.py`
-**Status**: [ ] TODO
+**Status**: [x] DONE
 **Depends on**: Task 1.5
 
 **Setup**: `gravity_only()` config (neutron is neutral, field_level=0).
@@ -306,7 +306,7 @@ Same as electron but with phase=π. Verify:
 
 ### Task 1.7: Sweep All 69 Particles (Automated Mass & Stability)
 **File**: `tests/validation/test_particle_sweep.py`
-**Status**: [ ] TODO
+**Status**: [x] DONE
 **Depends on**: Tasks 1.1-1.6
 
 Automated sweep over entire catalog:
