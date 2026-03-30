@@ -327,7 +327,7 @@ Automated sweep over entire catalog:
 
 ### Task 2.1: Electron-Electron Repulsion (EM Like-Charge)
 **File**: `tests/validation/test_ee_repulsion.py`
-**Status**: [ ] TODO
+**Status**: [x] DONE
 **Depends on**: Task 1.1
 
 **Setup**: `gravity_em()` config, two electrons (both phase=0) separated by 20 lattice units.
@@ -344,7 +344,7 @@ Automated sweep over entire catalog:
 
 ### Task 2.2: Electron-Positron Attraction (EM Opposite-Charge)
 **File**: `tests/validation/test_ep_attraction.py`
-**Status**: [ ] TODO
+**Status**: [x] DONE
 **Depends on**: Task 2.1
 
 **Setup**: `gravity_em()` config, electron (phase=0) + positron (phase=π) separated by 20 units.
@@ -360,7 +360,7 @@ Automated sweep over entire catalog:
 
 ### Task 2.3: Electron-Positron Annihilation
 **File**: `tests/validation/test_annihilation.py`
-**Status**: [ ] TODO
+**Status**: [x] DONE
 **Depends on**: Task 2.2
 
 **Setup**: Same as 2.2 but start closer (separation ~8-10 units) so they merge.
@@ -377,7 +377,7 @@ Automated sweep over entire catalog:
 
 ### Task 2.4: Gravitational Attraction (Two Neutral Massive Particles)
 **File**: `tests/validation/test_gravity_attraction.py`
-**Status**: [ ] TODO
+**Status**: [x] DONE
 **Depends on**: Task 1.5
 
 **Setup**: `gravity_only()` config, two heavy real-field solitons (e.g., neutron-mass) separated by 20 units.
@@ -393,7 +393,7 @@ Automated sweep over entire catalog:
 
 ### Task 2.5: Coulomb Force Law Measurement (1/r² Test)
 **File**: `tests/validation/test_coulomb_law.py`
-**Status**: [ ] TODO
+**Status**: [x] DONE
 **Depends on**: Task 2.1
 
 **Setup**: `gravity_em()` config, two electrons at separations r = 10, 15, 20, 25, 30.
@@ -408,7 +408,7 @@ Automated sweep over entire catalog:
 
 ### Task 2.6: Charge Quantization Test
 **File**: `tests/validation/test_charge_quantization.py`
-**Status**: [ ] TODO
+**Status**: [x] DONE
 **Depends on**: Task 2.1
 
 **Setup**: `gravity_em()` config, particles with intermediate phases (θ = 0, π/4, π/2, 3π/4, π).
