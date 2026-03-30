@@ -251,9 +251,8 @@ def _save_animation(anim: FuncAnimation, path: str, fps: int = 10) -> None:
         try:
             import imageio_ffmpeg
             import matplotlib
-            matplotlib.rcParams["animation.ffmpeg_path"] = (
-                imageio_ffmpeg.get_ffmpeg_exe()
-            )
+
+            matplotlib.rcParams["animation.ffmpeg_path"] = imageio_ffmpeg.get_ffmpeg_exe()
         except ImportError:
             pass
         try:

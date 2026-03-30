@@ -242,16 +242,9 @@ def measure_scattering_angle(
         return {"angle_deg": 0.0, "impact_param": 0.0}
 
     # Initial and final separation vectors
-    p0 = np.array(positions[0][0], dtype=float) - np.array(
-        positions[0][1], dtype=float
-    )
-    pf = np.array(positions[-1][0], dtype=float) - np.array(
-        positions[-1][1], dtype=float
-    )
-    cos_angle = float(
-        np.dot(p0, pf)
-        / (np.linalg.norm(p0) * np.linalg.norm(pf) + 1e-30)
-    )
+    p0 = np.array(positions[0][0], dtype=float) - np.array(positions[0][1], dtype=float)
+    pf = np.array(positions[-1][0], dtype=float) - np.array(positions[-1][1], dtype=float)
+    cos_angle = float(np.dot(p0, pf) / (np.linalg.norm(p0) * np.linalg.norm(pf) + 1e-30))
     angle = float(np.degrees(np.arccos(np.clip(cos_angle, -1, 1))))
     impact = float(np.linalg.norm(np.cross(p0, pf)) / (np.linalg.norm(pf) + 1e-30))
     return {"angle_deg": angle, "impact_param": impact}

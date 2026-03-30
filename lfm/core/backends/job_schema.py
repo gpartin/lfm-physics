@@ -22,9 +22,10 @@ import numpy as np
 @dataclass
 class HookSpec:
     """One hook applied during a simulation phase (source, barrier, or detector)."""
-    type: str                           # "continuous_source" | "absorbing_barrier" | "detector_screen"
-    axis: int = 2                       # 0=x, 1=y, 2=z
-    position: int = 0                   # grid index along axis
+
+    type: str  # "continuous_source" | "absorbing_barrier" | "detector_screen"
+    axis: int = 2  # 0=x, 1=y, 2=z
+    position: int = 0  # grid index along axis
     # continuous_source fields
     omega: float = 1.0
     amplitude: float = 1.0
@@ -42,7 +43,9 @@ class SnapshotSpec:
     every_n_steps: int = 0
     include_chi: bool = True
     include_psi: bool = True
-    detector_z_slice: Optional[int] = None  # legacy: server returns 2D slice; use downsample_stride instead
+    detector_z_slice: Optional[int] = (
+        None  # legacy: server returns 2D slice; use downsample_stride instead
+    )
     downsample_stride: Optional[int] = None  # 3D spatial stride: N=256+stride=4 → 64³ per snapshot
 
     def to_dict(self) -> Dict[str, Any]:
@@ -70,6 +73,7 @@ class RunPlanStep:
 @dataclass
 class SimulationJob:
     """Full simulation job specification sent to POST /v1/simulate_job."""
+
     grid_size: int
     run_plan: List[RunPlanStep]
     chi0: float = 19.0
@@ -107,8 +111,9 @@ class SimulationJob:
 @dataclass
 class Snapshot:
     """Decoded snapshot from a simulation response."""
+
     step: int
-    psi: Optional[np.ndarray] = None   # shape (N,N,N) or (N,N) when 2D slice
+    psi: Optional[np.ndarray] = None  # shape (N,N,N) or (N,N) when 2D slice
     chi: Optional[np.ndarray] = None
 
     @classmethod
@@ -116,15 +121,17 @@ class Snapshot:
         stride = int(d.get("psi_downsample_stride", 1))
         eff_N = N // stride  # effective grid size after spatial downsampling
 
-        def _decode(b64: Optional[str], is_2d: bool = False, downsampled: bool = False) -> Optional[np.ndarray]:
+        def _decode(
+            b64: Optional[str], is_2d: bool = False, downsampled: bool = False
+        ) -> Optional[np.ndarray]:
             if b64 is None:
                 return None
             raw = base64.b64decode(b64)
-            if raw[:2] == b'\x1f\x8b':  # gzip magic — server sent compressed snapshot
+            if raw[:2] == b"\x1f\x8b":  # gzip magic — server sent compressed snapshot
                 raw = gzip.decompress(raw)
             arr = np.frombuffer(raw, dtype=np.float32).copy()
             if is_2d:
-                return arr.reshape(N, N)   # legacy 2D slice in original coords
+                return arr.reshape(N, N)  # legacy 2D slice in original coords
             n = eff_N if downsampled else N
             return arr.reshape(n, n, n)
 
@@ -139,6 +146,7 @@ class Snapshot:
 @dataclass
 class JobResult:
     """Decoded response from POST /v1/simulate_job."""
+
     job_id: str
     steps_completed: int
     elapsed_ms: int
@@ -156,9 +164,7 @@ class JobResult:
     def from_response_dict(cls, d: Dict[str, Any], N: int) -> "JobResult":
         ki = d.get("kernel_info", {})
         metrics = d.get("metrics", {})
-        snapshots = [
-            Snapshot.from_response_dict(s, N) for s in d.get("snapshots", [])
-        ]
+        snapshots = [Snapshot.from_response_dict(s, N) for s in d.get("snapshots", [])]
         return cls(
             job_id=d["job_id"],
             steps_completed=d["steps_completed"],

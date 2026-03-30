@@ -302,6 +302,7 @@ class TestBarrierCallback:
         After one callback call the slit mean must equal 5.0 * (1−γ).
         """
         import math
+
         sim = _sim()
         slits = [Slit(center=SLIT_CENTER_A, width=4, detector=True, detector_strength=0.5)]
         b = Barrier(sim, axis=2, position=BARRIER_POS, slits=slits, absorb=False)

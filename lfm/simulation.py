@@ -361,10 +361,7 @@ class Simulation:
         if position is None:
             position = (float(center), float(center), float(center))
 
-        has_velocity = (
-            velocity is not None
-            and sum(v**2 for v in velocity) > 1e-20
-        )
+        has_velocity = velocity is not None and sum(v**2 for v in velocity) > 1e-20
 
         # --- Choose amplitude and sigma ---
         # Moving particles need shallow wells to avoid Peierls-Nabarro
@@ -438,8 +435,12 @@ class Simulation:
         if has_velocity:
             assert velocity is not None  # mypy narrowing
             pr_c, pi_c, pr_p, pi_p, _ = boost_fields(
-                E, chi_local, velocity,
-                dt=dt, omega=sol.eigenvalue, chi0=chi0,
+                E,
+                chi_local,
+                velocity,
+                dt=dt,
+                omega=sol.eigenvalue,
+                chi0=chi0,
             )
         else:
             pr_c = E
@@ -485,7 +486,7 @@ class Simulation:
 
         if has_velocity:
             assert velocity is not None  # mypy narrowing
-            envelope_sq = pr_c ** 2 + pi_c ** 2
+            envelope_sq = pr_c**2 + pi_c**2
             self._velocity_boosts.append((velocity, envelope_sq))
 
         return sol
@@ -620,7 +621,7 @@ class Simulation:
         if velocity is not None:
             # envelope² is the |Ψ|² contribution of this soliton alone
             # (used as weight to localise the velocity field).
-            self._velocity_boosts.append(((vx, vy, vz), envelope ** 2))
+            self._velocity_boosts.append(((vx, vy, vz), envelope**2))
 
     def place_solitons(
         self,

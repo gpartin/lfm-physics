@@ -267,7 +267,9 @@ class CupyBackend:
                 cp.clip(sa_3d, 0.0, None, out=sa_3d)
                 _sa_in[s] = sa_3d.ravel().astype(cp.float32)
         else:
-            _sa_in = sa_fields_in if sa_fields_in is not None else cp.zeros(3 * total, dtype=cp.float32)
+            _sa_in = (
+                sa_fields_in if sa_fields_in is not None else cp.zeros(3 * total, dtype=cp.float32)
+            )
 
         self._kernel_color(
             grid,

@@ -30,6 +30,7 @@ from lfm import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_sim(N: int = 32, field_level=FieldLevel.COMPLEX, chi0: float = 19.0):
     """Create a fresh simulation for testing."""
     cfg = SimulationConfig(
@@ -45,9 +46,9 @@ def _peak_z(sim: Simulation) -> float:
     """Return z-coordinate of peak |Ψ|² (marginalised over x, y)."""
     pr = sim.psi_real
     pi = sim.psi_imag
-    e2 = pr ** 2
+    e2 = pr**2
     if pi is not None:
-        e2 = e2 + pi ** 2
+        e2 = e2 + pi**2
     profile = e2.sum(axis=(0, 1))  # marginalise x, y → 1-D profile(z)
     return float(np.argmax(profile))
 
@@ -55,6 +56,7 @@ def _peak_z(sim: Simulation) -> float:
 # ---------------------------------------------------------------------------
 # Test: stationary placement
 # ---------------------------------------------------------------------------
+
 
 class TestPlaceParticleStationary:
     """Place a particle at rest and verify it stays put."""
@@ -92,6 +94,7 @@ class TestPlaceParticleStationary:
 # Test: moving placement
 # ---------------------------------------------------------------------------
 
+
 class TestPlaceParticleMoving:
     """Place a particle with velocity and verify it moves."""
 
@@ -116,6 +119,7 @@ class TestPlaceParticleMoving:
 # Test: charge phase
 # ---------------------------------------------------------------------------
 
+
 class TestChargePhase:
     """Verify matter vs antimatter phase is applied correctly."""
 
@@ -135,6 +139,7 @@ class TestChargePhase:
 # Test: multi-particle superposition
 # ---------------------------------------------------------------------------
 
+
 class TestMultiParticle:
     """Place two particles and verify superposition."""
 
@@ -146,9 +151,9 @@ class TestMultiParticle:
         sim.equilibrate()
 
         pr = sim.psi_real
-        e2 = pr ** 2
+        e2 = pr**2
         if sim.psi_imag is not None:
-            e2 = e2 + sim.psi_imag ** 2
+            e2 = e2 + sim.psi_imag**2
         profile = e2.sum(axis=(0, 1))  # z-profile
 
         # Should have two peaks near z=20 and z=44
@@ -161,6 +166,7 @@ class TestMultiParticle:
 # ---------------------------------------------------------------------------
 # Test: factory function integration
 # ---------------------------------------------------------------------------
+
 
 class TestFactoryIntegration:
     """Verify factory functions route through place_particle correctly."""
@@ -205,6 +211,7 @@ class TestFactoryIntegration:
 # Test: collision motion verification
 # ---------------------------------------------------------------------------
 
+
 class TestCollisionMotion:
     """End-to-end: two particles approach, collide, annihilate."""
 
@@ -212,24 +219,24 @@ class TestCollisionMotion:
     def test_particles_approach(self):
         """Proton+antiproton peaks must converge along collision axis."""
         sim = _make_sim(N=64)
-        sim.place_particle("proton",     position=(32, 32, 22), velocity=(0, 0, 0.1))
+        sim.place_particle("proton", position=(32, 32, 22), velocity=(0, 0, 0.1))
         sim.place_particle("antiproton", position=(32, 32, 42), velocity=(0, 0, -0.1))
         sim.run(steps=100)  # just equilibrate
 
         pr = sim.psi_real
         pi = sim.psi_imag
-        e2 = pr ** 2
+        e2 = pr**2
         if pi is not None:
-            e2 = e2 + pi ** 2
+            e2 = e2 + pi**2
         profile0 = e2.sum(axis=(0, 1)).copy()
 
         sim.run(steps=4000)
 
         pr2 = sim.psi_real
         pi2 = sim.psi_imag
-        e2b = pr2 ** 2
+        e2b = pr2**2
         if pi2 is not None:
-            e2b = e2b + pi2 ** 2
+            e2b = e2b + pi2**2
         profile1 = e2b.sum(axis=(0, 1))
 
         # The peaks should have moved closer to centre (z=32)
@@ -242,6 +249,4 @@ class TestCollisionMotion:
         sep_1 = peak_high_1 - peak_low_1
 
         # Separation should decrease (particles approach)
-        assert sep_1 < sep_0, (
-            f"Particles didn't approach: sep {sep_0} → {sep_1}"
-        )
+        assert sep_1 < sep_0, f"Particles didn't approach: sep {sep_0} → {sep_1}"

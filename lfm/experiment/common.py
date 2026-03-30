@@ -45,6 +45,7 @@ def midplane_slice(
     """
     try:
         import cupy
+
         if isinstance(field_3d, cupy.ndarray):
             field_3d = cupy.asnumpy(field_3d)
     except ImportError:
@@ -55,6 +56,7 @@ def midplane_slice(
     slc: list[slice | int] = [slice(None)] * 3
     slc[t1] = N // 2
     return field_3d[tuple(slc)]
+
 
 if TYPE_CHECKING:
     from matplotlib.figure import Figure
@@ -242,13 +244,15 @@ def gpu_snapshot_loop(
                     xp = cupy
             except ImportError:
                 pass
-            metrics.append({
-                "step": step,
-                "chi_min": float(xp.min(chi)),
-                "chi_max": float(xp.max(chi)),
-                "energy_total": float(xp.sum(sim.energy_density)),
-                "psi_max": float(xp.max(xp.abs(sim.psi_real))),
-            })
+            metrics.append(
+                {
+                    "step": step,
+                    "chi_min": float(xp.min(chi)),
+                    "chi_max": float(xp.max(chi)),
+                    "energy_total": float(xp.sum(sim.energy_density)),
+                    "psi_max": float(xp.max(xp.abs(sim.psi_real))),
+                }
+            )
 
         if movie_every and step % movie_every == 0:
             msnap = {"step": step}

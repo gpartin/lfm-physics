@@ -100,9 +100,7 @@ class TestHelmholtzSaKernel:
         x = np.arange(N, dtype=np.float32)
         X, Y, Z = np.meshgrid(x, x, x, indexing="ij")
         c = N // 2
-        f = np.exp(-((X - c) ** 2 + (Y - c) ** 2 + (Z - c) ** 2) / 8.0).astype(
-            np.float32
-        )
+        f = np.exp(-((X - c) ** 2 + (Y - c) ** 2 + (Z - c) ** 2) / 8.0).astype(np.float32)
 
         kx = np.fft.fftfreq(N) * (2 * np.pi)
         ky = np.fft.fftfreq(N) * (2 * np.pi)

@@ -70,6 +70,7 @@ def configure_remote(
 
 # ─── RemoteBackend ────────────────────────────────────────────────────────────
 
+
 class RemoteBackend:
     """Backend implementation that executes GOV-01/02 on the WaveGuard cloud GPU.
 
@@ -134,6 +135,7 @@ class RemoteBackend:
         except ImportError:
             import urllib.request
             import urllib.error
+
             return self._run_job_urllib(job, timeout)
 
         url = f"{self._resolved_endpoint()}/v1/simulate_job"
@@ -153,9 +155,7 @@ class RemoteBackend:
                 detail = resp.json().get("detail", resp.text[:200])
             except Exception:
                 detail = resp.text[:200]
-            raise RuntimeError(
-                f"Remote simulation returned HTTP {resp.status_code}: {detail}"
-            )
+            raise RuntimeError(f"Remote simulation returned HTTP {resp.status_code}: {detail}")
 
         return JobResult.from_response_dict(resp.json(), job.grid_size)
 
@@ -241,6 +241,7 @@ class RemoteBackend:
         """Call GET /v1/health and return the JSON response dict."""
         try:
             import requests
+
             resp = requests.get(
                 f"{self._resolved_endpoint()}/v1/health",
                 timeout=10.0,

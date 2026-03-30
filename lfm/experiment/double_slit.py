@@ -64,18 +64,19 @@ __all__ = [
 ]
 
 # ── Internal constants ─────────────────────────────────────────────────────
-_BOUNDARY_FRAC: float = 0.15   # absorbing sponge layer (fraction of N/2)
-_CHI0_SIM: float = 1.0         # effective chi0: fast waves, short transit time
-_KAPPA_SIM: float = 1e-6       # near-static chi (pure wave-optics limit)
-_DT: float = 0.02              # leapfrog timestep (CFL-safe for chi0=1, omega≤2)
-_AMPLITUDE: float = 3.0        # CW source injection amplitude
-_BOOST: float = 10.0           # CW boost factor — fast steady-state buildup
+_BOUNDARY_FRAC: float = 0.15  # absorbing sponge layer (fraction of N/2)
+_CHI0_SIM: float = 1.0  # effective chi0: fast waves, short transit time
+_KAPPA_SIM: float = 1e-6  # near-static chi (pure wave-optics limit)
+_DT: float = 0.02  # leapfrog timestep (CFL-safe for chi0=1, omega≤2)
+_AMPLITUDE: float = 3.0  # CW source injection amplitude
+_BOOST: float = 10.0  # CW boost factor — fast steady-state buildup
 _BARRIER_HEIGHT: float = 51.0  # chi inside solid barrier (>> omega → evanescent)
 _MOVIE_BARRIER_H: float = 6.0  # semi-transparent barrier for movie visibility
-_MAX_STEPS: int = 64_000       # global step cap (~25 min per variant on RTX 4060)
+_MAX_STEPS: int = 64_000  # global step cap (~25 min per variant on RTX 4060)
 
 
 # ── Geometry ───────────────────────────────────────────────────────────────
+
 
 @dataclass
 class _Geometry:
@@ -116,7 +117,7 @@ class _Geometry:
         """Fresnel number N_F = d² / (λ D)."""
         if self.D <= 0 or self.wavelength <= 0:
             return float("inf")
-        return self.d ** 2 / (self.wavelength * self.D)
+        return self.d**2 / (self.wavelength * self.D)
 
     @property
     def fringe_spacing(self) -> float:
@@ -187,16 +188,17 @@ def make_geometry(N: int, *, far_field: bool = False) -> "_Geometry":
 
         # Source: Pythagorean constraint — source Gaussian must fit inside sphere
         sigma_src = max(6.0, float(half_sep) * 2.0)
-        src_margin2 = active_r ** 2 - sigma_src ** 2
+        src_margin2 = active_r**2 - sigma_src**2
         z_src_min = (
             int(math.ceil(N / 2.0 - math.sqrt(max(1.0, src_margin2)))) + 1
-            if src_margin2 > 0 else N // 4
+            if src_margin2 > 0
+            else N // 4
         )
         source_z = max(z_src_min, z_lo)
         barrier_z = N // 2
 
         # Detector: ensure transverse safe radius covers 2 × half_sep
-        max_dz = math.sqrt(max(0.0, active_r ** 2 - (2.0 * half_sep) ** 2))
+        max_dz = math.sqrt(max(0.0, active_r**2 - (2.0 * half_sep) ** 2))
         detector_z = max(barrier_z + 4, min(z_hi, int(math.floor(N / 2.0 + max_dz)) - 1))
 
     else:
@@ -211,10 +213,11 @@ def make_geometry(N: int, *, far_field: bool = False) -> "_Geometry":
         slit_width = max(3, N // 64)
 
         sigma_src = float(max(int(N * 0.12), 3 * half_sep))
-        src_margin2 = active_r ** 2 - sigma_src ** 2
+        src_margin2 = active_r**2 - sigma_src**2
         z_src_min = (
             int(math.ceil(N / 2.0 - math.sqrt(max(1.0, src_margin2)))) + 1
-            if src_margin2 > 0 else N // 4
+            if src_margin2 > 0
+            else N // 4
         )
         source_z = max(z_src_min, z_lo)
         barrier_z = max(
@@ -226,10 +229,10 @@ def make_geometry(N: int, *, far_field: bool = False) -> "_Geometry":
         n_stripes = 3.0
         alpha = n_stripes * wavelength / (2.0 * half_sep)
         C = float(barrier_z - N // 2)
-        qa = alpha ** 2 + 1.0
+        qa = alpha**2 + 1.0
         qb = 2.0 * C
-        qc = C ** 2 - active_r ** 2
-        disc = max(0.0, qb ** 2 - 4.0 * qa * qc)
+        qc = C**2 - active_r**2
+        disc = max(0.0, qb**2 - 4.0 * qa * qc)
         D_opt = max(8, int((-qb + math.sqrt(disc)) / (2.0 * qa)))
         detector_z = max(barrier_z + 4, min(z_hi, barrier_z + D_opt))
 
@@ -258,11 +261,8 @@ def make_geometry(N: int, *, far_field: bool = False) -> "_Geometry":
     else:
         # NF movie: capped sigma so the blob looks like a localised particle
         movie_sigma = max(4.0, min(float(half_sep), 12.0))
-        ms_margin2 = active_r ** 2 - movie_sigma ** 2
-        ms_min = (
-            int(math.ceil(N / 2.0 - math.sqrt(ms_margin2))) + 1
-            if ms_margin2 > 0 else N // 4
-        )
+        ms_margin2 = active_r**2 - movie_sigma**2
+        ms_min = int(math.ceil(N / 2.0 - math.sqrt(ms_margin2))) + 1 if ms_margin2 > 0 else N // 4
         movie_source_z = max(ms_min, z_lo)
 
     return _Geometry(
@@ -289,6 +289,7 @@ def make_geometry(N: int, *, far_field: bool = False) -> "_Geometry":
 
 
 # ── Result class ───────────────────────────────────────────────────────────
+
 
 class DoubleSlit:
     """Result of a :func:`double_slit` experiment run.
@@ -350,9 +351,7 @@ class DoubleSlit:
 
     # ── Outputs ────────────────────────────────────────────────────────
 
-    def click_pattern(
-        self, n_particles: int = 10_000, seed: int = 42
-    ) -> np.ndarray:
+    def click_pattern(self, n_particles: int = 10_000, seed: int = 42) -> np.ndarray:
         """Monte-Carlo single-particle click events sampled from :attr:`pattern`.
 
         Returns an ``(N, N)`` integer array of hit counts.
@@ -370,6 +369,7 @@ class DoubleSlit:
         """Return a matplotlib figure with the interference-pattern heatmap
         and 1-D transverse profile."""
         import lfm.viz as viz
+
         return viz.plot_interference_pattern(
             self.pattern,
             title=title or self.label,
@@ -503,8 +503,14 @@ class DoubleSlit:
         import matplotlib.pyplot as plt
 
         _COLORS = [
-            "#3b82f6", "#22c55e", "#f97316", "#ef4444",
-            "#ec4899", "#a855f7", "#06b6d4", "#f43f5e",
+            "#3b82f6",
+            "#22c55e",
+            "#f97316",
+            "#ef4444",
+            "#ec4899",
+            "#a855f7",
+            "#06b6d4",
+            "#f43f5e",
         ]
         n = len(results)
         fig, axes = plt.subplots(1, n, figsize=(5 * n, 5), sharey=True)
@@ -532,8 +538,10 @@ class DoubleSlit:
 
 # ── Internal simulation helpers ────────────────────────────────────────────
 
+
 def _build_sim(geo: _Geometry) -> "_lfm_t.Simulation":
     import lfm
+
     cfg = lfm.SimulationConfig(
         grid_size=geo.N,
         field_level=lfm.FieldLevel.COMPLEX,
@@ -561,7 +569,7 @@ def _run_cw_physics(
     # CW source — injects sinusoidal plane-wave into the source plane every step
     source = sim.add_source(
         axis=2,
-        position=geo.source_z,      # absolute cell index (>= 1 → treated as cells)
+        position=geo.source_z,  # absolute cell index (>= 1 → treated as cells)
         omega=geo.omega,
         amplitude=_AMPLITUDE,
         envelope_sigma=geo.sigma_src,  # absolute cells (>= 1)
@@ -594,7 +602,7 @@ def _run_cw_physics(
         source.step_callback(sim, step)
         barrier.step_callback(sim, step)
         if step % geo.record_every == 0:
-            screen.record()   # GPU fast-path: copies only N²×4 bytes
+            screen.record()  # GPU fast-path: copies only N²×4 bytes
         if step % geo.snap_every == 0:
             snaps.append({"step": evolver.step, "energy_density": sim.energy_density.copy()})
         if verbose and step % max(1, geo.steps // 10) == 0:
@@ -617,6 +625,7 @@ def _run_packet_physics(
 ) -> tuple[DetectorScreen, list[dict]]:
     """Wave-packet variant: single soliton boosted toward the barrier."""
     import lfm
+
     sim = _build_sim(geo)
     mid = geo.N // 2
 
@@ -638,10 +647,10 @@ def _run_packet_physics(
     screen = sim.add_detector(axis=2, position=geo.detector_z)
 
     pkt_k = _CHI0_SIM * v_z
-    pkt_vg = pkt_k / math.sqrt(pkt_k ** 2 + _CHI0_SIM ** 2)
+    pkt_vg = pkt_k / math.sqrt(pkt_k**2 + _CHI0_SIM**2)
     travel = (geo.detector_z - geo.source_z) / max(pkt_vg, 0.1)
     total_steps = max(1500, int(travel / _DT * 1.5))
-    max_frames = min(400, max(50, int(1e9 / (geo.N ** 3 * 4))))
+    max_frames = min(400, max(50, int(1e9 / (geo.N**3 * 4))))
     snap_every = max(2, total_steps // max_frames)
 
     if verbose:
@@ -710,6 +719,7 @@ def make_movie_snapshots(
     """
     # ── original _run_movie body follows ─────────────────────────────────
     import lfm
+
     sim = _build_sim(geo)
     mid = geo.N // 2
 
@@ -747,7 +757,7 @@ def make_movie_snapshots(
     def _cb(s: "_lfm_t.Simulation", step: int) -> None:
         barrier.step_callback(s, step)
 
-    max_frames = min(200, max(40, int(1_000_000_000 // (geo.N ** 3 * 4))))
+    max_frames = min(200, max(40, int(1_000_000_000 // (geo.N**3 * 4))))
     snap_every = max(1, geo.movie_steps // max_frames)
 
     # Capture initial state (step 0) so the animation starts at the source
@@ -757,7 +767,7 @@ def make_movie_snapshots(
         snapshot_every=snap_every,
         fields=["psi_real"],
         step_callback=_cb,
-        evolve_chi=False,   # κ=1e-6 → χ must stay frozen (static medium); device-resident snapshot avoids PCIe overhead
+        evolve_chi=False,  # κ=1e-6 → χ must stay frozen (static medium); device-resident snapshot avoids PCIe overhead
     )
     return [initial, *rest]
 
@@ -768,6 +778,7 @@ ExperimentGeometry = _Geometry
 
 
 # ── Public API ─────────────────────────────────────────────────────────────
+
 
 def double_slit(
     N: int = 64,
@@ -843,12 +854,14 @@ def double_slit(
         for i in range(n_slits):
             sign = -1 if i == 0 else 1
             is_detector = (which_path > 0.0) and (i == which_path_slit)
-            slits.append(Slit(
-                center=mid + sign * geo.half_sep,
-                width=geo.slit_width,
-                detector=is_detector,
-                detector_strength=float(which_path) if is_detector else 1.0,
-            ))
+            slits.append(
+                Slit(
+                    center=mid + sign * geo.half_sep,
+                    width=geo.slit_width,
+                    detector=is_detector,
+                    detector_strength=float(which_path) if is_detector else 1.0,
+                )
+            )
 
     # ── Auto-generate label ────────────────────────────────────────────
     if label is None:

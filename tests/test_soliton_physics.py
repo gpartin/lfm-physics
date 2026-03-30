@@ -57,25 +57,29 @@ def gpu_evolve_real(
     ev = Evolver(cfg, backend="auto")
     ev.set_psi_real(E)
     ev.set_psi_real_prev(E_prev)
-    ev.set_chi(chi)           # sets all 4 buffers
-    ev.set_chi_prev(chi_prev) # override prev to differ from current
+    ev.set_chi(chi)  # sets all 4 buffers
+    ev.set_chi_prev(chi_prev)  # override prev to differ from current
     ev.evolve(steps)
     return ev.get_psi_real(), ev.get_chi()
 
 
 def gpu_evolve_complex(
-    Pr: np.ndarray, Pi: np.ndarray,
-    Pr_prev: np.ndarray, Pi_prev: np.ndarray,
-    chi: np.ndarray, chi_prev: np.ndarray,
-    dt: float, steps: int,
+    Pr: np.ndarray,
+    Pi: np.ndarray,
+    Pr_prev: np.ndarray,
+    Pi_prev: np.ndarray,
+    chi: np.ndarray,
+    chi_prev: np.ndarray,
+    dt: float,
+    steps: int,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Evolve complex-field GOV-01/02 on GPU. Returns (Pr, Pi, chi)."""
     N = Pr.shape[0]
     cfg = SimulationConfig(grid_size=N, field_level=FieldLevel.COMPLEX, dt=dt)
     ev = Evolver(cfg, backend="auto")
-    ev.set_psi_real(Pr)         # all 4 buffers
+    ev.set_psi_real(Pr)  # all 4 buffers
     ev.set_psi_real_prev(Pr_prev)
-    ev.set_psi_imag(Pi)         # all 4 buffers
+    ev.set_psi_imag(Pi)  # all 4 buffers
     ev.set_psi_imag_prev(Pi_prev)
     ev.set_chi(chi)
     ev.set_chi_prev(chi_prev)
@@ -179,8 +183,11 @@ class TestRelaxL0:
     def test_relaxation_converges(self):
         """relax_eigenmode produces a converged solution for l=0."""
         sol = relax_eigenmode(
-            N=self.N, amplitude=self.AMP, sigma=self.SIG,
-            verbose=False, **_SOLVE_KW,
+            N=self.N,
+            amplitude=self.AMP,
+            sigma=self.SIG,
+            verbose=False,
+            **_SOLVE_KW,
         )
         assert sol.converged, f"Did not converge in {sol.cycles} steps"
         assert sol.chi_min < CHI0, "Chi well not formed"
@@ -191,8 +198,11 @@ class TestRelaxL0:
     def test_chi_well_forms(self):
         """Relaxation produces a clear chi-well below chi0."""
         sol = relax_eigenmode(
-            N=self.N, amplitude=self.AMP, sigma=self.SIG,
-            verbose=False, **_SOLVE_KW,
+            N=self.N,
+            amplitude=self.AMP,
+            sigma=self.SIG,
+            verbose=False,
+            **_SOLVE_KW,
         )
         # With kappa=1/63, wells are shallow on small grids.
         # chi should drop at least 0.05 below 19.0
@@ -204,17 +214,23 @@ class TestRelaxL0:
         Success: COM drift < 1.0 cell over 500 leapfrog steps.
         """
         sol = relax_eigenmode(
-            N=self.N, amplitude=self.AMP, sigma=self.SIG,
-            verbose=False, **_SOLVE_KW,
+            N=self.N,
+            amplitude=self.AMP,
+            sigma=self.SIG,
+            verbose=False,
+            **_SOLVE_KW,
         )
         assert sol.converged
 
         com_0 = measure_com(sol.psi_r)
 
         E_f, chi_f = gpu_evolve_real(
-            sol.psi_r, sol.psi_r,  # E_prev = E (zero velocity)
-            sol.chi, sol.chi,      # chi_prev = chi
-            DT_DEFAULT, 500,
+            sol.psi_r,
+            sol.psi_r,  # E_prev = E (zero velocity)
+            sol.chi,
+            sol.chi,  # chi_prev = chi
+            DT_DEFAULT,
+            500,
         )
 
         com_f = measure_com(E_f)
@@ -252,14 +268,18 @@ class TestBoostL0:
         Empirical ~75% → ~0.75 cells.  Threshold 0.3 is conservative.
         """
         sol = relax_eigenmode(
-            N=self.N, amplitude=self.AMP, sigma=self.SIG,
-            verbose=False, **_SOLVE_KW,
+            N=self.N,
+            amplitude=self.AMP,
+            sigma=self.SIG,
+            verbose=False,
+            **_SOLVE_KW,
         )
         assert sol.converged
 
         vx = 0.05  # 5% of c
         Pr_c, Pi_c, Pr_p, Pi_p, chi_p = boost_fields(
-            sol.psi_r, sol.chi,
+            sol.psi_r,
+            sol.chi,
             velocity=(vx, 0.0, 0.0),
             dt=self.DT_MOTION,
             omega=sol.eigenvalue,
@@ -269,29 +289,37 @@ class TestBoostL0:
         com_0 = measure_com(Pr_c, Pi_c)
 
         Pr, Pi, chi = gpu_evolve_complex(
-            Pr_c, Pi_c, Pr_p, Pi_p,
-            sol.chi.copy(), chi_p,
-            self.DT_MOTION, self.STEPS,
+            Pr_c,
+            Pi_c,
+            Pr_p,
+            Pi_p,
+            sol.chi.copy(),
+            chi_p,
+            self.DT_MOTION,
+            self.STEPS,
         )
 
         com_f = measure_com(Pr, Pi)
         dx = com_f[0] - com_0[0]
         assert dx > 0.3, (
-            f"COM only advanced {dx:.2f} cells "
-            f"(expected ~0.75 at v=0.05c, {self.STEPS} steps)"
+            f"COM only advanced {dx:.2f} cells (expected ~0.75 at v=0.05c, {self.STEPS} steps)"
         )
 
     def test_boost_preserves_amplitude(self):
         """Boost does not destroy the soliton (|Ψ|² stays > 30%)."""
         sol = relax_eigenmode(
-            N=self.N, amplitude=self.AMP, sigma=self.SIG,
-            verbose=False, **_SOLVE_KW,
+            N=self.N,
+            amplitude=self.AMP,
+            sigma=self.SIG,
+            verbose=False,
+            **_SOLVE_KW,
         )
         E0_total = float(np.sum(sol.psi_r.astype(np.float64) ** 2))
 
         vx = 0.05
         Pr_c, Pi_c, Pr_p, Pi_p, chi_p = boost_fields(
-            sol.psi_r, sol.chi,
+            sol.psi_r,
+            sol.chi,
             velocity=(vx, 0.0, 0.0),
             dt=self.DT_MOTION,
             omega=sol.eigenvalue,
@@ -299,9 +327,14 @@ class TestBoostL0:
         )
 
         Pr, Pi, chi = gpu_evolve_complex(
-            Pr_c, Pi_c, Pr_p, Pi_p,
-            sol.chi.copy(), chi_p,
-            self.DT_MOTION, self.STEPS,
+            Pr_c,
+            Pi_c,
+            Pr_p,
+            Pi_p,
+            sol.chi.copy(),
+            chi_p,
+            self.DT_MOTION,
+            self.STEPS,
         )
 
         Psq_final = float(np.sum(Pr.astype(np.float64) ** 2 + Pi.astype(np.float64) ** 2))
@@ -322,8 +355,13 @@ class TestAngularModes:
     def test_l1_converges(self):
         """l=1 mode converges via relaxation."""
         sol = relax_eigenmode(
-            N=self.N, amplitude=6.0, sigma=3.0,
-            l=1, m=0, verbose=False, **_SOLVE_KW,
+            N=self.N,
+            amplitude=6.0,
+            sigma=3.0,
+            l=1,
+            m=0,
+            verbose=False,
+            **_SOLVE_KW,
         )
         assert sol.converged, f"l=1 did not converge in {sol.cycles} steps"
         assert sol.chi_min < CHI0
@@ -331,46 +369,69 @@ class TestAngularModes:
     def test_l2_converges(self):
         """l=2 mode converges via relaxation."""
         sol = relax_eigenmode(
-            N=self.N, amplitude=6.0, sigma=3.0,
-            l=2, m=0, verbose=False, **_SOLVE_KW,
+            N=self.N,
+            amplitude=6.0,
+            sigma=3.0,
+            l=2,
+            m=0,
+            verbose=False,
+            **_SOLVE_KW,
         )
         assert sol.converged, f"l=2 did not converge in {sol.cycles} steps"
 
     @pytest.mark.xfail(
         reason="N=32 with amp=6 chi-well too shallow to sustain distinct l=1 bound state; "
-               "l=1 collapses to l=0 during SCF. Needs N>=64 and deeper well.",
+        "l=1 collapses to l=0 during SCF. Needs N>=64 and deeper well.",
         strict=False,
     )
     def test_l0_vs_l1_distinct_omega(self):
         """l=0 and l=1 have different eigenvalues."""
         sol0 = relax_eigenmode(
-            N=self.N, amplitude=6.0, sigma=3.0,
-            l=0, verbose=False, **_SOLVE_KW,
+            N=self.N,
+            amplitude=6.0,
+            sigma=3.0,
+            l=0,
+            verbose=False,
+            **_SOLVE_KW,
         )
         sol1 = relax_eigenmode(
-            N=self.N, amplitude=6.0, sigma=3.0,
-            l=1, m=0, verbose=False, **_SOLVE_KW,
+            N=self.N,
+            amplitude=6.0,
+            sigma=3.0,
+            l=1,
+            m=0,
+            verbose=False,
+            **_SOLVE_KW,
         )
         assert sol0.converged and sol1.converged
         # Eigenvalues should differ
         assert abs(sol0.eigenvalue - sol1.eigenvalue) > 0.01, (
-            f"omega_0={sol0.eigenvalue:.4f}, omega_1={sol1.eigenvalue:.4f} "
-            f"are not distinct"
+            f"omega_0={sol0.eigenvalue:.4f}, omega_1={sol1.eigenvalue:.4f} are not distinct"
         )
 
     def test_l3_converges(self):
         """l=3 mode converges via relaxation."""
         sol = relax_eigenmode(
-            N=self.N, amplitude=6.0, sigma=3.0,
-            l=3, m=0, verbose=False, **_SOLVE_KW,
+            N=self.N,
+            amplitude=6.0,
+            sigma=3.0,
+            l=3,
+            m=0,
+            verbose=False,
+            **_SOLVE_KW,
         )
         assert sol.converged, f"l=3 did not converge in {sol.cycles} steps"
 
     def test_l4_converges(self):
         """l=4 mode converges via relaxation."""
         sol = relax_eigenmode(
-            N=self.N, amplitude=6.0, sigma=3.0,
-            l=4, m=0, verbose=False, **_SOLVE_KW,
+            N=self.N,
+            amplitude=6.0,
+            sigma=3.0,
+            l=4,
+            m=0,
+            verbose=False,
+            **_SOLVE_KW,
         )
         assert sol.converged, f"l=4 did not converge in {sol.cycles} steps"
 
@@ -389,7 +450,10 @@ class TestParticleTypes:
     def test_electron(self):
         """ELECTRON (l=0, lightest) produces converged eigenmode."""
         sol = relax_eigenmode(
-            particle=ELECTRON, N=self.N, verbose=False, **_SOLVE_KW,
+            particle=ELECTRON,
+            N=self.N,
+            verbose=False,
+            **_SOLVE_KW,
         )
         assert sol.converged, f"ELECTRON failed: {sol.cycles} steps, chi_min={sol.chi_min:.3f}"
         assert sol.chi_min > 0
@@ -398,16 +462,22 @@ class TestParticleTypes:
     def test_electron_stationarity(self):
         """ELECTRON eigenmode is stationary (COM drift < 1 cell / 500 steps)."""
         sol = relax_eigenmode(
-            particle=ELECTRON, N=self.N, verbose=False, **_SOLVE_KW,
+            particle=ELECTRON,
+            N=self.N,
+            verbose=False,
+            **_SOLVE_KW,
         )
         assert sol.converged
 
         com_0 = measure_com(sol.psi_r)
 
         E_f, chi_f = gpu_evolve_real(
-            sol.psi_r, sol.psi_r,
-            sol.chi, sol.chi,
-            DT_DEFAULT, 500,
+            sol.psi_r,
+            sol.psi_r,
+            sol.chi,
+            sol.chi,
+            DT_DEFAULT,
+            500,
         )
 
         com_f = measure_com(E_f)
@@ -424,24 +494,36 @@ class TestParticleTypes:
         """
         N = 64
         sol = relax_eigenmode(
-            N=N, amplitude=3.0, sigma=5.0,
-            verbose=False, **_SOLVE_KW,
+            N=N,
+            amplitude=3.0,
+            sigma=5.0,
+            verbose=False,
+            **_SOLVE_KW,
         )
         assert sol.converged
 
         vx = 0.05
         dt_m = 0.005
         Pr_c, Pi_c, Pr_p, Pi_p, chi_p = boost_fields(
-            sol.psi_r, sol.chi, (vx, 0.0, 0.0), dt_m,
-            omega=sol.eigenvalue, chi0=CHI0,
+            sol.psi_r,
+            sol.chi,
+            (vx, 0.0, 0.0),
+            dt_m,
+            omega=sol.eigenvalue,
+            chi0=CHI0,
         )
 
         com_0 = measure_com(Pr_c, Pi_c)
 
         Pr, Pi, chi = gpu_evolve_complex(
-            Pr_c, Pi_c, Pr_p, Pi_p,
-            sol.chi.copy(), chi_p,
-            dt_m, 4000,
+            Pr_c,
+            Pi_c,
+            Pr_p,
+            Pi_p,
+            sol.chi.copy(),
+            chi_p,
+            dt_m,
+            4000,
         )
 
         com_f = measure_com(Pr, Pi)
@@ -463,9 +545,15 @@ class TestCatalogSmoke:
     @pytest.mark.parametrize("l_val", [0, 1, 2, 3, 4])
     def test_angular_modes_smoke(self, l_val):
         sol = relax_eigenmode(
-            N=self.N, amplitude=6.0, sigma=2.0,
-            l=l_val, m=0, max_cycles=10, steps_per_cycle=200,
-            tolerance=1e-2, verbose=False,
+            N=self.N,
+            amplitude=6.0,
+            sigma=2.0,
+            l=l_val,
+            m=0,
+            max_cycles=10,
+            steps_per_cycle=200,
+            tolerance=1e-2,
+            verbose=False,
         )
         assert sol.chi_min > 0, f"l={l_val}: chi went negative"
         assert sol.energy > 0, f"l={l_val}: no energy"

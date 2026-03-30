@@ -538,8 +538,13 @@ def classify_potential(
         "r2": best_r2,
         "yukawa": {"A": A_y, "m": m_y, "r2": r2_y},
         "coulomb": {"A": A_c, "B": B_c, "r2": r2_c},
-        "cornell": {"A": A_cn, "sigma": sig_cn, "C": C_cn, "r2": r2_cn,
-                    "confined": cornell_confined},
+        "cornell": {
+            "A": A_cn,
+            "sigma": sig_cn,
+            "C": C_cn,
+            "r2": r2_cn,
+            "confined": cornell_confined,
+        },
         "verdict": verdicts[best_name],
     }
 
@@ -613,8 +618,9 @@ def static_interaction_potential(
     N = int(psi_r.shape[roll_axis])
 
     # E_self: static energy of the isolated soliton (zero KE → prev = current)
-    E_self = _total_energy(psi_r, psi_r, chi_sol.astype(np.float64), dt=1.0, c=c,
-                           psi_i=psi_i, psi_i_prev=psi_i)
+    E_self = _total_energy(
+        psi_r, psi_r, chi_sol.astype(np.float64), dt=1.0, c=c, psi_i=psi_i, psi_i_prev=psi_i
+    )
 
     seps = np.asarray(separations, dtype=int)
     V_arr = np.zeros(len(seps), dtype=np.float64)
@@ -644,14 +650,21 @@ def static_interaction_potential(
         psi_sq = psi_tot_r**2
         if psi_tot_i is not None:
             psi_sq = psi_sq + psi_tot_i**2
-        if psi_sq.ndim == 4:          # multi-colour: sum over colour axis
+        if psi_sq.ndim == 4:  # multi-colour: sum over colour axis
             psi_sq = psi_sq.sum(axis=0)
 
         chi_eq = equilibrate_chi(psi_sq.astype(np.float32), chi0=chi0, kappa=kappa)
 
         # Static energy (zero KE: prev = current)
-        E_tot = _total_energy(psi_tot_r, psi_tot_r, chi_eq.astype(np.float64), dt=1.0, c=c,
-                              psi_i=psi_tot_i, psi_i_prev=psi_tot_i)
+        E_tot = _total_energy(
+            psi_tot_r,
+            psi_tot_r,
+            chi_eq.astype(np.float64),
+            dt=1.0,
+            c=c,
+            psi_i=psi_tot_i,
+            psi_i_prev=psi_tot_i,
+        )
         E_total_arr[i] = E_tot
         V_arr[i] = E_tot - 2.0 * E_self
 

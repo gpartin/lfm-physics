@@ -343,7 +343,7 @@ class NumpyBackend:
                 sa_sum += sa_flat
                 sa_sq_sum += sa_flat * sa_flat
             # SCV = Σ_a S_a² - (1/N_c)(Σ_a S_a)²
-            scv_term = sa_sq_sum - (1.0 / n_colors) * sa_sum ** 2
+            scv_term = sa_sq_sum - (1.0 / n_colors) * sa_sum**2
 
         # GOV-02
         lap_chi = self._laplacian_3d(chi, N)

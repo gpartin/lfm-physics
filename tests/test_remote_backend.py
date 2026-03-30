@@ -96,7 +96,7 @@ class TestSimulationJob:
         tiny_job.initial_psi[4, 4, 4] = 5.0
         d = tiny_job.to_request_dict()
         assert "initial_psi" in d
-        assert len(d["initial_psi"]) == N ** 3
+        assert len(d["initial_psi"]) == N**3
         assert d["initial_psi"][4 * N * N + 4 * N + 4] == pytest.approx(5.0)
 
     def test_no_fusion_depth_by_default(self, tiny_job):
@@ -112,14 +112,17 @@ class TestSimulationJob:
 class TestJobResult:
     def _make_raw(self, N: int, n_snaps: int = 2) -> Dict[str, Any]:
         import base64
+
         snaps = []
         for i in range(n_snaps):
             arr = np.ones((N, N, N), dtype=np.float32) * i
-            snaps.append({
-                "step": (i + 1) * 50,
-                "psi_b64": base64.b64encode(arr.tobytes()).decode(),
-                "chi_b64": base64.b64encode(arr.tobytes()).decode(),
-            })
+            snaps.append(
+                {
+                    "step": (i + 1) * 50,
+                    "psi_b64": base64.b64encode(arr.tobytes()).decode(),
+                    "chi_b64": base64.b64encode(arr.tobytes()).decode(),
+                }
+            )
         return {
             "job_id": "sim-abc123",
             "steps_completed": 100,
@@ -179,6 +182,7 @@ class TestConfigureRemote:
     def test_configure_sets_globals(self):
         """configure_remote() updates module-level globals."""
         import lfm.core.backends.remote_backend as rb
+
         configure_remote(
             api_key="sk-lfmsim-test-key",
             endpoint="http://test-endpoint",
@@ -189,6 +193,7 @@ class TestConfigureRemote:
     def test_configure_raises_without_key(self, monkeypatch):
         monkeypatch.delenv("LFM_SIMULATE_API_KEY", raising=False)
         import lfm.core.backends.remote_backend as rb
+
         rb._REMOTE_API_KEY = None
         with pytest.raises(ValueError, match="No API key"):
             configure_remote()
@@ -200,13 +205,19 @@ class TestRemoteBackendMocked:
         resp.status_code = status_code
         if body is None:
             import base64
+
             N = 8
             arr = np.ones((N, N, N), dtype=np.float32)
             body = {
                 "job_id": "sim-mocked",
                 "steps_completed": 100,
                 "elapsed_ms": 150,
-                "kernel_info": {"fusion_depth": 10, "active_fraction": 1.0, "pruning_efficiency": "0%", "backend": "numpy"},
+                "kernel_info": {
+                    "fusion_depth": 10,
+                    "active_fraction": 1.0,
+                    "pruning_efficiency": "0%",
+                    "backend": "numpy",
+                },
                 "snapshots": [],
                 "detector_patterns": {},
                 "metrics": {"energy_initial": 1.0, "energy_final": 0.99, "energy_drift_pct": 1.0},
@@ -228,7 +239,9 @@ class TestRemoteBackendMocked:
                 mock_backend.run_job(tiny_job)
 
     def test_run_job_403_blocked(self, tiny_job, mock_backend):
-        forbidden = self._make_mock_response(status_code=403, body={"detail": "Simulation jobs require an API key."})
+        forbidden = self._make_mock_response(
+            status_code=403, body={"detail": "Simulation jobs require an API key."}
+        )
         with patch("requests.post", return_value=forbidden):
             with pytest.raises(RuntimeError, match="HTTP 403"):
                 mock_backend.run_job(tiny_job)
@@ -265,7 +278,11 @@ class TestRemoteBackendLive:
             run_plan=[
                 RunPlanStep(
                     steps=200,
-                    hooks=[HookSpec(type="continuous_source", axis=2, position=4, omega=1.0, amplitude=3.0)],
+                    hooks=[
+                        HookSpec(
+                            type="continuous_source", axis=2, position=4, omega=1.0, amplitude=3.0
+                        )
+                    ],
                     snapshots=SnapshotSpec(every_n_steps=100),
                 )
             ],
@@ -280,12 +297,15 @@ class TestRemoteBackendLive:
         assert len(result.snapshots) == 2
         assert result.psi_final is not None
         assert result.psi_final.shape == (N, N, N)
-        print(f"\nLive test passed in {elapsed:.1f}s. "
-              f"Backend: {result.backend}, fusion_depth={result.fusion_depth}, "
-              f"energy_drift={result.energy_drift_pct:.3f}%" if result.energy_drift_pct is not None
-              else f"\nLive test passed in {elapsed:.1f}s. "
-              f"Backend: {result.backend}, fusion_depth={result.fusion_depth}, "
-              f"energy_drift=N/A")
+        print(
+            f"\nLive test passed in {elapsed:.1f}s. "
+            f"Backend: {result.backend}, fusion_depth={result.fusion_depth}, "
+            f"energy_drift={result.energy_drift_pct:.3f}%"
+            if result.energy_drift_pct is not None
+            else f"\nLive test passed in {elapsed:.1f}s. "
+            f"Backend: {result.backend}, fusion_depth={result.fusion_depth}, "
+            f"energy_drift=N/A"
+        )
 
     def test_rejected_by_invalid_key(self):
         backend = RemoteBackend(api_key="sk-lfmsim-invalid-key")

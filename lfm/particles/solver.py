@@ -54,6 +54,7 @@ if TYPE_CHECKING:
 # GPU acceleration via CuPy (optional — falls back to NumPy if unavailable)
 try:
     import cupy as cp
+
     _HAS_CUPY = True
 except ImportError:
     cp = None  # type: ignore[assignment]
@@ -464,18 +465,27 @@ def _laplacian_19pt(f: NDArray) -> NDArray:
     """
     # Face neighbors (distance 1): 6 terms, weight 1/3
     faces = (
-        np.roll(f, 1, 0) + np.roll(f, -1, 0)
-        + np.roll(f, 1, 1) + np.roll(f, -1, 1)
-        + np.roll(f, 1, 2) + np.roll(f, -1, 2)
+        np.roll(f, 1, 0)
+        + np.roll(f, -1, 0)
+        + np.roll(f, 1, 1)
+        + np.roll(f, -1, 1)
+        + np.roll(f, 1, 2)
+        + np.roll(f, -1, 2)
     )
     # Edge neighbors (distance sqrt2): 12 terms, weight 1/6
     edges = (
-        np.roll(np.roll(f, 1, 0), 1, 1) + np.roll(np.roll(f, 1, 0), -1, 1)
-        + np.roll(np.roll(f, -1, 0), 1, 1) + np.roll(np.roll(f, -1, 0), -1, 1)
-        + np.roll(np.roll(f, 1, 0), 1, 2) + np.roll(np.roll(f, 1, 0), -1, 2)
-        + np.roll(np.roll(f, -1, 0), 1, 2) + np.roll(np.roll(f, -1, 0), -1, 2)
-        + np.roll(np.roll(f, 1, 1), 1, 2) + np.roll(np.roll(f, 1, 1), -1, 2)
-        + np.roll(np.roll(f, -1, 1), 1, 2) + np.roll(np.roll(f, -1, 1), -1, 2)
+        np.roll(np.roll(f, 1, 0), 1, 1)
+        + np.roll(np.roll(f, 1, 0), -1, 1)
+        + np.roll(np.roll(f, -1, 0), 1, 1)
+        + np.roll(np.roll(f, -1, 0), -1, 1)
+        + np.roll(np.roll(f, 1, 0), 1, 2)
+        + np.roll(np.roll(f, 1, 0), -1, 2)
+        + np.roll(np.roll(f, -1, 0), 1, 2)
+        + np.roll(np.roll(f, -1, 0), -1, 2)
+        + np.roll(np.roll(f, 1, 1), 1, 2)
+        + np.roll(np.roll(f, 1, 1), -1, 2)
+        + np.roll(np.roll(f, -1, 1), 1, 2)
+        + np.roll(np.roll(f, -1, 1), -1, 2)
     )
     return (1.0 / 3.0) * faces + (1.0 / 6.0) * edges - 4.0 * f
 
@@ -486,17 +496,26 @@ def _laplacian_19pt_gpu(f):
     Same stencil as _laplacian_19pt but operates on CuPy arrays.
     """
     faces = (
-        cp.roll(f, 1, 0) + cp.roll(f, -1, 0)
-        + cp.roll(f, 1, 1) + cp.roll(f, -1, 1)
-        + cp.roll(f, 1, 2) + cp.roll(f, -1, 2)
+        cp.roll(f, 1, 0)
+        + cp.roll(f, -1, 0)
+        + cp.roll(f, 1, 1)
+        + cp.roll(f, -1, 1)
+        + cp.roll(f, 1, 2)
+        + cp.roll(f, -1, 2)
     )
     edges = (
-        cp.roll(cp.roll(f, 1, 0), 1, 1) + cp.roll(cp.roll(f, 1, 0), -1, 1)
-        + cp.roll(cp.roll(f, -1, 0), 1, 1) + cp.roll(cp.roll(f, -1, 0), -1, 1)
-        + cp.roll(cp.roll(f, 1, 0), 1, 2) + cp.roll(cp.roll(f, 1, 0), -1, 2)
-        + cp.roll(cp.roll(f, -1, 0), 1, 2) + cp.roll(cp.roll(f, -1, 0), -1, 2)
-        + cp.roll(cp.roll(f, 1, 1), 1, 2) + cp.roll(cp.roll(f, 1, 1), -1, 2)
-        + cp.roll(cp.roll(f, -1, 1), 1, 2) + cp.roll(cp.roll(f, -1, 1), -1, 2)
+        cp.roll(cp.roll(f, 1, 0), 1, 1)
+        + cp.roll(cp.roll(f, 1, 0), -1, 1)
+        + cp.roll(cp.roll(f, -1, 0), 1, 1)
+        + cp.roll(cp.roll(f, -1, 0), -1, 1)
+        + cp.roll(cp.roll(f, 1, 0), 1, 2)
+        + cp.roll(cp.roll(f, 1, 0), -1, 2)
+        + cp.roll(cp.roll(f, -1, 0), 1, 2)
+        + cp.roll(cp.roll(f, -1, 0), -1, 2)
+        + cp.roll(cp.roll(f, 1, 1), 1, 2)
+        + cp.roll(cp.roll(f, 1, 1), -1, 2)
+        + cp.roll(cp.roll(f, -1, 1), 1, 2)
+        + cp.roll(cp.roll(f, -1, 1), -1, 2)
     )
     return (1.0 / 3.0) * faces + (1.0 / 6.0) * edges - 4.0 * f
 
@@ -585,11 +604,7 @@ def ylm_seed(
         }.get(m, x * y * z / r**3)
     elif l == 4:
         ylm = {
-            0: (
-                35 * z**4
-                - 30 * z**2 * (x * x + y * y + z * z)
-                + 3 * (x * x + y * y + z * z) ** 2
-            )
+            0: (35 * z**4 - 30 * z**2 * (x * x + y * y + z * z) + 3 * (x * x + y * y + z * z) ** 2)
             / r**4,
         }.get(m, x * y * (x * x - y * y) / r**4)
     else:
@@ -634,7 +649,7 @@ def _relax_loop_gpu(
     # FFT wavenumber grid (CPU — used for Poisson solve)
     kx = np.fft.fftfreq(N) * 2.0 * np.pi
     KX, KY, KZ = np.meshgrid(kx, kx, kx, indexing="ij")
-    K2 = KX ** 2 + KY ** 2 + KZ ** 2
+    K2 = KX**2 + KY**2 + KZ**2
     K2[0, 0, 0] = 1.0
 
     E_cpu = E_np.copy()
@@ -679,9 +694,7 @@ def _relax_loop_gpu(
             if step % check_interval == 0:
                 dE = float(cp.max(cp.abs(E_new - E)))
                 if verbose and step == check_interval:
-                    print(
-                        f"    E relax step {step}: dE={dE:.3e} dt_E={dt_E:.5f}"
-                    )
+                    print(f"    E relax step {step}: dE={dE:.3e} dt_E={dt_E:.5f}")
                 if dE < tolerance:
                     e_converged = True
                     E = E_new
@@ -699,10 +712,7 @@ def _relax_loop_gpu(
         # === Check overall convergence ===
         dE_cycle = float(np.max(np.abs(E_cpu - E_prev_cpu)))
         if verbose:
-            print(
-                f"  cycle {cycle + 1} done | dE_cycle={dE_cycle:.3e} | "
-                f"e_converged={e_converged}"
-            )
+            print(f"  cycle {cycle + 1} done | dE_cycle={dE_cycle:.3e} | e_converged={e_converged}")
 
         if dE_cycle < tolerance and cycle > 0:
             converged = True
@@ -739,7 +749,7 @@ def _relax_loop_cpu(
     # FFT wavenumber grid
     kx = np.fft.fftfreq(N) * 2.0 * np.pi
     KX, KY, KZ = np.meshgrid(kx, kx, kx, indexing="ij")
-    K2 = KX ** 2 + KY ** 2 + KZ ** 2
+    K2 = KX**2 + KY**2 + KZ**2
     K2[0, 0, 0] = 1.0
 
     chi = np.full((N, N, N), chi0, dtype=np.float32)
@@ -784,9 +794,7 @@ def _relax_loop_cpu(
             if step % check_interval == 0:
                 dE = float(np.max(np.abs(E_new - E)))
                 if verbose and step == check_interval:
-                    print(
-                        f"    E relax step {step}: dE={dE:.3e} dt_E={dt_E:.5f}"
-                    )
+                    print(f"    E relax step {step}: dE={dE:.3e} dt_E={dt_E:.5f}")
                 if dE < tolerance:
                     e_converged = True
                     E = E_new
@@ -799,10 +807,7 @@ def _relax_loop_cpu(
 
         dE_cycle = float(np.max(np.abs(E - E_prev)))
         if verbose:
-            print(
-                f"  cycle {cycle + 1} done | dE_cycle={dE_cycle:.3e} | "
-                f"e_converged={e_converged}"
-            )
+            print(f"  cycle {cycle + 1} done | dE_cycle={dE_cycle:.3e} | e_converged={e_converged}")
 
         if dE_cycle < tolerance and cycle > 0:
             converged = True
@@ -920,12 +925,10 @@ def relax_eigenmode(
         idx = np.arange(N, dtype=np.float64)
         X, Y, Z = np.meshgrid(idx, idx, idx, indexing="ij")
         cx, cy, cz = position
-        r2 = ((X - cx) ** 2 + (Y - cy) ** 2 + (Z - cz) ** 2) / (sigma ** 2)
+        r2 = ((X - cx) ** 2 + (Y - cy) ** 2 + (Z - cz) ** 2) / (sigma**2)
         E = (amplitude * np.exp(-r2)).astype(np.float32)
     else:
-        E = ylm_seed(N, l, m, sigma, center=position, amplitude=amplitude).astype(
-            np.float32
-        )
+        E = ylm_seed(N, l, m, sigma, center=position, amplitude=amplitude).astype(np.float32)
 
     # Boundary mask: frozen outer shell
     bmask = _spherical_boundary_mask(N, boundary_fraction)
@@ -941,14 +944,32 @@ def relax_eigenmode(
     # --- Dispatch to GPU or CPU path ---
     if _HAS_CUPY:
         E_out, chi_out, converged, total_steps, cycle = _relax_loop_gpu(
-            E, N, chi0, kappa, amplitude, safe_dt_E,
-            max_cycles, steps_per_cycle, check_interval, tolerance,
-            boundary_fraction, verbose,
+            E,
+            N,
+            chi0,
+            kappa,
+            amplitude,
+            safe_dt_E,
+            max_cycles,
+            steps_per_cycle,
+            check_interval,
+            tolerance,
+            boundary_fraction,
+            verbose,
         )
     else:
         E_out, chi_out, converged, total_steps, cycle = _relax_loop_cpu(
-            E, bmask, N, chi0, kappa, amplitude, safe_dt_E,
-            max_cycles, steps_per_cycle, check_interval, tolerance,
+            E,
+            bmask,
+            N,
+            chi0,
+            kappa,
+            amplitude,
+            safe_dt_E,
+            max_cycles,
+            steps_per_cycle,
+            check_interval,
+            tolerance,
             verbose,
         )
 
@@ -990,7 +1011,13 @@ def boost_fields(
     dt: float = DT_DEFAULT,
     omega: float = 0.0,
     chi0: float = CHI0,
-) -> tuple[NDArray[np.float32], NDArray[np.float32], NDArray[np.float32], NDArray[np.float32], NDArray[np.float32]]:
+) -> tuple[
+    NDArray[np.float32],
+    NDArray[np.float32],
+    NDArray[np.float32],
+    NDArray[np.float32],
+    NDArray[np.float32],
+]:
     """Create moving-soliton initial conditions via phase-gradient boost.
 
     Encodes momentum as a complex phase Ψ = E·exp(ikx) where k = γωv/c²
