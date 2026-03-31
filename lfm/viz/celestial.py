@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
-from matplotlib.patches import Circle, FancyArrowPatch
+from matplotlib.patches import Circle
 
 from lfm.constants import CHI0
 
@@ -45,12 +45,13 @@ if TYPE_CHECKING:
 # Helpers
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 def _render_frame_3d(
     xs: np.ndarray,
     ys: np.ndarray,
     zs: np.ndarray,
     depths: np.ndarray,
-    bodies: list["CelestialBody"],
+    bodies: list[CelestialBody],
     body_positions: dict[str, tuple[float, float, float]],
     t: float,
     step: int,
@@ -76,7 +77,7 @@ def _render_frame_3d(
     import matplotlib.pyplot as plt
 
     fig = plt.figure(figsize=figsize, facecolor="#050510", dpi=dpi)
-    ax  = fig.add_subplot(111, projection="3d")
+    ax = fig.add_subplot(111, projection="3d")
     ax.set_facecolor("#050510")
 
     # Transparent panes, dim grid
@@ -101,13 +102,19 @@ def _render_frame_3d(
     # body markers to blink as the camera rotates.  Depth is encoded via alpha.
     fade = min(1.0, (frame_idx - chi_reveal_frame + 1) / 5.0) if show_chi else 0.0
     if show_chi and len(xs) > 0:
-        norm_d  = np.clip(depths / max(dchi_vmax, 1e-6), 0.0, 1.0)
-        colors  = cmap(norm_d * 0.85 + 0.1)
+        norm_d = np.clip(depths / max(dchi_vmax, 1e-6), 0.0, 1.0)
+        colors = cmap(norm_d * 0.85 + 0.1)
         colors[:, 3] = np.clip(norm_d * 0.6 + 0.05, 0.0, 1.0) * fade
         ax.scatter(
-            xs, ys, zs,
-            c=colors, s=2, linewidths=0,
-            depthshade=False, rasterized=True, zorder=2,
+            xs,
+            ys,
+            zs,
+            c=colors,
+            s=2,
+            linewidths=0,
+            depthshade=False,
+            rasterized=True,
+            zorder=2,
         )
 
     # ── Body markers drawn as 2-D overlay ────────────────────────────────────
@@ -120,24 +127,32 @@ def _render_frame_3d(
     _draw_body_overlays(fig, ax, bodies, body_positions, N, dpi, figsize)
 
     # ── Info overlay ─────────────────────────────────────────────────────────
-    fig.text(0.03, 0.97, title,
-             color="white", fontsize=9, va="top", fontweight="bold")
-    orbit_label = "orbit 1  (χ hidden)" if not show_chi else (
-        "χ revealed — orbit 2+  (dark-matter halo visible)"
-        if frame_idx == chi_reveal_frame else "orbit 2+  (χ active)"
+    fig.text(0.03, 0.97, title, color="white", fontsize=9, va="top", fontweight="bold")
+    orbit_label = (
+        "orbit 1  (χ hidden)"
+        if not show_chi
+        else (
+            "χ revealed — orbit 2+  (dark-matter halo visible)"
+            if frame_idx == chi_reveal_frame
+            else "orbit 2+  (χ active)"
+        )
     )
-    fig.text(0.03, 0.92,
-             f"t = {t:.1f}   step {step:,}\n"
-             f"χ_min = {chi_min:+.4f}   χ₀ = {int(CHI0)}\n"
-             f"{orbit_label}",
-             color="#9999bb", fontsize=7, va="top", fontfamily="monospace")
+    fig.text(
+        0.03,
+        0.92,
+        f"t = {t:.1f}   step {step:,}\nχ_min = {chi_min:+.4f}   χ₀ = {int(CHI0)}\n{orbit_label}",
+        color="#9999bb",
+        fontsize=7,
+        va="top",
+        fontfamily="monospace",
+    )
 
     # ── Rasterise to RGB ──────────────────────────────────────────────────────
     fig.canvas.draw()
     w, h = fig.canvas.get_width_height()
-    buf  = fig.canvas.buffer_rgba()
-    arr  = np.frombuffer(buf, dtype=np.uint8).reshape(h, w, 4)
-    rgb  = arr[:, :, :3].copy()
+    buf = fig.canvas.buffer_rgba()
+    arr = np.frombuffer(buf, dtype=np.uint8).reshape(h, w, 4)
+    rgb = arr[:, :, :3].copy()
     plt.close(fig)
     return rgb
 
@@ -145,6 +160,7 @@ def _render_frame_3d(
 # ──────────────────────────────────────────────────────────────────────────────
 # 2-D body overlay helper (called AFTER 3-D canvas.draw)
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def _draw_body_overlays(
     fig,
@@ -162,11 +178,10 @@ def _draw_body_overlays(
     markers are painted directly onto the figure canvas in normalised figure
     coordinates and are guaranteed on top of everything in the 3-D axes.
     """
-    import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import proj3d
 
     proj_mat = ax.get_proj()  # 4×4 homogeneous projection matrix (valid now)
-    fw_px = fig.get_figwidth()  * dpi
+    fw_px = fig.get_figwidth() * dpi
     fh_px = fig.get_figheight() * dpi
 
     # Transparent 2-D overlay axes that covers the whole figure
@@ -189,30 +204,44 @@ def _draw_body_overlays(
         yf = float(disp[1]) / fh_px
 
         # Marker radius in figure-fraction units — keep it small (dot, not disc)
-        r_fill = max(b.dot_size ** 0.5 * 0.0006, 0.003)
+        r_fill = max(b.dot_size**0.5 * 0.0006, 0.003)
         r_glow = r_fill * 1.8
 
         # Glow halo
-        ax2d.add_patch(Circle(
-            (xf, yf), r_glow,
-            transform=ax2d.transAxes,
-            color=b.ring_color, alpha=0.15,
-            linewidth=0, zorder=90,
-        ))
+        ax2d.add_patch(
+            Circle(
+                (xf, yf),
+                r_glow,
+                transform=ax2d.transAxes,
+                color=b.ring_color,
+                alpha=0.15,
+                linewidth=0,
+                zorder=90,
+            )
+        )
         # Filled body
-        ax2d.add_patch(Circle(
-            (xf, yf), r_fill,
-            transform=ax2d.transAxes,
-            facecolor=b.color,
-            edgecolor=b.ring_color, linewidth=1.2,
-            zorder=91,
-        ))
+        ax2d.add_patch(
+            Circle(
+                (xf, yf),
+                r_fill,
+                transform=ax2d.transAxes,
+                facecolor=b.color,
+                edgecolor=b.ring_color,
+                linewidth=1.2,
+                zorder=91,
+            )
+        )
         # Label — just above the marker
         ax2d.text(
-            xf, yf + r_fill * 1.8, b.name,
+            xf,
+            yf + r_fill * 1.8,
+            b.name,
             transform=ax2d.transAxes,
-            color=b.ring_color, fontsize=5.5,
-            ha="center", va="bottom", zorder=92,
+            color=b.ring_color,
+            fontsize=5.5,
+            ha="center",
+            va="bottom",
+            zorder=92,
         )
 
 
@@ -220,9 +249,10 @@ def _draw_body_overlays(
 # Public API
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 def animate_celestial_3d(
     sim,
-    bodies: list["CelestialBody"],
+    bodies: list[CelestialBody],
     body_omegas: dict[str, float],
     *,
     n_frames: int = 80,
@@ -299,16 +329,17 @@ def animate_celestial_3d(
         Path of the saved file, or None if saving failed.
     """
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    N  = sim.chi.shape[0]
+    N = sim.chi.shape[0]
     if center is None:
         cx = cy = cz = float(N // 2)
     else:
         cx, cy, cz = float(center[0]), float(center[1]), float(center[2])
 
-    dt  = sim.config.dt
+    dt = sim.config.dt
     rng = np.random.default_rng(42)
 
     # ── Auto chi_reveal_frame: show chi after FASTEST planet's first orbit ──
@@ -319,8 +350,8 @@ def animate_celestial_3d(
     if chi_reveal_frame is None:
         omegas = [abs(body_omegas[b.name]) for b in bodies if b.orbital_radius > 0]
         if omegas:
-            omega_max  = max(omegas)  # fastest body (innermost)
-            T_fastest  = (2 * np.pi / omega_max) if omega_max > 0 else 0.0
+            omega_max = max(omegas)  # fastest body (innermost)
+            T_fastest = (2 * np.pi / omega_max) if omega_max > 0 else 0.0
             steps_one_orbit = T_fastest / dt
             chi_reveal_frame = int(np.ceil(steps_one_orbit / steps_per_frame))
             chi_reveal_frame = min(chi_reveal_frame, n_frames // 3)  # chi visible for >=2/3 of anim
@@ -330,9 +361,11 @@ def animate_celestial_3d(
                     (b for b in bodies if b.orbital_radius > 0),
                     key=lambda b: abs(body_omegas[b.name]),
                 ).name
-                print(f"χ reveal at frame {chi_reveal_frame}/{n_frames} "
-                      f"(after {fastest_name}'s first orbit: "
-                      f"{steps_one_orbit:.0f} steps = {T_fastest:.1f} t)")
+                print(
+                    f"χ reveal at frame {chi_reveal_frame}/{n_frames} "
+                    f"(after {fastest_name}'s first orbit: "
+                    f"{steps_one_orbit:.0f} steps = {T_fastest:.1f} t)"
+                )
         else:
             chi_reveal_frame = 0
 
@@ -357,9 +390,9 @@ def animate_celestial_3d(
     for f in range(n_frames):
         sim.run(steps_per_frame, record_metrics=False)
         step = (f + 1) * steps_per_frame
-        t    = step * dt
+        t = step * dt
 
-        chi3    = np.array(sim.chi, dtype=np.float32)  # GPU→CPU; freed below
+        chi3 = np.array(sim.chi, dtype=np.float32)  # GPU→CPU; freed below
         chi_min = float(chi3.min())
 
         # χ volume: every voxel where χ < χ₀ − well_threshold gets a dot.
@@ -403,7 +436,7 @@ def animate_celestial_3d(
             xi = np.arange(xs0, xs1) - cx_s
             yi = np.arange(ys0, ys1) - cy_s
             zi = np.arange(zs0, zs1) - cz_s
-            xx, yy, zz = np.meshgrid(xi, yi, zi, indexing='ij')
+            xx, yy, zz = np.meshgrid(xi, yi, zi, indexing="ij")
             sphere_mask = (xx**2 + yy**2 + zz**2) <= rex**2
             psi2_planet[xs0:xs1, ys0:ys1, zs0:zs1][sphere_mask] = 0.0
         else:
@@ -418,11 +451,10 @@ def animate_celestial_3d(
         # (exp(-k²·σ²/2) ≈ 0.002 for k=2.3, σ=1.5) while keeping the envelope
         # peak at the soliton centre (the blurred envelope is just wider).
         from scipy.ndimage import gaussian_filter as _gf  # noqa: PLC0415
-        min_planet_sigma = min(
-            (b.sigma for b in bodies if b.orbital_radius > 0), default=1.5
-        )
+
+        min_planet_sigma = min((b.sigma for b in bodies if b.orbital_radius > 0), default=1.5)
         blur_sigma = max(min_planet_sigma, 1.0)
-        psi2_smooth       = _gf(psi2_nomask, sigma=blur_sigma)
+        psi2_smooth = _gf(psi2_nomask, sigma=blur_sigma)
         psi2_planet_smooth = _gf(psi2_planet, sigma=blur_sigma)
 
         body_field_pos: dict[str, tuple[float, float, float]] = {}
@@ -448,45 +480,73 @@ def animate_celestial_3d(
 
         del psi2, psi2_planet, psi2_smooth, psi2_planet_smooth
 
-        frame_clouds.append((
-            ix.astype(np.float32), iy.astype(np.float32),
-            iz.astype(np.float32), deps.astype(np.float32),
-            step, t, chi_min, body_field_pos,
-        ))
+        frame_clouds.append(
+            (
+                ix.astype(np.float32),
+                iy.astype(np.float32),
+                iz.astype(np.float32),
+                deps.astype(np.float32),
+                step,
+                t,
+                chi_min,
+                body_field_pos,
+            )
+        )
         del chi3  # free the big array immediately
 
         if verbose:
-            print(f"\r  {f+1:3d}/{n_frames}  step={step:,}  t={t:.1f}  "
-                  f"χ_min={chi_min:.3f}  pts={len(ix)}", end="", flush=True)
+            print(
+                f"\r  {f + 1:3d}/{n_frames}  step={step:,}  t={t:.1f}  "
+                f"χ_min={chi_min:.3f}  pts={len(ix)}",
+                end="",
+                flush=True,
+            )
     if verbose:
         print()
 
     # Global depth colour scales
     all_depths = np.concatenate([fc[3] for fc in frame_clouds if len(fc[3]) > 0])
-    dchi_vmax  = float(np.percentile(all_depths, 99)) if len(all_depths) > 0 else 5.0
+    dchi_vmax = float(np.percentile(all_depths, 99)) if len(all_depths) > 0 else 5.0
     # plasma: dark purple (shallow) → yellow (deep well).  χ = 19 is transparent.
-    cmap       = plt.get_cmap("plasma")
+    cmap = plt.get_cmap("plasma")
 
     # ── Step 2: pre-render frames ─────────────────────────────────────────────
     if verbose:
-        print(f"Rendering {n_frames} frames at {figsize[0]*dpi:.0f}×{figsize[1]*dpi:.0f} px…")
+        print(f"Rendering {n_frames} frames at {figsize[0] * dpi:.0f}×{figsize[1] * dpi:.0f} px…")
 
     rendered: list[np.ndarray] = []
     for f_idx, (xs, ys, zs, deps, step, t, chi_min, body_field_pos) in enumerate(frame_clouds):
-        show_chi = (f_idx >= chi_reveal_frame)
+        show_chi = f_idx >= chi_reveal_frame
         rgb = _render_frame_3d(
-            xs, ys, zs, deps,
-            bodies, body_field_pos, t, step, chi_min,
-            N, cx, cy, cz, dchi_vmax, f_idx,
-            title, camera_elev, camera_azim_start, camera_rotate_speed,
-            figsize, dpi, cmap,
+            xs,
+            ys,
+            zs,
+            deps,
+            bodies,
+            body_field_pos,
+            t,
+            step,
+            chi_min,
+            N,
+            cx,
+            cy,
+            cz,
+            dchi_vmax,
+            f_idx,
+            title,
+            camera_elev,
+            camera_azim_start,
+            camera_rotate_speed,
+            figsize,
+            dpi,
+            cmap,
             show_chi=show_chi,
             chi_reveal_frame=chi_reveal_frame,
             n_frames=n_frames,
         )
         rendered.append(rgb)
         if verbose:
-            print(f"\r  rendered {f_idx+1}/{n_frames}", end="", flush=True)
+            print(f"\r  rendered {f_idx + 1}/{n_frames}", end="", flush=True)
     if verbose:
         print()
 
@@ -518,6 +578,7 @@ def animate_celestial_3d(
 # Save helpers
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 def _ensure_even(frame: np.ndarray) -> np.ndarray:
     """Crop to even dimensions (required by some video codecs)."""
     h, w = frame.shape[:2]
@@ -529,9 +590,11 @@ def _save_mp4(frames: list[np.ndarray], path: str, fps: int) -> str | None:
     # Approach 1: imageio with ffmpeg
     try:
         import imageio
+
         frames_even = [_ensure_even(f) for f in frames]
         writer = imageio.get_writer(
-            path, fps=fps,
+            path,
+            fps=fps,
             codec="libx264",
             ffmpeg_params=["-crf", "22", "-pix_fmt", "yuv420p"],
         )
@@ -544,20 +607,32 @@ def _save_mp4(frames: list[np.ndarray], path: str, fps: int) -> str | None:
 
     # Approach 2: subprocess ffmpeg + PIL for individual PNGs
     try:
-        import subprocess, tempfile
+        import subprocess
+        import tempfile
+
         from PIL import Image
+
         with tempfile.TemporaryDirectory() as td:
             for i, fr in enumerate(frames):
                 Image.fromarray(_ensure_even(fr)).save(f"{td}/{i:06d}.png")
             result = subprocess.run(
                 [
-                    "ffmpeg", "-y",
-                    "-framerate", str(fps),
-                    "-i", f"{td}/%06d.png",
-                    "-c:v", "libx264", "-crf", "22", "-pix_fmt", "yuv420p",
+                    "ffmpeg",
+                    "-y",
+                    "-framerate",
+                    str(fps),
+                    "-i",
+                    f"{td}/%06d.png",
+                    "-c:v",
+                    "libx264",
+                    "-crf",
+                    "22",
+                    "-pix_fmt",
+                    "yuv420p",
                     path,
                 ],
-                capture_output=True, timeout=180,
+                capture_output=True,
+                timeout=180,
             )
             if result.returncode == 0:
                 return path
@@ -571,6 +646,7 @@ def _save_gif(frames: list[np.ndarray], path: str, fps: int) -> str | None:
     """Save RGB frames as GIF via imageio or Pillow."""
     try:
         import imageio
+
         imageio.mimsave(path, frames, fps=fps)
         return path
     except Exception:
@@ -578,7 +654,8 @@ def _save_gif(frames: list[np.ndarray], path: str, fps: int) -> str | None:
 
     try:
         from PIL import Image
-        pil_frames  = [Image.fromarray(fr) for fr in frames]
+
+        pil_frames = [Image.fromarray(fr) for fr in frames]
         duration_ms = int(1000 / fps)
         pil_frames[0].save(
             path,
