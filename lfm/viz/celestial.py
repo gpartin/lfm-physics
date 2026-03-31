@@ -373,7 +373,8 @@ def animate_celestial_3d(
                 sel = rng.choice(len(ix), max_points, replace=False)  # uniform
                 ix, iy, iz, deps = ix[sel], iy[sel], iz[sel], deps[sel]
         else:
-            ix = iy = iz = deps = np.empty(0, dtype=np.float32)
+            ix = iy = iz = np.empty(0, dtype=np.intp)
+            deps = np.empty(0, dtype=np.float32)
 
         # Find each body's position via |Ψ|² (energy density) maximum in a
         # tight search box around the previous-frame position.
