@@ -399,7 +399,12 @@ class Simulation:
                 )
 
         # --- Ensure complex field level for moving or charged particles ---
-        needs_complex = has_velocity or abs(particle.phase) > 1e-10
+        # Neutral antiparticles (charge=0, phase=π) do NOT need COMPLEX:
+        # GOV-02 uses |Ψ|² which is phase-blind, so flipping the sign of the
+        # real field has no physical effect in a gravity-only simulation.
+        needs_complex = has_velocity or (
+            abs(particle.phase) > 1e-10 and abs(particle.charge) > 1e-10
+        )
         if needs_complex and self.config.field_level == FieldLevel.REAL:
             raise ValueError(
                 "Moving or charged particles require field_level=COMPLEX. "
