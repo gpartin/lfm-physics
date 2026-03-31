@@ -47,6 +47,12 @@ from lfm.experiment.common import ExperimentConfig, ExperimentResult, midplane_s
 from lfm.experiment.detector import DetectorScreen
 from lfm.experiment.dispersion import Dispersion, dispersion
 from lfm.experiment.double_slit import double_slit, DoubleSlit
+from lfm.experiment.entanglement import (
+    entanglement,
+    EntanglementResult,
+    EntanglementSuiteResult,
+    SPIN_CONFIGS,
+)
 from lfm.experiment.source import ContinuousSource
 
 __all__ = [
@@ -60,6 +66,10 @@ __all__ = [
     "DoubleSlit",
     "collision",
     "CollisionResult",
+    "entanglement",
+    "EntanglementResult",
+    "EntanglementSuiteResult",
+    "SPIN_CONFIGS",
     "ExperimentConfig",
     "ExperimentResult",
     "midplane_slice",

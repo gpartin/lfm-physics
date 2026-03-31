@@ -160,11 +160,14 @@ Each example builds on the one before, from empty space to a simulated cosmos:
 | 13 | [13_weak_force.py](examples/13_weak_force.py) | Turn ε_W on/off and measure parity asymmetry from χ + j |
 | 14 | [14_strong_force.py](examples/14_strong_force.py) | Color fields — measure confinement proxy via χ line integrals |
 
+**Advanced & showcase examples (15–37):** cover double-slit interference, Kepler orbits, gravitational waves, Stern-Gerlach spin deflection, 720° spinor periodicity, Bell inequalities, and more. See [examples/](examples/) for the full list.
+
 ```bash
 cd examples
 python 01_empty_space.py        # start here
 python 08_universe.py           # the payoff — cosmic structure from noise
 python 14_strong_force.py       # all four forces active
+python 37_spin_entanglement_showcase.py --small   # spin correlations + 3-D movie
 ```
 
 **Interactive tutorials with visualisations:**
@@ -406,6 +409,35 @@ If you are unsure which CUDA version you have, run `nvcc --version` or
 used automatically.
 
 Typical speedup: **50–200×** for N ≥ 64 grids on modern NVIDIA GPUs.
+
+## Project Structure
+
+```
+lfm/                Library source code (import as `import lfm`)
+  core/             Leapfrog evolver, backends (NumPy + CuPy/CUDA), config
+  analysis/         Post-processing: spectra, spinors, chi statistics
+  experiment/       High-level experiment runners (double-slit, collision, …)
+  particles/        Soliton solvers, tracking, collision helpers
+  viz/              Plotting and animation utilities (matplotlib + ffmpeg)
+
+examples/           37 numbered tutorial scripts (01 → 37)
+  outputs/          Auto-created results (PNG, MP4) – not committed
+
+experiments/        Quantitative validation experiments (paper evidence)
+
+tests/              pytest suite (`pytest tests/`)
+
+docs/               Sphinx documentation source
+
+benchmarks/         Performance benchmarking scripts
+
+research/           Exploratory scripts tied to paper drafts
+
+scripts/            Development scratch scripts (prefixed with `_`)
+                    Not part of the public API; may be incomplete or outdated
+
+tools/              Developer utilities (linting helpers, release scripts)
+```
 
 ## Documentation
 
