@@ -323,7 +323,7 @@ def animate_celestial_3d(
             T_fastest  = (2 * np.pi / omega_max) if omega_max > 0 else 0.0
             steps_one_orbit = T_fastest / dt
             chi_reveal_frame = int(np.ceil(steps_one_orbit / steps_per_frame))
-            chi_reveal_frame = min(chi_reveal_frame, n_frames // 3)  # show chi for at least 2/3 of animation
+            chi_reveal_frame = min(chi_reveal_frame, n_frames // 3)  # chi visible for >=2/3 of anim
             chi_reveal_frame = min(chi_reveal_frame, n_frames - 5)  # need room for orbit 2
             if verbose:
                 fastest_name = max(
