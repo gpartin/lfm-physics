@@ -25,6 +25,7 @@ import numpy as np
 
 import lfm
 from lfm.constants import CHI0, LAMBDA_H
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
 
 
 def _theory_omega() -> float:
@@ -33,6 +34,9 @@ def _theory_omega() -> float:
 
 
 def main() -> None:
+    _args = parse_no_anim()
+    _OUT  = make_out_dir("22_soliton_modes")
+
     print("Example 22: Soliton Normal Modes")
     print(f"  Theory: ω_H = √(8·λ_H)·χ₀ = {_theory_omega():.4f} rad/step\n")
 
@@ -43,12 +47,12 @@ def main() -> None:
         grid_size=N,
         field_level=lfm.FieldLevel.REAL,
         e_amplitude=6.0,
-        sigma=2.5,
+        lambda_self=LAMBDA_H,   # Mexican hat ON — required for Higgs/breathing mode
         report_interval=2000,
     )
     sim = lfm.Simulation(config)
     cx = N // 2
-    sim.place_soliton((cx, cx, cx))
+    sim.place_soliton((cx, cx, cx), amplitude=6.0, sigma=2.5)
     sim.equilibrate()
 
     print("  Equilibration complete.  Applying small radial perturbation …")
@@ -154,6 +158,10 @@ def main() -> None:
         print("  (matplotlib not available — skipping plots)")
 
     print("\nDone.")
+
+    # Short 3-D movie of the soliton breathing (uses sim state after FFT run)
+    run_and_save_3d_movie(sim, steps=1000, out_dir=_OUT, stem="soliton_modes",
+        field="chi_deficit", snapshot_every=20, no_anim=_args.no_anim)
 
 
 if __name__ == "__main__":

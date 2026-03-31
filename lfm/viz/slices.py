@@ -69,7 +69,7 @@ def plot_slice(
     if ax is None:
         fig, ax = plt.subplots(figsize=(6, 5))
     else:
-        fig = cast(Figure, ax.figure)
+        fig = ax.figure
 
     im = ax.imshow(
         data.T,
@@ -135,7 +135,7 @@ def plot_chi_histogram(
     if ax is None:
         fig, ax = plt.subplots(figsize=(7, 4))
     else:
-        fig = cast(Figure, ax.figure)
+        fig = ax.figure
 
     flat = np.asarray(chi).ravel()
     ax.hist(flat, bins=bins, color="#4a90d9", edgecolor="none", alpha=0.85)

@@ -77,3 +77,33 @@ def full_physics(grid_size: int = 64, **overrides: object) -> SimulationConfig:
     )
     params.update(overrides)
     return SimulationConfig(**params)  # type: ignore[arg-type]
+
+
+def spinor_field(grid_size: int = 64, **overrides: object) -> SimulationConfig:
+    """Spin-1/2 spinor: two-component complex field (FieldLevel.COLOR, n_colors=2).
+
+    Array layout returned by Evolver.get_psi_real() / get_psi_imag()::
+
+        psi_r[0], psi_i[0]  ->  Re(ψ_↑), Im(ψ_↑)  (spin-up)
+        psi_r[1], psi_i[1]  ->  Re(ψ_↓), Im(ψ_↓)  (spin-down)
+
+    GOV-02 coupling: χ sourced by |ψ_↑|² + |ψ_↓|² (spin-blind gravity).
+    Use :mod:`lfm.fields.spinor` for initial conditions and
+    :mod:`lfm.analysis.spinor` for measurements.
+
+    The key prediction: 720° rotational periodicity (spinor sign flip at 360°)
+    is measurable via interference — see
+    :func:`lfm.analysis.spinor.spinor_interference_energy`.
+
+    For: spin-1/2 dynamics, Stern-Gerlach, neutron interferometry analogs,
+         spinor chi-well formation.
+    """
+    params: dict[str, object] = dict(
+        grid_size=grid_size,
+        field_level=FieldLevel.COLOR,
+        n_colors=2,
+        boundary_type=BoundaryType.FROZEN,
+        lambda_self=LAMBDA_H,
+    )
+    params.update(overrides)
+    return SimulationConfig(**params)  # type: ignore[arg-type]

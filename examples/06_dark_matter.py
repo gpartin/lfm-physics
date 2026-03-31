@@ -15,6 +15,10 @@ substrate's memory of where matter used to be.
 import numpy as np
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
+
+_args = parse_no_anim()
+_OUT  = make_out_dir("06_dark_matter")
 
 config = lfm.SimulationConfig(grid_size=48)
 sim = lfm.Simulation(config)
@@ -77,3 +81,8 @@ print("Dark matter is not a substance — it's the lattice remembering")
 print("where matter used to be.  The χ-well persists and attracts.")
 print()
 print("Next: can matter appear from nothing? (→ 07)")
+# 3-D movie showing the persistent chi-well (dark matter halo)
+snaps, _movie = run_and_save_3d_movie(
+    sim, steps=1000, out_dir=_OUT, stem="dark_matter",
+    field="chi_deficit", snapshot_every=50, no_anim=_args.no_anim,
+)

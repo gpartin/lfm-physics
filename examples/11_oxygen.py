@@ -20,6 +20,10 @@ Run:
 import numpy as np
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
+
+_args = parse_no_anim()
+_OUT  = make_out_dir("11_oxygen")
 
 N = 64
 config = lfm.SimulationConfig(grid_size=N, field_level=lfm.FieldLevel.COLOR)
@@ -100,3 +104,9 @@ for step in [1000, 2000, 4000]:
 print()
 print("Both shells remain bound — no Pauli exclusion postulate required.")
 print("Shell structure emerges from wave interference and geometry alone.")
+
+# 3-D movie of multi-shell oxygen atom
+snaps, _movie = run_and_save_3d_movie(
+    sim, steps=1000, out_dir=_OUT, stem="oxygen",
+    field="psi_real", snapshot_every=20, no_anim=_args.no_anim,
+)

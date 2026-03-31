@@ -29,6 +29,7 @@ from __future__ import annotations
 import numpy as np
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
 
 
 def run_interference(N: int, phase_diff: float, steps: int = 1500) -> tuple[float, float]:
@@ -37,7 +38,6 @@ def run_interference(N: int, phase_diff: float, steps: int = 1500) -> tuple[floa
         grid_size=N,
         field_level=lfm.FieldLevel.COMPLEX,
         e_amplitude=5.0,
-        sigma=2.5,
         report_interval=500,
     )
     sim = lfm.Simulation(config)
@@ -57,6 +57,9 @@ def run_interference(N: int, phase_diff: float, steps: int = 1500) -> tuple[floa
 
 
 def main() -> None:
+    _args = parse_no_anim()
+    _OUT  = make_out_dir("21_wave_interference")
+
     N = 48
     print("Example 21: Wave Interference and Double-Slit Diffraction")
 
@@ -91,7 +94,6 @@ def main() -> None:
             grid_size=N,
             field_level=lfm.FieldLevel.COMPLEX,
             e_amplitude=5.0,
-            sigma=2.5,
             report_interval=200,
         )
         sim = lfm.Simulation(config)
@@ -100,7 +102,8 @@ def main() -> None:
         sim.place_soliton((cx, cx - sep // 2, cx), phase=0.0)
         sim.place_soliton((cx, cx + sep // 2, cx), phase=0.0)
         sim.equilibrate()
-        sim.run_with_snapshots(2000, snapshot_every=200, fields=["chi"])
+        run_and_save_3d_movie(sim, steps=2000, out_dir=_OUT, stem="wave_interference",
+            field="chi_deficit", snapshot_every=50, no_anim=_args.no_anim)
 
         # Mid-plane slice
         fig1, ax1 = plot_slice(sim.chi, axis=2, title="χ after interference (Δθ = 0)")
@@ -125,7 +128,6 @@ def main() -> None:
                 grid_size=N,
                 field_level=lfm.FieldLevel.COMPLEX,
                 e_amplitude=5.0,
-                sigma=2.5,
                 report_interval=500,
             )
             s2 = lfm.Simulation(cfg2)

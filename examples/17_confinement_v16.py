@@ -35,7 +35,11 @@ from __future__ import annotations
 import numpy as np
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
 from lfm.constants import KAPPA, KAPPA_C, KAPPA_STRING, LAMBDA_H
+
+_args = parse_no_anim()
+_OUT  = make_out_dir("17_confinement_v16")
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 N = 64
@@ -83,7 +87,10 @@ print(f"  chi midpoint:        {chi_mid_before:.4f}")
 print(f"  chi global min:      {chi_global_min_before:.4f}")
 
 # ── Evolve ────────────────────────────────────────────────────────────────────
-sim.run(steps=STEPS, record_metrics=False)
+snaps, _movie = run_and_save_3d_movie(
+    sim, steps=STEPS, out_dir=_OUT, stem="confinement_v16",
+    field="chi_deficit", snapshot_every=500, no_anim=_args.no_anim,
+)
 
 # ── Measure after ─────────────────────────────────────────────────────────────
 sa_after = sim.sa_fields
@@ -97,18 +104,16 @@ print(f"  chi midpoint change: {chi_mid_after - chi_mid_before:+.4f}")
 print(f"  S_a max (equilib):   {sa_after.max():.4e}" if sa_after is not None else "")
 
 # ── Flux tube profile ─────────────────────────────────────────────────────────
-profile = lfm.flux_tube_profile(sim.chi, sim.sa_fields, (cx, cy, z1), (cx, cy, z2))
-print("\nFlux-tube profile along z axis (chi at each point):")
-chi_along_z = profile["chi_profile"]
-sa0_along_z = profile["sa_profile"][0] if "sa_profile" in profile else None
-z_pts = profile.get("z_coords", np.arange(len(chi_along_z)))
-print(f"  z range:   [{z_pts.min():.0f}, {z_pts.max():.0f}]")
+r_centres, chi_along_z, scv_along_z = lfm.flux_tube_profile(sim.chi, sim.sa_fields, (cx, cy, z1), (cx, cy, z2))
+print("\nFlux-tube profile (radial bins, perpendicular to flux tube axis):")
+print(f"  r range:   [{r_centres.min():.1f}, {r_centres.max():.1f}]")
 print(f"  chi range: [{chi_along_z.min():.3f}, {chi_along_z.max():.3f}]")
-if sa0_along_z is not None:
-    print(f"  S_a[0] range: [{sa0_along_z.min():.4e}, {sa0_along_z.max():.4e}]")
+print(f"  scv range: [{scv_along_z.min():.4e}, {scv_along_z.max():.4e}]")
 
 # ── String-tension proxy ──────────────────────────────────────────────────────
-tension = lfm.string_tension(sim)
+# Manual proxy: chi deficit at midpoint per unit separation
+_sep = max(abs(z2 - z1), 1)
+tension = float(lfm.CHI0 - sim.chi[cx, cy, N // 2]) / _sep
 print(f"\nString-tension proxy:  {tension:.6f}")
 print("(non-zero ⟹ chi gradient between sources)")
 

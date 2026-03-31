@@ -33,6 +33,10 @@ from __future__ import annotations
 import numpy as np
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
+
+_args = parse_no_anim()
+_OUT  = make_out_dir("16_lorentz_anisotropy")
 
 N = 64
 cfg = lfm.SimulationConfig(grid_size=N, field_level=lfm.FieldLevel.REAL, dt=0.02)
@@ -134,3 +138,9 @@ print("Lattice interpretation:")
 print("  - <0.2% anisotropy at k=0.30; <0.005% at k=0.10 (O(k^4) suppression).")
 print("  - 14 orders of magnitude below GRB photon-dispersion bounds at accessible energies.")
 print("  - Falsifiable: linear dispersion or direction-dependent GRB timing would rule this out.")
+
+# 3-D movie of the wave-front isotropy test
+snaps, _movie = run_and_save_3d_movie(
+    sim, steps=160, out_dir=_OUT, stem="lorentz_anisotropy",
+    field="psi_real", snapshot_every=4, no_anim=_args.no_anim,
+)

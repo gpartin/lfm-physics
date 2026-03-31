@@ -31,7 +31,11 @@ from __future__ import annotations
 import numpy as np
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
 from lfm.analysis.observables import rotation_curve
+
+_args = parse_no_anim()
+_OUT  = make_out_dir("19_rotating_galaxy")
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 N = 128  # 128³ for a realistic rotation curve; use 64 for quick tests
@@ -92,7 +96,10 @@ print(f"\nRotation curve (before evolution, {len(rc_before['r'])} bins):")
 
 # ── Evolve ────────────────────────────────────────────────────────────────────
 print(f"\nEvolving {STEPS:,} steps…")
-sim.run(steps=STEPS, record_metrics=False)
+snaps, _movie = run_and_save_3d_movie(
+    sim, steps=STEPS, out_dir=_OUT, stem="rotating_galaxy",
+    field="chi_deficit", snapshot_every=200, no_anim=_args.no_anim,
+)
 
 # ── Measure rotation curve after running ──────────────────────────────────────
 rc_after = rotation_curve(

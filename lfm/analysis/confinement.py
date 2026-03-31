@@ -211,6 +211,8 @@ def flux_tube_profile(
     """
     chi = np.asarray(chi, dtype=np.float32)
     scv = np.asarray(scv, dtype=np.float32)
+    if scv.ndim == 4:  # COLOR level (3,N,N,N) → collapse to (N,N,N) magnitude
+        scv = np.sqrt((scv ** 2).sum(axis=0))
     N = chi.shape[0]
 
     # Axis unit vector

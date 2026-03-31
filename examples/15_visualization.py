@@ -8,14 +8,21 @@ Requires: pip install "lfm-physics[viz]"
 """
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
+
+_args = parse_no_anim()
+_OUT  = make_out_dir("15_visualization")
 
 # ── 1. Run a quick simulation ─────────────────────────────────────────
 
-config = lfm.SimulationConfig(grid_size=32)
+config = lfm.SimulationConfig(grid_size=32, report_interval=60)
 sim = lfm.Simulation(config)
 sim.place_soliton((16, 16, 16), amplitude=6.0)
 sim.equilibrate()
-sim.run(steps=3000)
+snaps, _movie = run_and_save_3d_movie(
+    sim, steps=3000, out_dir=_OUT, stem="visualization",
+    field="chi_deficit", snapshot_every=60, no_anim=_args.no_anim,
+)
 
 print("15 – Visualisation & Analysis")
 print("=" * 55)

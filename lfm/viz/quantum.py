@@ -905,10 +905,8 @@ def animate_double_slit_3d(
             phase_text.set_text("\u25b6 Building interference pattern")
             phase_text.set_color("#44ff88")
 
-        # Camera rotation for true 3-D depth perception
-        if camera_rotate:
-            new_azim = camera_azim + frame_num * camera_rotate_speed
-            ax_3d.view_init(elev=camera_elev, azim=new_azim)
+        # Camera rotation disabled
+        ax_3d.view_init(elev=camera_elev, azim=camera_azim)
 
         step_text.set_text(f"Step {step}")
         info_text.set_text(f"{n_pts:,} pts   frame {frame_num + 1}/{n_frames}")

@@ -23,6 +23,10 @@ Run:
 import numpy as np
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
+
+_args = parse_no_anim()
+_OUT  = make_out_dir("10_hydrogen_molecule")
 
 N = 64
 config = lfm.SimulationConfig(grid_size=N, field_level=lfm.FieldLevel.COMPLEX)
@@ -57,7 +61,11 @@ print(f"  Anti-bond  χ_min = {m_anti_0['chi_min']:.3f},  energy = {m_anti_0['en
 print()
 
 STEPS = 6000
-sim_bond.run(steps=STEPS)
+# Bonding sim uses the 3-D movie helper — captures the covalent bond forming
+snaps, _movie = run_and_save_3d_movie(
+    sim_bond, steps=STEPS, out_dir=_OUT, stem="hydrogen_molecule",
+    field="psi_real", snapshot_every=60, no_anim=_args.no_anim,
+)
 sim_anti.run(steps=STEPS)
 
 m_bond_f = sim_bond.metrics()

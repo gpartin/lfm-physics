@@ -37,7 +37,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 
@@ -432,6 +432,8 @@ def _build_collision_sim(
     geo: _CollisionGeometry,
     particle_a_name: str,
     particle_b_name: str,
+    lambda_self: float = 0.0,
+    poisson_only: bool = False,
     verbose: bool = False,
 ) -> _lfm_t.Simulation:
     """Create and populate the simulation for a collision.
@@ -442,6 +444,7 @@ def _build_collision_sim(
     Algorithm
     ---------
     1. Relax eigenmode ONCE at grid centre via Poisson-relaxation cycling
+       (or skip relaxation and use raw Gaussian + Poisson if poisson_only=True)
     2. Roll the converged fields to particle A and B positions
     3. Apply charge phase (matter θ=0, antimatter θ=π)
     4. Boost each with ``boost_fields()`` (complex phase gradient)
@@ -461,32 +464,70 @@ def _build_collision_sim(
     fl_int = max(part_a.field_level, part_b.field_level, 1)
     fl_map = {0: "real", 1: "complex", 2: "color"}
 
-    # ── Step 1: Relax eigenmode ONCE at grid centre ────────────────
-    if verbose:
-        print("  Relaxing eigenmode...", flush=True)
-    sol = relax_eigenmode(
-        N=geo.N,
-        amplitude=geo.amplitude,
-        sigma=geo.sigma,
-        chi0=geo.chi0,
-        verbose=verbose,
-    )
-    if not sol.converged:
-        warnings.warn(
-            "Eigenmode relaxation did not converge "
-            f"(chi_min={sol.chi_min:.3f}). Using best result.",
-            stacklevel=2,
-        )
-    if verbose:
-        print(
-            f"  Eigenmode ready: chi_min={sol.chi_min:.3f}  omega={sol.eigenvalue:.4f}",
-            flush=True,
-        )
-
-    # ── Step 2: Roll eigenmode to each particle position ───────────
+    # ── Step 1: Build soliton template ─────────────────────────────
     center = geo.N // 2
-    E_template = sol.psi_r
-    dchi_template = sol.chi - np.float32(geo.chi0)
+    if poisson_only:
+        # Skip eigenmode relaxation — use raw Gaussian with one-shot
+        # Poisson chi (gives deep chi_min ≈ 14-16 for amp=6 at N=64,
+        # rather than the shallow 18.865 that the eigenmode converges to).
+        if verbose:
+            print("  Poisson-only init (no eigenmode relaxation)...", flush=True)
+        coords = np.arange(geo.N, dtype=np.float64) - center
+        gz, gy, gx = np.meshgrid(coords, coords, coords, indexing="ij")
+        r2 = (gx**2 + gy**2 + gz**2).astype(np.float64)
+        E_template = (geo.amplitude * np.exp(-r2 / (2.0 * geo.sigma**2))).astype(
+            np.float32
+        )
+        kx = np.fft.fftfreq(geo.N) * 2.0 * np.pi
+        KX, KY, KZ = np.meshgrid(kx, kx, kx, indexing="ij")
+        K2 = (KX**2 + KY**2 + KZ**2).astype(np.float64)
+        K2[0, 0, 0] = 1.0
+        e2 = E_template.astype(np.float64) ** 2
+        dchi_hat = -KAPPA * np.fft.fftn(e2) / K2
+        dchi_hat[0, 0, 0] = 0.0
+        chi_template = (
+            geo.chi0 + np.fft.ifftn(dchi_hat).real
+        ).astype(np.float32)
+        np.clip(chi_template, 0.01, None, out=chi_template)
+        dchi_template = chi_template - np.float32(geo.chi0)
+        # Use chi_min as approximate eigenvalue (wave frequency inside well)
+        eigenvalue = float(max(chi_template.min(), 1.0))
+        if verbose:
+            print(
+                f"  Poisson-only ready: chi_min={chi_template.min():.4f}  "
+                f"omega_approx={eigenvalue:.4f}  E_sum={float(e2.sum()):.1f}",
+                flush=True,
+            )
+    else:
+        # ── Eigenmode relaxation (default) ─────────────────────────
+        if verbose:
+            print("  Relaxing eigenmode...", flush=True)
+        sol = relax_eigenmode(
+            N=geo.N,
+            amplitude=geo.amplitude,
+            sigma=geo.sigma,
+            chi0=geo.chi0,
+            verbose=verbose,
+        )
+        if not sol.converged:
+            warnings.warn(
+                "Eigenmode relaxation did not converge "
+                f"(chi_min={sol.chi_min:.3f}). Using best result.",
+                stacklevel=2,
+            )
+        if verbose:
+            print(
+                f"  Eigenmode ready: chi_min={sol.chi_min:.3f}  omega={sol.eigenvalue:.4f}",
+                flush=True,
+            )
+        E_template = sol.psi_r
+        dchi_template = sol.chi - np.float32(geo.chi0)
+        eigenvalue = sol.eigenvalue
+
+    # ── Step 2: Roll soliton template to each particle position ────
+    center = geo.N // 2
+    E_template = E_template  # already defined above
+    dchi_template = dchi_template  # already defined above
 
     def _roll_to(arr: np.ndarray, pos: tuple) -> np.ndarray:
         out = arr
@@ -519,7 +560,7 @@ def _build_collision_sim(
         chi_a,
         vel_a_t,
         dt=_DT,
-        omega=sol.eigenvalue,
+        omega=eigenvalue,
         chi0=geo.chi0,
     )
     pr_b, pi_b, prp_b, pip_b, _ = boost_fields(
@@ -527,7 +568,7 @@ def _build_collision_sim(
         chi_b,
         vel_b_t,
         dt=_DT,
-        omega=sol.eigenvalue,
+        omega=eigenvalue,
         chi0=geo.chi0,
     )
 
@@ -578,6 +619,7 @@ def _build_collision_sim(
         boundary_fraction=0.0,
         field_level=fl_map.get(fl_int, "complex"),
         evolve_chi=True,
+        lambda_self=lambda_self,
     )
     sim = build_sim(cfg)
 
@@ -602,9 +644,12 @@ def _run_physics(
     *,
     verbose: bool,
     animate: bool = False,
+    lambda_self: float = 0.0,
+    poisson_only: bool = False,
+    step_callback: "Callable[['_lfm_t.Simulation', int], None] | None" = None,
 ) -> tuple[list[dict], list[dict], float, list[dict]]:
     """Run physics + optional movie capture in a single pass."""
-    sim = _build_collision_sim(geo, particle_a, particle_b, verbose=verbose)
+    sim = _build_collision_sim(geo, particle_a, particle_b, lambda_self=lambda_self, poisson_only=poisson_only, verbose=verbose)
 
     # Record initial energy before any evolution
     try:
@@ -626,6 +671,7 @@ def _run_physics(
         label=f"{particle_a}+{particle_b}",
         evolve_chi=True,
         metrics_every=geo.metrics_every,
+        step_callback=step_callback,
     )
 
     return snaps, metrics, initial_energy, movie_snaps
@@ -635,9 +681,10 @@ def _run_movie_pass(
     geo: _CollisionGeometry,
     particle_a: str,
     particle_b: str,
+    lambda_self: float = 0.0,
 ) -> list[dict]:
     """Run a dense snapshot pass for the 3-D movie."""
-    sim = _build_collision_sim(geo, particle_a, particle_b)
+    sim = _build_collision_sim(geo, particle_a, particle_b, lambda_self=lambda_self)
 
     # Capture initial frame
     frames: list[dict] = [{"step": 0, "energy_density": sim.energy_density.copy()}]
@@ -663,6 +710,9 @@ def collision(
     amplitude: float = _DEFAULT_AMPLITUDE,
     axis: int = 2,
     chi0: float = _CHI0,
+    lambda_self: float = 0.0,
+    poisson_only: bool = False,
+    step_callback: "Callable[['_lfm_t.Simulation', int], None] | None" = None,
     animate: bool = True,
     label: str | None = None,
     verbose: bool = True,
@@ -686,6 +736,15 @@ def collision(
         Collision axis (0=x, 1=y, 2=z).
     chi0 : float
         Background χ value (default 19).
+    lambda_self : float
+        Mexican-hat self-interaction coefficient λ_H for GOV-02.
+        0.0 (default) = gravity-only.  Set to ``lfm.LAMBDA_H`` (≈ 4/31)
+        to enable the Higgs potential V(χ) = λ_H(χ²−χ₀²)² — chi rings at
+        ω_H ≈ 19.30 after a collision crushes it below χ₀.
+    step_callback : callable or None
+        Optional ``(sim, step) -> None`` called inside the evolution loop at
+        every step.  Use this for dense per-step diagnostics (e.g. chi at the
+        collision centre for Higgs-ringing FFT) without re-running the sim.
     animate : bool
         If True, run a second dense-snapshot pass for the 3-D movie.
     label : str or None
@@ -713,6 +772,13 @@ def collision(
     if not 0 < speed <= 0.5:
         raise ValueError(f"speed must be in (0, 0.5], got {speed}")
 
+    if poisson_only and verbose:
+        print(
+            "  poisson_only=True: skipping eigenmode relaxation "
+            "(raw Gaussian + one-shot Poisson chi — deep wells, fast setup)",
+            flush=True,
+        )
+
     geo = _compute_geometry(N, axis=axis, speed=speed, amplitude=amplitude, chi0=chi0)
 
     if label is None:
@@ -736,6 +802,9 @@ def collision(
         particle_b,
         verbose=verbose,
         animate=animate,
+        lambda_self=lambda_self,
+        poisson_only=poisson_only,
+        step_callback=step_callback,
     )
 
     if verbose and metrics:

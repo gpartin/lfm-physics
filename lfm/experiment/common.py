@@ -92,6 +92,7 @@ class ExperimentConfig:
     boundary_fraction: float = 0.15
     field_level: str = "complex"
     evolve_chi: bool = True
+    lambda_self: float = 0.0
 
 
 # ── Simulation builder ─────────────────────────────────────────────────────
@@ -129,6 +130,8 @@ def build_sim(cfg: ExperimentConfig) -> "_lfm_t.Simulation":
         kw["kappa"] = cfg.kappa
     if bt == lfm.BoundaryType.ABSORBING:
         kw["boundary_fraction"] = cfg.boundary_fraction
+    if cfg.lambda_self > 0:
+        kw["lambda_self"] = cfg.lambda_self
 
     return lfm.Simulation(lfm.SimulationConfig(**kw))
 

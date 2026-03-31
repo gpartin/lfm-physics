@@ -12,6 +12,10 @@ looks like in the simulation.
 """
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
+
+_args = parse_no_anim()
+_OUT  = make_out_dir("01_empty_space")
 
 # Create a 32³ lattice.  No particles, no energy — just vacuum.
 config = lfm.SimulationConfig(grid_size=32)
@@ -34,7 +38,10 @@ print("This is the emptiest possible universe.")
 print()
 
 # Evolve for a bit — nothing should change.
-sim.run(steps=500)
+snaps, _movie = run_and_save_3d_movie(
+    sim, steps=500, out_dir=_OUT, stem="empty_space",
+    field="chi", snapshot_every=50, no_anim=_args.no_anim,
+)
 m = sim.metrics()
 print("After 500 steps of evolution:")
 print(f"  chi mean  = {m['chi_mean']:.4f}")

@@ -9,10 +9,13 @@ inside the stable regime.
 """
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
 
 N = 64
 V = 0.04  # in units of c
 STEPS = 10_000
+_args = parse_no_anim()
+_OUT  = make_out_dir("26_electron_traverse")
 
 print("26 — Electron Traverse (v = 0.04c)")
 print("=" * 55)
@@ -47,6 +50,11 @@ if expected_disp > 0:
     print(f"  Ratio actual/expected: {ratio:.2f}")
 print()
 print("The electron crossed the grid driven by the phase-gradient boost.")
-print("No Newtonian force was injected — momentum came from the wave phase.")
+print("No Newtonian force was injected \u2014 momentum came from the wave phase.")
 print()
 print("Next: compare electron vs muon at the same velocity (-> 27).")
+
+# 3-D movie: fresh demo sim with chi evolving for visualization
+_demo = lfm.create_particle("electron", N=N, velocity=(V, 0.0, 0.0))
+run_and_save_3d_movie(_demo.sim, steps=500, out_dir=_OUT, stem="electron_traverse",
+    field="psi_real", snapshot_every=5, intensity_floor=0.001, no_anim=_args.no_anim)

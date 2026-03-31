@@ -80,6 +80,7 @@ def animate_collision_3d(
     max_frames: int = 150,
     figsize: tuple[float, float] = (16, 10),
     title: str = "LFM Particle Collision",
+    show_phase_labels: bool = False,
     save_path: str | None = None,
 ) -> "FuncAnimation":
     """Create a 3-D animated movie of a particle collision.
@@ -144,6 +145,12 @@ def animate_collision_3d(
     t1 = (prop + 1) % 3
     t2 = (prop + 2) % 3
     _is_signed = field.startswith("psi")
+    # Amplitude mode: render |Ψ| = sqrt(real² + imag²) when psi_imag is
+    # available — the amplitude is constant for a stationary eigenstate so
+    # the movie is steady with no blinking.
+    _amplitude_mode = field == "psi_real" and "psi_imag" in snapshots[0]
+    if _amplitude_mode:
+        _is_signed = False
 
     # ── Sub-sample frames ──────────────────────────────────────────────
     if len(snapshots) > max_frames:
@@ -156,10 +163,27 @@ def animate_collision_3d(
     n_frames = len(frame_idx)
 
     # Global max for normalisation reference
-    global_max = max(
-        (float(np.abs(snapshots[i][field]).max()) for i in frame_idx),
-        default=1.0,
-    )
+    def _to_np(a):
+        try:
+            import cupy as _cp
+            if isinstance(a, _cp.ndarray):
+                return _cp.asnumpy(a)
+        except ImportError:
+            pass
+        return np.asarray(a)
+
+    if _amplitude_mode:
+        global_max = max(
+            (float(np.sqrt(_to_np(snapshots[i]["psi_real"]).astype(np.float32) ** 2
+                           + _to_np(snapshots[i]["psi_imag"]).astype(np.float32) ** 2).max())
+             for i in frame_idx),
+            default=1.0,
+        )
+    else:
+        global_max = max(
+            (float(np.abs(snapshots[i][field]).max()) for i in frame_idx),
+            default=1.0,
+        )
     if global_max == 0:
         global_max = 1.0
 
@@ -325,6 +349,15 @@ def animate_collision_3d(
         except ImportError:
             pass
 
+        # Amplitude mode: |Ψ| = sqrt(real² + imag²) — no blinking
+        if _amplitude_mode and "psi_imag" in snap:
+            try:
+                import cupy as _cp
+                pimag = _cp.asnumpy(snap["psi_imag"]) if isinstance(snap["psi_imag"], _cp.ndarray) else np.asarray(snap["psi_imag"])
+            except ImportError:
+                pimag = np.asarray(snap["psi_imag"])
+            arr = np.sqrt(arr.astype(np.float64) ** 2 + pimag.astype(np.float64) ** 2).astype(np.float32)
+
         # ── Remove old scatter ─────────────────────────────────────────
         if _scatter[0] is not None:
             _scatter[0].remove()
@@ -382,12 +415,8 @@ def animate_collision_3d(
             linewidths=0,
         )
 
-        # Camera rotation
-        if camera_rotate:
-            ax_3d.view_init(
-                elev=camera_elev,
-                azim=camera_azim + frame_num * camera_rotate_speed,
-            )
+        # Camera rotation disabled
+        ax_3d.view_init(elev=camera_elev, azim=camera_azim)
 
         # ── Phase indicator ────────────────────────────────────────────
         # Estimate collision progress from chi cross-section
@@ -401,16 +430,17 @@ def animate_collision_3d(
             except ImportError:
                 pass
 
-        frac = frame_num / max(1, n_frames - 1)
-        if frac < 0.3:
-            phase_text.set_text("\u25b6 Approach")
-            phase_text.set_color("#4488ff")
-        elif frac < 0.55:
-            phase_text.set_text("\u26a1 Collision!")
-            phase_text.set_color("#ff4444")
-        else:
-            phase_text.set_text("\u2728 Aftermath")
-            phase_text.set_color("#22cc88")
+        if show_phase_labels:
+            frac = frame_num / max(1, n_frames - 1)
+            if frac < 0.3:
+                phase_text.set_text("\u25b6 Approach")
+                phase_text.set_color("#4488ff")
+            elif frac < 0.55:
+                phase_text.set_text("\u26a1 Collision!")
+                phase_text.set_color("#ff4444")
+            else:
+                phase_text.set_text("\u2728 Aftermath")
+                phase_text.set_color("#22cc88")
 
         step_text.set_text(f"Step {step}")
         info_text.set_text(f"{len(coords):,} pts   frame {frame_num + 1}/{n_frames}")

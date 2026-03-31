@@ -23,14 +23,17 @@ from __future__ import annotations
 import numpy as np
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
 
 
 def main() -> None:
+    _args = parse_no_anim()
+    _OUT  = make_out_dir("20_gravitational_waves")
+
     N = 48
     config = lfm.SimulationConfig(
         grid_size=N,
         e_amplitude=8.0,
-        sigma=2.0,
         report_interval=200,
     )
     sim = lfm.Simulation(config)
@@ -48,10 +51,10 @@ def main() -> None:
 
     # Run with energy-density snapshots every 100 steps
     steps_total = 3000
-    snaps = sim.run_with_snapshots(
-        steps_total,
-        snapshot_every=100,
-        fields=["chi", "energy_density"],
+    snaps, _movie = run_and_save_3d_movie(
+        sim, steps=steps_total, out_dir=_OUT, stem="gravitational_waves",
+        field="chi_deficit", snapshot_every=100, no_anim=_args.no_anim,
+        extra_fields=["energy_density"],
     )
     print(f"  Collected {len(snaps)} snapshots")
 

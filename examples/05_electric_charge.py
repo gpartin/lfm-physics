@@ -17,6 +17,10 @@ electromagnetic equations are added — just GOV-01 with complex Ψ.
 import numpy as np
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
+
+_args = parse_no_anim()
+_OUT  = make_out_dir("05_electric_charge")
 
 config = lfm.SimulationConfig(
     grid_size=48,
@@ -80,3 +84,8 @@ print()
 print("No Coulomb's law was injected.  Charge = phase.")
 print()
 print("Next: what is dark matter? (→ 06)")
+# 3-D movie showing opposite-phase (attracting) pair evolution
+snaps, _movie = run_and_save_3d_movie(
+    sim_opp, steps=1000, out_dir=_OUT, stem="electric_charge",
+    field="psi_real", snapshot_every=20, no_anim=_args.no_anim,
+)

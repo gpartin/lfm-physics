@@ -8,6 +8,10 @@ Acceptance criterion: psi^2 >= 2% near EACH proton after 10 000 steps.
 """
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
+
+_args = parse_no_anim()
+_OUT  = make_out_dir("30_hydrogen_molecule")
 
 print("30 — LFM Hydrogen Molecule (H2)")
 print("=" * 55)
@@ -49,3 +53,7 @@ else:
 print()
 print("Complete! The LFM particle physics ladder:")
 print("  atoms -> molecules -> ... matter -> life")
+
+# 3-D movie using the solved molecule's simulation
+run_and_save_3d_movie(mol.sim, steps=500, out_dir=_OUT, stem="hydrogen_molecule",
+    field="psi_real", snapshot_every=10, intensity_floor=0.001, no_anim=_args.no_anim)

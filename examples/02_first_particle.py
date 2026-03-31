@@ -11,6 +11,10 @@ This is gravity emerging from nothing but the wave equations.
 """
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
+
+_args = parse_no_anim()
+_OUT  = make_out_dir("02_first_particle")
 
 config = lfm.SimulationConfig(grid_size=48)
 sim = lfm.Simulation(config)
@@ -38,7 +42,10 @@ print(f"  wells  = {m['well_fraction'] * 100:.1f}%  of the grid is a well")
 print()
 
 # Evolve — the soliton sits in its own gravity well.
-sim.run(steps=2000)
+snaps, _movie = run_and_save_3d_movie(
+    sim, steps=2000, out_dir=_OUT, stem="first_particle",
+    field="psi_real", snapshot_every=20, no_anim=_args.no_anim,
+)
 m = sim.metrics()
 print("After 2000 steps of evolution:")
 print(f"  χ_min  = {m['chi_min']:.2f}")

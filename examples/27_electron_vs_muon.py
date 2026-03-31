@@ -12,10 +12,13 @@ velocity — the ratio of displacements converges toward 1 as mass grows.
 """
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
 
 N = 64
 V = 0.04  # phase gradient velocity (same for both)
 STEPS = 6_000
+_args = parse_no_anim()
+_OUT  = make_out_dir("27_electron_vs_muon")
 
 print("27 — Electron vs Muon: Mass-Dependent Kinematics")
 print("=" * 55)
@@ -48,3 +51,8 @@ print(f"{'muon':<12} {lfm.MUON.mass_ratio:>12.1f} {disp_m:>14.1f} {disp_m / expe
 print()
 print("Both particles encoded the same phase velocity; the LFM dispersion slightly")
 print("modifies the group velocity based on each particle's chi-well depth.")
+
+# 3-D movie: fresh electron demo with chi evolving for visualization
+_demo = lfm.create_particle("electron", N=N, velocity=(V, 0.0, 0.0))
+run_and_save_3d_movie(_demo.sim, steps=400, out_dir=_OUT, stem="electron_vs_muon",
+    field="psi_real", snapshot_every=5, intensity_floor=0.001, no_anim=_args.no_anim)

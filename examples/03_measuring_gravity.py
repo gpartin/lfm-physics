@@ -9,6 +9,10 @@ lfm.radial_profile() to extract χ(r) — the gravitational well shape.
 """
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
+
+_args = parse_no_anim()
+_OUT  = make_out_dir("03_measuring_gravity")
 
 config = lfm.SimulationConfig(grid_size=48)
 sim = lfm.Simulation(config)
@@ -16,7 +20,10 @@ sim = lfm.Simulation(config)
 center = (24, 24, 24)
 sim.place_soliton(center, amplitude=6.0, sigma=4.0)
 sim.equilibrate()
-sim.run(steps=1000)
+snaps, _movie = run_and_save_3d_movie(
+    sim, steps=1000, out_dir=_OUT, stem="measuring_gravity",
+    field="chi_deficit", snapshot_every=50, no_anim=_args.no_anim,
+)
 
 print("03 — Measuring Gravity")
 print("=" * 55)

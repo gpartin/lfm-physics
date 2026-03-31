@@ -17,9 +17,10 @@ from __future__ import annotations
 import numpy as np
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
 
 
-def run_pair(separation: int) -> dict[str, float]:
+def run_pair(separation: int) -> tuple[dict[str, float], lfm.Simulation]:
     n = 56
     cx = n // 2
     p0 = (cx - separation // 2, n // 2, n // 2)
@@ -43,10 +44,13 @@ def run_pair(separation: int) -> dict[str, float]:
     sim.run(steps=2500)
 
     conf = lfm.confinement_proxy(sim.chi, p0, p1, samples=96)
-    return conf
+    return conf, sim
 
 
 def main() -> None:
+    _args = parse_no_anim()
+    _OUT  = make_out_dir("14_strong_force")
+
     print("14 - Strong Force (Color Confinement Proxy)")
     print("=" * 64)
     print()
@@ -54,9 +58,11 @@ def main() -> None:
     print(f"{'-----':>5}  {'---------':>9}  {'--------------':>14}  {'----------------':>16}")
 
     rows: list[tuple[int, dict[str, float]]] = []
+    last_sim: lfm.Simulation | None = None
     for sep in (10, 14, 18):
-        conf = run_pair(sep)
+        conf, sim = run_pair(sep)
         rows.append((sep, conf))
+        last_sim = sim
         print(
             f"{sep:>5d}  "
             f"{conf['distance']:>9.3f}  "
@@ -80,6 +86,10 @@ def main() -> None:
         print("Confinement proxy is strongly distance-dependent (approximately linear).")
     else:
         print("Weak linear trend at this resolution. Try larger grid/longer integration.")
+
+    if last_sim is not None:
+        run_and_save_3d_movie(last_sim, steps=500, out_dir=_OUT, stem="strong_force",
+            field="chi_deficit", snapshot_every=20, no_anim=_args.no_anim)
 
 
 if __name__ == "__main__":

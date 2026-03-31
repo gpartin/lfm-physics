@@ -95,6 +95,14 @@ from lfm.analysis.structure import (
     void_fraction,
     well_fraction,
 )
+from lfm.analysis.spinor import (
+    spinor_center_of_energy,
+    spinor_density,
+    spinor_interference_energy,
+    spinor_sigma_x,
+    spinor_sigma_y,
+    spinor_sigma_z,
+)
 from lfm.analysis.tracker import (
     collider_event_display,
     compute_impact_parameter,
@@ -175,4 +183,11 @@ __all__ = [
     "gravitational_wave_strain",
     "gw_quadrupole",
     "gw_power",
+    # spinor (Paper 048)
+    "spinor_density",
+    "spinor_sigma_z",
+    "spinor_sigma_x",
+    "spinor_sigma_y",
+    "spinor_interference_energy",
+    "spinor_center_of_energy",
 ]

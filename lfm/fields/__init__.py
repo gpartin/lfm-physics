@@ -31,6 +31,12 @@ from lfm.fields.equilibrium import (
 )
 from lfm.fields.random import seed_noise, uniform_chi
 from lfm.fields.soliton import gaussian_soliton, place_solitons, wave_kick
+from lfm.fields.spinor import (
+    apply_rotation_x,
+    apply_rotation_z,
+    gaussian_spinor,
+    vortex_spinor,
+)
 
 __all__ = [
     "gaussian_soliton",
@@ -48,4 +54,9 @@ __all__ = [
     "disk_positions",
     "disk_velocities",
     "initialize_disk",
+    # spinor
+    "gaussian_spinor",
+    "vortex_spinor",
+    "apply_rotation_x",
+    "apply_rotation_z",
 ]

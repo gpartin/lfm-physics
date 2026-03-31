@@ -20,6 +20,10 @@ Run:
 """
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
+
+_args = parse_no_anim()
+_OUT  = make_out_dir("09_hydrogen_atom")
 
 N = 64
 center = (N // 2, N // 2, N // 2)
@@ -66,7 +70,10 @@ print(f"  Electron placed at r={electron_r}")
 print(f"  χ-well depth at r={electron_r}:  Δχ = {chi_before:.3f}  (from GOV-01 + GOV-02 only)")
 print()
 
-sim.run(steps=4000)
+snaps, _movie = run_and_save_3d_movie(
+    sim, steps=4000, out_dir=_OUT, stem="hydrogen_atom",
+    field="psi_real", snapshot_every=40, no_anim=_args.no_anim,
+)
 m_after = sim.metrics()
 print("  After 4000 steps of evolution:")
 print(f"    χ_min         = {m_after['chi_min']:.3f}  (deeper → stronger binding)")

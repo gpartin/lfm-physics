@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Run all 8 quantitative experiments and print a summary table.
+"""Run all 13 quantitative experiments and print a summary table.
 
 Usage::
 
@@ -7,6 +7,11 @@ Usage::
 
 Each experiment tests a QUANTITATIVE prediction of LFM against
 known physics, using ONLY GOV-01 + GOV-02 (no external physics).
+
+Experiments 01-08: Core physics (mass-energy, gravity, Coulomb, dispersion,
+    redshift, mass hierarchy, string tension, dark energy modes).
+Experiments 09-13: Quantum information (superposition, measurement,
+    no-cloning, decoherence).
 """
 
 from __future__ import annotations
@@ -24,6 +29,11 @@ EXPERIMENTS = [
     "exp_06_mass_hierarchy",
     "exp_07_string_tension",
     "exp_08_dark_energy_modes",
+    "exp_09_superposition",
+    "exp_10_measurement",
+    "exp_11_no_cloning",
+    "exp_12_decoherence",
+    "exp_13_born_rule",
 ]
 
 
@@ -33,7 +43,7 @@ def main() -> None:
 
     print()
     print("╔" + "═" * 68 + "╗")
-    print("║   LFM QUANTITATIVE EXPERIMENT SUITE — 8 EXPERIMENTS              ║")
+    print("║   LFM QUANTITATIVE EXPERIMENT SUITE — 13 EXPERIMENTS             ║")
     print("║   Goal: Close every cold-reviewer gap with NUMBERS               ║")
     print("╚" + "═" * 68 + "╝")
     print()

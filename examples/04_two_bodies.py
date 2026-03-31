@@ -10,6 +10,10 @@ the coupled dynamics of Ψ and χ.
 """
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
+
+_args = parse_no_anim()
+_OUT  = make_out_dir("04_two_bodies")
 
 config = lfm.SimulationConfig(grid_size=48)
 sim = lfm.Simulation(config)
@@ -65,3 +69,8 @@ print("Each soliton curves toward the other's χ-well.")
 print("No Newton, no force law — just waves in a lattice.")
 print()
 print("Next: what about electric charge? (→ 05)")
+# 3-D movie showing the two-body gravitational interaction
+snaps, _movie = run_and_save_3d_movie(
+    sim, steps=1000, out_dir=_OUT, stem="two_bodies",
+    field="chi_deficit", snapshot_every=20, no_anim=_args.no_anim,
+)

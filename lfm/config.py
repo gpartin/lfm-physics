@@ -25,6 +25,8 @@ from lfm.constants import (
     E_AMPLITUDE_BY_GRID,
     EPSILON_W,
     KAPPA,
+    KAPPA_C,
+    LAMBDA_H,
     N_COLORS,
     OBSERVABLE_RADIUS_PLANCK,
     SA_D,
@@ -43,6 +45,89 @@ class FieldLevel(enum.IntEnum):
     REAL = 0
     COMPLEX = 1
     COLOR = 2
+
+
+class ChiMode(enum.Enum):
+    """Which GOV-02 update rule to use for the χ field.
+
+    WAVE
+        Full second-order PDE (default). Both ∂²χ/∂t² and ∇²χ active.
+        Required for solitons, orbits, quantum, nuclear, and solar-scale.
+    MEMORY
+        GOV-03 quasi-static approximation: χ² = χ₀² − g⟨|Ψ|²⟩_τ.
+        χ tracks a running average of energy over τ steps (dark matter halo).
+        Appropriate for galactic- and cosmic-scale dark matter simulations.
+    STATIC
+        GOV-04 Poisson limit: ∇²χ = (κ/c²)(|Ψ|² − E₀²).
+        χ solved once from instantaneous energy density.
+        Fastest; valid when χ responds much faster than Ψ dynamics.
+    """
+
+    WAVE = "wave"
+    MEMORY = "memory"
+    STATIC = "static"
+
+
+class PhysicsScale(enum.Enum):
+    """Named physical scale of the simulation.
+
+    Setting ``physical_scale`` on :class:`SimulationConfig` (or using
+    :meth:`SimulationConfig.for_scale`) auto-selects the appropriate
+    :class:`FieldLevel`, :class:`ChiMode`, and coupling constants.
+
+    The table below lists the *minimum* physical size of one grid cell
+    for each scale, the forces active, and which GOV equations are used.
+
+    +------------+----------------+------------+-----------+-------------------+
+    | Scale      | Δx / cell      | FieldLevel | ChiMode   | Active physics    |
+    +============+================+============+===========+===================+
+    | PLANCK     | 1.6 × 10⁻³⁵ m | COLOR      | WAVE      | All 4 forces      |
+    | NUCLEAR    | ~ 1 fm         | COLOR      | WAVE      | QCD + confinement |
+    | ATOMIC     | ~ 0.1 Å        | COMPLEX    | WAVE      | EM + orbitals     |
+    | MOLECULAR  | ~ 1 nm         | COMPLEX    | WAVE      | Chemistry / bonds |
+    | CLASSICAL  | > 1 μm         | REAL       | WAVE      | Gravity only      |
+    | SOLAR      | ~ 10⁹ m        | REAL       | WAVE      | Orbital mechanics |
+    | GALACTIC   | ~ 1 parsec     | REAL       | MEMORY    | Dark matter halo  |
+    | COSMIC     | ~ 1 Mpc        | REAL       | MEMORY    | Large-scale struct|
+    +------------+----------------+------------+-----------+-------------------+
+
+    The minimum resolvable particle at each scale is one with Compton
+    wavelength ≥ one grid cell (σ_min ≈ 1.0 cell).
+    """
+
+    PLANCK = "planck"
+    NUCLEAR = "nuclear"
+    ATOMIC = "atomic"
+    MOLECULAR = "molecular"
+    CLASSICAL = "classical"
+    SOLAR = "solar"
+    GALACTIC = "galactic"
+    COSMIC = "cosmic"
+
+
+# Physical size of one grid cell at each named scale (metres).
+_SCALE_CELL_SIZE_M: dict[PhysicsScale, float] = {
+    PhysicsScale.PLANCK:    1.616e-35,   # 1 Planck length
+    PhysicsScale.NUCLEAR:   1.0e-15,     # 1 fm
+    PhysicsScale.ATOMIC:    1.0e-11,     # 0.1 Angstrom
+    PhysicsScale.MOLECULAR: 1.0e-9,      # 1 nm
+    PhysicsScale.CLASSICAL: 1.0e-4,      # 0.1 mm
+    PhysicsScale.SOLAR:     1.5e11,      # 1 AU
+    PhysicsScale.GALACTIC:  3.086e16,    # 1 parsec
+    PhysicsScale.COSMIC:    3.086e22,    # 1 Mpc
+}
+
+# Regime default: (FieldLevel, ChiMode, lambda_self, kappa_c)
+_SCALE_DEFAULTS: dict[PhysicsScale, tuple[FieldLevel, ChiMode, float, float]] = {
+    PhysicsScale.PLANCK:    (FieldLevel.COLOR,   ChiMode.WAVE,   LAMBDA_H, KAPPA_C),
+    PhysicsScale.NUCLEAR:   (FieldLevel.COLOR,   ChiMode.WAVE,   LAMBDA_H, KAPPA_C),
+    PhysicsScale.ATOMIC:    (FieldLevel.COMPLEX, ChiMode.WAVE,   0.0,      0.0),
+    PhysicsScale.MOLECULAR: (FieldLevel.COMPLEX, ChiMode.WAVE,   0.0,      0.0),
+    PhysicsScale.CLASSICAL: (FieldLevel.REAL,    ChiMode.WAVE,   0.0,      0.0),
+    PhysicsScale.SOLAR:     (FieldLevel.REAL,    ChiMode.WAVE,   0.0,      0.0),
+    PhysicsScale.GALACTIC:  (FieldLevel.REAL,    ChiMode.MEMORY, 0.0,      0.0),
+    PhysicsScale.COSMIC:    (FieldLevel.REAL,    ChiMode.MEMORY, 0.0,      0.0),
+}
 
 
 class BoundaryType(enum.Enum):
@@ -168,6 +253,33 @@ class SimulationConfig:
     This value is metadata only — it does not change the physics kernels.
     """
 
+    # Physical regime
+    physical_scale: PhysicsScale | None = None
+    """Named physical scale.  When set, the appropriate :class:`FieldLevel`,
+    :class:`ChiMode`, and coupling constants (``lambda_self``, ``kappa_c``)
+    are applied automatically in ``__post_init__``.
+
+    The specific couplings chosen are those in ``_SCALE_DEFAULTS``.
+    Any coupling you set *before* this auto-selection will be overridden.
+    To take manual control, leave ``physical_scale=None`` and set
+    ``field_level`` / ``chi_mode`` explicitly.
+
+    Use :meth:`SimulationConfig.for_scale` as a convenience factory::
+
+        cfg = SimulationConfig.for_scale(PhysicsScale.SOLAR, grid_size=256)
+    """
+
+    chi_mode: ChiMode = ChiMode.WAVE
+    """Which GOV-02 update rule to use.  See :class:`ChiMode`.
+
+    ``WAVE`` (default): full second-order PDE — required for solitons, orbits,
+    and quantum-scale simulations.
+    ``MEMORY``: GOV-03 τ-averaging (dark matter halos).
+    ``STATIC``: GOV-04 Poisson solve (quasi-static Newtonian limit).
+
+    Set automatically when ``physical_scale`` is provided.
+    """
+
     # Derived (computed in __post_init__)
     dx: float = field(init=False, default=1.0)
     """Grid spacing. Always 1.0 in natural units."""
@@ -176,6 +288,13 @@ class SimulationConfig:
     """Gaussian soliton width = grid_size / blob_sigma_factor."""
 
     def __post_init__(self) -> None:
+        # Apply regime defaults BEFORE validation so derived fields see them.
+        if self.physical_scale is not None:
+            fl, cm, ls, kc = _SCALE_DEFAULTS[self.physical_scale]
+            self.field_level = fl
+            self.chi_mode = cm
+            self.lambda_self = ls
+            self.kappa_c = kc
         self._validate()
         self.dx = 1.0
         self.sigma = self.grid_size / self.blob_sigma_factor
@@ -187,6 +306,7 @@ class SimulationConfig:
 
     def _validate(self) -> None:
         """Validate configuration parameters."""
+        import warnings
         if self.grid_size < 8:
             raise ValueError(f"grid_size must be >= 8, got {self.grid_size}")
         if self.dt <= 0:
@@ -206,11 +326,93 @@ class SimulationConfig:
             raise ValueError(f"boundary_fraction must be in (0, 1), got {self.boundary_fraction}")
         if self.field_level == FieldLevel.COLOR and self.n_colors < 1:
             raise ValueError(f"n_colors must be >= 1, got {self.n_colors}")
+        # Cross-check: warn when field_level disagrees with physical_scale.
+        if self.physical_scale is None and self.field_level != FieldLevel.REAL:
+            # User set field_level manually — no warning needed.
+            pass
+        elif self.physical_scale is not None:
+            expected_fl = _SCALE_DEFAULTS[self.physical_scale][0]
+            if self.field_level != expected_fl:
+                warnings.warn(
+                    f"physical_scale={self.physical_scale.value!r} expects "
+                    f"FieldLevel.{expected_fl.name} but field_level="
+                    f"FieldLevel.{self.field_level.name} is set. "
+                    "The physical_scale auto-selection has been overridden.",
+                    stacklevel=3,
+                )
 
     @property
     def sa_enabled(self) -> bool:
         """True when S_a auxiliary fields are active (kappa_tube > 0)."""
         return self.kappa_tube > 0.0
+
+    @property
+    def cell_size_m(self) -> float | None:
+        """Physical size of one grid cell in metres, or *None* if not anchored.
+
+        Returns the cell size for the :attr:`physical_scale` if one is set,
+        otherwise ``None`` (the user has not provided a physical anchor).
+
+        Example::
+
+            cfg = SimulationConfig.for_scale(PhysicsScale.SOLAR, grid_size=256)
+            print(cfg.cell_size_m)   # 1.5e+11  (1 AU per cell)
+        """
+        if self.physical_scale is None:
+            return None
+        return _SCALE_CELL_SIZE_M[self.physical_scale]
+
+    @property
+    def minimum_particle_size_m(self) -> float | None:
+        """Smallest resolvable particle diameter in metres, or *None*.
+
+        Defined as ``cell_size_m`` (i.e. σ_min = 1.0 grid cells).
+        A particle with Compton wavelength smaller than this cannot be
+        represented on the current grid — use a finer :class:`PhysicsScale`.
+        """
+        cs = self.cell_size_m
+        return cs  # σ_min = 1.0 cell
+
+    @classmethod
+    def for_scale(
+        cls,
+        scale: PhysicsScale,
+        grid_size: int = 128,
+        **kwargs,
+    ) -> SimulationConfig:
+        """Create a :class:`SimulationConfig` with regime defaults for *scale*.
+
+        This is the recommended way to configure scale-based simulations::
+
+            # Nuclear-scale: COLOR field, WAVE chi, Mexican hat on
+            cfg = SimulationConfig.for_scale(PhysicsScale.NUCLEAR, grid_size=64)
+
+            # Solar-scale: REAL field, WAVE chi, gravity only
+            cfg = SimulationConfig.for_scale(PhysicsScale.SOLAR, grid_size=256)
+
+            # Galactic-scale: REAL field, MEMORY chi (dark matter)
+            cfg = SimulationConfig.for_scale(PhysicsScale.GALACTIC, grid_size=128)
+
+        Any keyword argument overrides the regime default::
+
+            cfg = SimulationConfig.for_scale(
+                PhysicsScale.ATOMIC, grid_size=64, dt=0.01
+            )
+
+        Parameters
+        ----------
+        scale:
+            Named physical scale (see :class:`PhysicsScale`).
+        grid_size:
+            Grid side length N.
+        **kwargs:
+            Additional overrides passed to :class:`SimulationConfig`.
+
+        Returns
+        -------
+        SimulationConfig
+        """
+        return cls(grid_size=grid_size, physical_scale=scale, **kwargs)
 
     @property
     def planck_scale(self) -> PlanckScale:

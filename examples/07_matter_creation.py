@@ -15,6 +15,10 @@ energy — just a vibrating χ field.
 import numpy as np
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
+
+_args = parse_no_anim()
+_OUT  = make_out_dir("07_matter_creation")
 
 N = 48
 config = lfm.SimulationConfig(grid_size=N)
@@ -83,3 +87,9 @@ print("In the early universe, χ oscillated violently after the")
 print("Big Bang — and this resonance filled space with matter.")
 print()
 print("Next: put it all together and simulate a universe (→ 08)")
+
+# 3-D movie of matter that was created by parametric resonance
+snaps, _movie = run_and_save_3d_movie(
+    sim, steps=500, out_dir=_OUT, stem="matter_creation",
+    field="psi_real", snapshot_every=10, no_anim=_args.no_anim,
+)

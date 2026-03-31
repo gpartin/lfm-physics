@@ -11,6 +11,10 @@ Unbound radiation radiates away; the residual psi is the bound s-state mode.
 """
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
+
+_args = parse_no_anim()
+_OUT  = make_out_dir("29_hydrogen_atom")
 
 print("29 — LFM Hydrogen Atom")
 print("=" * 55)
@@ -45,3 +49,7 @@ else:
 
 print()
 print("See also: 30_hydrogen_molecule.py")
+
+# 3-D movie using the solved atom's simulation (electron psi in nuclear chi-well)
+run_and_save_3d_movie(atom.sim, steps=500, out_dir=_OUT, stem="hydrogen_atom",
+    field="psi_real", snapshot_every=10, intensity_floor=0.001, no_anim=_args.no_anim)

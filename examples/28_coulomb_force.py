@@ -18,6 +18,7 @@ import numpy as np
 
 import lfm
 from lfm.config import BoundaryType, FieldLevel, SimulationConfig
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
 
 print("28 — Coulomb Force: Charge from Phase")
 print("=" * 55)
@@ -26,6 +27,8 @@ print()
 N = 64
 STEPS = 2_000
 SEP = 12  # initial separation in cells
+_args = parse_no_anim()
+_OUT  = make_out_dir("28_coulomb_force")
 
 
 # We place two solitons by hand using Gaussian seeds (fast, sufficient demo)
@@ -85,3 +88,8 @@ print()
 print("Same charge -> repel (gap grows).  Opposite charge -> attract (gap shrinks).")
 print()
 print("Electric charge is the wave PHASE. No Coulomb law was injected.")
+
+# 3-D movie: e- + e+ attracting each other
+_demo = place_two(0.0, math.pi)
+run_and_save_3d_movie(_demo, steps=1000, out_dir=_OUT, stem="coulomb_force",
+    field="psi_real", snapshot_every=20, intensity_floor=0.001, no_anim=_args.no_anim)

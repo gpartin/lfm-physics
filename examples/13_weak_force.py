@@ -18,9 +18,10 @@ from __future__ import annotations
 import numpy as np
 
 import lfm
+from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
 
 
-def build_run(epsilon_w: float) -> dict[str, float]:
+def build_run(epsilon_w: float) -> tuple[dict[str, float], lfm.Simulation]:
     cfg = lfm.SimulationConfig(
         grid_size=48,
         field_level=lfm.FieldLevel.COMPLEX,
@@ -60,16 +61,19 @@ def build_run(epsilon_w: float) -> dict[str, float]:
         "asymmetry": float(asym["asymmetry"]),
         "plus_weight": float(asym["plus_weight"]),
         "minus_weight": float(asym["minus_weight"]),
-    }
+    }, sim
 
 
 def main() -> None:
+    _args = parse_no_anim()
+    _OUT  = make_out_dir("13_weak_force")
+
     print("13 - Weak Force (Parity Asymmetry)")
     print("=" * 60)
     print()
 
-    w_on = build_run(epsilon_w=lfm.EPSILON_W)
-    w_off = build_run(epsilon_w=0.0)
+    w_on, sim_on = build_run(epsilon_w=lfm.EPSILON_W)
+    w_off, _ = build_run(epsilon_w=0.0)
 
     print(f"epsilon_w ON  ({lfm.EPSILON_W:.3f})")
     print(f"  j_rms      = {w_on['j_rms']:.6f}")
@@ -89,6 +93,9 @@ def main() -> None:
         print("Parity asymmetry strengthens when epsilon_w is enabled.")
     else:
         print("No clear parity separation at this scale. Try larger grid or longer run.")
+
+    run_and_save_3d_movie(sim_on, steps=500, out_dir=_OUT, stem="weak_force",
+        field="psi_real", snapshot_every=20, no_anim=_args.no_anim)
 
 
 if __name__ == "__main__":

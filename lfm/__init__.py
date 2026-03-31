@@ -80,9 +80,16 @@ from lfm.analysis import (
     void_statistics,
     weak_parity_asymmetry,
     well_fraction,
+    # spinor analysis (Paper 048)
+    spinor_density,
+    spinor_sigma_z,
+    spinor_sigma_x,
+    spinor_sigma_y,
+    spinor_interference_energy,
+    spinor_center_of_energy,
 )
-from lfm.config import BoundaryType, FieldLevel, SimulationConfig
-from lfm.config_presets import full_physics, gravity_em, gravity_only
+from lfm.config import BoundaryType, ChiMode, FieldLevel, PhysicsScale, SimulationConfig
+from lfm.config_presets import full_physics, gravity_em, gravity_only, spinor_field
 from lfm.constants import (
     AGE_UNIVERSE_GYR,
     ALPHA_EM,
@@ -133,12 +140,15 @@ from lfm.experiment import (
     dispersion,
 )
 from lfm.fields import (
+    apply_rotation_x,
+    apply_rotation_z,
     boosted_soliton,
     disk_positions,
     disk_velocities,
     equilibrate_chi,
     equilibrate_from_fields,
     gaussian_soliton,
+    gaussian_spinor,
     grid_positions,
     initialize_disk,
     place_solitons,
@@ -147,6 +157,7 @@ from lfm.fields import (
     sparse_positions,
     tetrahedral_positions,
     uniform_chi,
+    vortex_spinor,
     wave_kick,
 )
 from lfm.io.snapshots import load_snapshots, save_snapshots
@@ -255,9 +266,18 @@ from lfm.planning import (
     scale_limit_note,
     use_case_preset,
 )
+from lfm.scenarios import (
+    BodyType,
+    CelestialBody,
+    black_hole_system,
+    galaxy_core,
+    place_bodies,
+    solar_system,
+)
 from lfm.simulation import Simulation
 from lfm.sweep import sweep, sweep_2d
 from lfm.units import CosmicScale, PlanckScale
+from lfm.viz.celestial import animate_celestial_3d
 from lfm.viz.collision import animate_collision_3d
 from lfm.viz.quantum import animate_3d_slices, animate_double_slit_3d
 
@@ -302,10 +322,13 @@ __all__ = [
     "SimulationConfig",
     "FieldLevel",
     "BoundaryType",
+    "PhysicsScale",
+    "ChiMode",
     # Config presets
     "gravity_only",
     "gravity_em",
     "full_physics",
+    "spinor_field",
     # Backends & Simulation
     "Evolver",
     "Simulation",
@@ -314,6 +337,10 @@ __all__ = [
     "configure_remote",
     # Fields
     "gaussian_soliton",
+    "gaussian_spinor",
+    "vortex_spinor",
+    "apply_rotation_x",
+    "apply_rotation_z",
     "place_solitons",
     "wave_kick",
     "poisson_solve_fft",
@@ -412,6 +439,13 @@ __all__ = [
     "gravitational_wave_strain",
     "gw_quadrupole",
     "gw_power",
+    # Spinor (Paper 048)
+    "spinor_density",
+    "spinor_sigma_z",
+    "spinor_sigma_x",
+    "spinor_sigma_y",
+    "spinor_interference_energy",
+    "spinor_center_of_energy",
     # Boosted soliton
     "boosted_soliton",
     # Sweep
@@ -425,6 +459,7 @@ __all__ = [
     "load_snapshots",
     # Visualization
     "animate_3d_slices",
+    "animate_celestial_3d",
     "animate_collision_3d",
     "animate_double_slit_3d",
     # Particle catalog (Phase 1)
@@ -536,4 +571,11 @@ __all__ = [
     # Phase 6: Collision
     "CollisionSetup",
     "create_collision",
+    # Celestial scenarios
+    "BodyType",
+    "CelestialBody",
+    "solar_system",
+    "black_hole_system",
+    "galaxy_core",
+    "place_bodies",
 ]

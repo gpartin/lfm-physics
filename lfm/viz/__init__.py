@@ -21,6 +21,7 @@ Quick usage::
 """
 
 from lfm.viz.animation import animate_slice, animate_three_slices
+from lfm.viz.celestial import animate_celestial_3d
 from lfm.viz.collision import animate_collision_3d
 from lfm.viz.evolution import plot_energy_components, plot_evolution
 from lfm.viz.fields import plot_isosurface
@@ -65,6 +66,8 @@ __all__ = [
     "animate_3d_slices",
     "render_3d_volume",
     "volume_render_available",
+    # celestial / scenarios
+    "animate_celestial_3d",
     # other
     "plot_radial_profile",
     "plot_isosurface",
