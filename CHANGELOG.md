@@ -4,6 +4,78 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.3.0] - 2026-03-31
+
+### Added
+
+- **Helmholtz SCV confinement kernel (GOV-02 v17)** (`lfm/core/backends/numpy_backend.py`,
+  `cupy_backend.py`): replaces the v16 Euler diffusion kernel with an FFT-based Helmholtz
+  smoothing operator for the Smoothed Colour Variance (SCV) term. Produces the canonical
+  linear confinement potential V(r) = σr (R² = 0.989 static) with all parameters derived
+  from χ₀ = 19. Both NumPy and CuPy backends updated.
+- **Config presets module** (`lfm/config_presets.py`): `gravity_only()`, `gravity_em()`,
+  and `full_physics()` convenience constructors for `SimulationConfig` covering the three
+  most common physics regimes.
+- **Measurement toolkit** (`lfm/analysis/measurements.py`): `binding_energy()`,
+  `color_fraction()`, `phase_winding()`, `chi_at_peak()`, `oscillation_frequency()`,
+  `particle_lifetime()`, `scattering_angle()` — purpose-built diagnostics for the particle
+  physics validation suite.
+- **Experiment runner** (`lfm/experiment/runner.py`): `ValidationResult` dataclass and
+  `run_experiment()` with explicit H₀/H₁ hypothesis tracking; integrates with the existing
+  `lfm.Simulation` API.
+- **Spinor fields and SU(2) algebra** (`lfm/fields/spinor.py`, `lfm/analysis/spinor.py`):
+  Pauli matrices σ_y, rotation operators R_x / R_z, SU(2) composition — the spinor
+  representation underlying Paper 048 (spin-½ emergence). 14/14 algebraic checks pass.
+- **Spin examples 34–37**:
+  - `34_spin_720_periodicity.py` — spinor 720° periodicity vs scalar 360° (Pauli exclusion)
+  - `35_bloch_precession.py` — Bloch-sphere spin precession in a χ-field
+  - `36_entanglement_correlations.py` — two-spin entanglement, ⟨σ_z⊗σ_z⟩ correlations
+  - `37_bell_inequality.py` — Bell-inequality violation showcase (Bell-CHSH parameter ≈ 2√2)
+- **Standard Model particle catalog** (`lfm/particles/__init__.py`): 69 particles covering
+  all three lepton/quark generations, gauge bosons, and compound hadrons, each with an
+  `l`-value mapping to mass via m/mₑ = l(l+1).
+- **Eigenmode particle solver** (`lfm/particles/solver.py`): `place_particle()` with
+  automatic chi-equilibration; `EigenmodeSolver` for exact standing-wave placement without
+  Gaussian transients.
+- **Collision experiment framework** (`lfm/scenarios/`): `auto_equilibrate()` before boost,
+  collision diagnostics, impact-parameter measurement.
+- **EM / light source support** (`lfm/scenarios/celestial.py`): `spherical_phase_source()`,
+  `place_light_source()` — massless (χ = 0) photon wavepackets; absorbing boundary
+  conditions for open-domain EM propagation; config validator for the massless regime.
+- **Particle validation test suite** (620 tests passing, 0 failures):
+  - Phase 1: single-particle stability (7 tests, `test_soliton_physics.py`)
+  - Phase 2: two-particle interactions (6 tests, `test_place_particle.py`)
+  - Phase 3: colour physics and confinement (6 tests)
+  - Phase 4: emergent behaviour (7 tests, `test_v12_features.py`)
+  - Quantitative suite: 8 precision checks
+
+### Fixed
+
+- **`matplotlib` lazy import** (`lfm/viz/celestial.py`): top-level `from matplotlib.patches
+  import Circle` was executed at import time, raising `ModuleNotFoundError` on headless
+  CI runners that list matplotlib as an optional dependency.  Import now happens inside
+  `_draw_body_overlays()`.
+- **`COLOR` `n_colors` bug** (`lfm/experiment/entanglement.py`): `n_colors` was not
+  forwarded to the colour backend, causing single-component runs to use 3-component arrays.
+- **`chi0` validation** (`lfm/core/`): `chi0 > 0` is now enforced (previously `>= 0`
+  was accepted, silently producing a zero-mass lattice with no Klein-Gordon restoring force).
+- **Neutral antiparticles** (`lfm/particles/`): `charge=0` is now accepted at the `REAL`
+  field level; previously a spurious `ValueError` was raised.
+- Ruff lint: F401 noqa on public re-exports (`lfm/analysis/__init__.py`), E501 on
+  auto-generated comment (`lfm/experiment/double_slit.py`), SIM117 nested-with in
+  `tests/test_remote_backend.py`.
+- Mypy: resolved all remaining type errors in `lfm/scenarios/celestial.py`,
+  `lfm/analysis/measurements.py`, and `lfm/core/backends/`.
+
+### Changed
+
+- `SimulationConfig` documentation updated to reflect v17 Helmholtz parameters and the
+  new `config_presets` module.
+- README refreshed: v17 governing equations, new spinor/particle examples, updated
+  constants table.
+- `PARTICLE_VALIDATION_PLAN.md` added (827 lines) — structured test plan covering all
+  four physics phases.
+
 ## [1.2.1] - 2026-03-27
 
 ### Fixed

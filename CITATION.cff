@@ -11,8 +11,8 @@ authors:
   - family-names: Partin
     given-names: Greg
     email: gpartin@gmail.com
-version: "1.2.0"
-date-released: 2026-03-25
+version: "1.3.0"
+date-released: 2026-03-31
 license: MIT
 repository-code: "https://github.com/gpartin/lfm-physics"
 url: "https://lfm-physics.readthedocs.io"
@@ -31,8 +31,8 @@ preferred-citation:
   authors:
     - family-names: Partin
       given-names: Greg
-  version: "1.2.0"
-  date-released: 2026-03-25
+  version: "1.3.0"
+  date-released: 2026-03-31
   license: MIT
   repository-code: "https://github.com/gpartin/lfm-physics"
   url: "https://lfm-physics.readthedocs.io"
