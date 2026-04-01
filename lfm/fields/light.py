@@ -47,8 +47,12 @@ Direct usage::
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def spherical_phase_source(
@@ -123,10 +127,10 @@ def spherical_phase_source(
     def _shell(r_centre: float) -> NDArray[np.float64]:
         """1/r-weighted Gaussian centred at r_centre."""
         r_safe = np.where(R > 0.5, R, np.inf)
-        return delta_theta * R0 / r_safe * np.exp(-((R - r_centre) ** 2) / (2.0 * sigma ** 2))
+        return delta_theta * R0 / r_safe * np.exp(-((R - r_centre) ** 2) / (2.0 * sigma**2))
 
-    shell_t0 = _shell(R0)                        # t = 0
-    shell_tm1 = _shell(R0 - c_speed * dt)        # t = −Δt (shifted inward → outward IC)
+    shell_t0 = _shell(R0)  # t = 0
+    shell_tm1 = _shell(R0 - c_speed * dt)  # t = −Δt (shifted inward → outward IC)
 
     cos_p = np.cos(charge_phase)
     sin_p = np.sin(charge_phase)

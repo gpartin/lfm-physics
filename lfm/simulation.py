@@ -274,12 +274,12 @@ class Simulation:
 
     def place_particle(
         self,
-        name: "str | Particle",
+        name: str | Particle,
         position: tuple[float, float, float] | None = None,
         velocity: tuple[float, float, float] | None = None,
         amplitude: float | None = None,
         sigma: float | None = None,
-    ) -> "SolitonSolution":
+    ) -> SolitonSolution:
         """Place a particle with proper eigenmode physics and optional motion.
 
         This is the recommended way to add particles to a simulation.
@@ -339,7 +339,6 @@ class Simulation:
         import math as _math
 
         from lfm.particles.catalog import (
-            Particle,
             amplitude_for_particle,
             get_particle,
             sigma_for_particle,
@@ -370,10 +369,7 @@ class Simulation:
         _MOTION_SIGMA_MIN = 12.0
 
         if amplitude is None:
-            if has_velocity:
-                amplitude = _MOTION_AMP
-            else:
-                amplitude = amplitude_for_particle(particle, N)
+            amplitude = _MOTION_AMP if has_velocity else amplitude_for_particle(particle, N)
 
         if sigma is None:
             if has_velocity:
