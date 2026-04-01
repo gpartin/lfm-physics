@@ -86,7 +86,7 @@ void evolve_gov01_gov02(
     float chi_c = chi[idx];
     float chi_sq = chi_c * chi_c;
     float mask = boundary_mask[idx];
-    float interior = 1.0f - mask;
+    float absorb = 1.0f - mask;  // 1 inside, 0 at boundary (smooth taper)
 
     // Accumulate colorblind sources for GOV-02
     float psi_sq_total = 0.0f;
@@ -145,11 +145,11 @@ void evolve_gov01_gov02(
             Pi_new -= dt2 * eps_cc * chi_sq * (Pi_val - Pi_avg);
         }
 
-        // Frozen boundary: zero Psi on boundary cells
-        Psi_r_next[aidx] = Pr_new * interior;
-        Psi_r_prev_next[aidx] = Pr;
-        Psi_i_next[aidx] = Pi_new * interior;
-        Psi_i_prev_next[aidx] = Pi_val;
+        // Absorbing boundary — damp both new and prev to prevent leapfrog reflection.
+        Psi_r_next[aidx] = Pr_new * absorb;
+        Psi_r_prev_next[aidx] = Pr * absorb;      // damp prev too
+        Psi_i_next[aidx] = Pi_new * absorb;
+        Psi_i_prev_next[aidx] = Pi_val * absorb;  // damp prev too
 
         // Per-color energy density
         float e_a = Pr * Pr + Pi_val * Pi_val;
@@ -227,7 +227,7 @@ void evolve_gov01_gov02(
     if (chi_new < -chi0) chi_new = -chi0;
 
     // Frozen boundary
-    chi_new = mask * chi0 + interior * chi_new;
+    chi_new = mask * chi0 + absorb * chi_new;
 
     chi_next[idx] = chi_new;
     chi_prev_next[idx] = chi_c;
@@ -405,13 +405,14 @@ void evolve_real(
     // BH excision
     if (chi_new < -chi0) chi_new = -chi0;
 
-    // Frozen boundary
+    // Absorbing boundary — damp both new and prev to prevent leapfrog reflection.
     float mask = boundary_mask[idx];
-    E_new = (1.0f - mask) * E_new;
-    chi_new = mask * chi0 + (1.0f - mask) * chi_new;
+    float absorb = 1.0f - mask;
+    E_new = absorb * E_new;
+    chi_new = mask * chi0 + absorb * chi_new;
 
     E_next[idx] = E_new;
-    E_prev_next[idx] = E_c;
+    E_prev_next[idx] = absorb * E_c;   // damp prev too
     chi_next[idx] = chi_new;
     chi_prev_next[idx] = chi_c;
 }
@@ -522,16 +523,17 @@ void evolve_complex(
     // BH excision
     if (chi_new < -chi0) chi_new = -chi0;
 
-    // Frozen boundary
+    // Absorbing boundary — damp both new and prev to prevent leapfrog reflection.
     float mask = boundary_mask[idx];
-    Pr_new = (1.0f - mask) * Pr_new;
-    Pi_new = (1.0f - mask) * Pi_new;
-    chi_new = mask * chi0 + (1.0f - mask) * chi_new;
+    float absorb = 1.0f - mask;
+    Pr_new = absorb * Pr_new;
+    Pi_new = absorb * Pi_new;
+    chi_new = mask * chi0 + absorb * chi_new;
 
     Psi_r_next[idx] = Pr_new;
-    Psi_r_prev_next[idx] = Pr;
+    Psi_r_prev_next[idx] = absorb * Pr;      // damp prev too
     Psi_i_next[idx] = Pi_new;
-    Psi_i_prev_next[idx] = Pi_val;
+    Psi_i_prev_next[idx] = absorb * Pi_val;  // damp prev too
     chi_next[idx] = chi_new;
     chi_prev_next[idx] = chi_c;
 }

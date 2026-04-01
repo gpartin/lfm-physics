@@ -15,6 +15,8 @@ useful when constructing batched initial conditions outside the
 :class:`Simulation` API.
 """
 
+from lfm.fields.light import spherical_phase_source
+
 from lfm.fields.arrangements import (
     disk_positions,
     disk_velocities,
@@ -59,4 +61,6 @@ __all__ = [
     "vortex_spinor",
     "apply_rotation_x",
     "apply_rotation_z",
+    # light
+    "spherical_phase_source",
 ]

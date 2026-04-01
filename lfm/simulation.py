@@ -628,6 +628,103 @@ class Simulation:
             # (used as weight to localise the velocity field).
             self._velocity_boosts.append(((vx, vy, vz), envelope**2))
 
+    def place_light_source(
+        self,
+        center: tuple[float, float, float] | None = None,
+        R0: float = 12.0,
+        sigma: float = 2.0,
+        delta_theta: float = 0.25,
+        charge_phase: float = 0.0,
+    ) -> None:
+        """Place an outward-propagating spherical EM wavefront (photon).
+
+        Requires ``FieldLevel.COMPLEX``.  Places a 1/r-weighted Gaussian
+        phase shell at radius ``R0`` and sets both the current *and*
+        previous Ψ buffers so the leapfrog starts with zero inward
+        component — the wave expands cleanly outward with no reflection.
+
+        The propagation speed is v_g ≈ 0.9912c (19-pt stencil dispersion;
+        this 0.9 % error is a genuine lattice prediction of LFM).
+
+        Parameters
+        ----------
+        center : (cx, cy, cz) or None
+            Source position.  Defaults to the grid centre.
+        R0 : float
+            Initial shell radius in grid cells.  Should be at least
+            3*sigma cells from the grid boundary sponge zone.
+        sigma : float
+            Shell half-width in grid cells (≥ 2 recommended).
+        delta_theta : float
+            Peak phase perturbation in radians.  Keep ≪ 1 for the
+            massless-photon linear regime (typical: 0.1–0.3).
+        charge_phase : float
+            Phase rotation of the wavefront: 0 = electron-like,
+            π = positron-like, π/2 = imaginary-polarised.
+
+        Raises
+        ------
+        ValueError
+            If ``config.field_level`` is not ``FieldLevel.COMPLEX``.
+
+        Examples
+        --------
+        Minimal outgoing light pulse from the grid centre::
+
+            sim = lfm.Simulation(lfm.SimulationConfig(
+                grid_size=64,
+                field_level=lfm.FieldLevel.COMPLEX,
+            ))
+            sim.place_light_source()
+            sim.run(steps=55)
+
+        Electron-like and positron-like pulses from the same source::
+
+            sim.place_light_source((32, 32, 32), charge_phase=0.0)    # e⁻
+            sim.place_light_source((32, 32, 32), charge_phase=3.1416) # e⁺
+        """
+        if self.config.field_level == FieldLevel.REAL:
+            raise ValueError(
+                "place_light_source() requires field_level=FieldLevel.COMPLEX. "
+                "Create the simulation with "
+                "SimulationConfig(field_level=FieldLevel.COMPLEX)."
+            )
+
+        from lfm.fields.light import spherical_phase_source
+
+        N = self.config.grid_size
+        if center is None:
+            c = float(N // 2)
+            center = (c, c, c)
+
+        pr_c, pi_c, pr_p, pi_p = spherical_phase_source(
+            N=N,
+            center=center,
+            R0=R0,
+            sigma=sigma,
+            delta_theta=delta_theta,
+            dt=self.config.dt,
+            c_speed=self.config.c,
+            charge_phase=charge_phase,
+        )
+
+        # Superpose onto existing fields (safe to call multiple times)
+        old_r = self._evolver.get_psi_real()
+        self._evolver.set_psi_real_current(old_r + pr_c)
+        old_r_prev = self._evolver.get_psi_real_prev()
+        self._evolver.set_psi_real_prev(old_r_prev + pr_p)
+
+        old_i = self._evolver.get_psi_imag()
+        if old_i is not None:
+            self._evolver.set_psi_imag_current(old_i + pi_c)
+        old_i_prev = self._evolver.get_psi_imag_prev()
+        if old_i_prev is not None:
+            self._evolver.set_psi_imag_prev(old_i_prev + pi_p)
+
+        # Light sources don't create chi wells — chi stays at chi0.
+        # No equilibration step needed (unlike solitons).
+        self._solitons_placed = True  # allow run() without equilibrate()
+
     def place_solitons(
         self,
         positions: list[tuple[float, float, float]],

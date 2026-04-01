@@ -311,15 +311,19 @@ class SimulationConfig:
             raise ValueError(f"grid_size must be >= 8, got {self.grid_size}")
         if self.dt <= 0:
             raise ValueError(f"dt must be positive, got {self.dt}")
-        if self.dt > CFL_19PT_MASSIVE:
+        # CFL limit depends on chi0: dt < 1/sqrt(16/3 + chi0^2)
+        # For chi0=0 (massless/EM) the limit is the wave-only CFL: 1/sqrt(16/3)
+        import math
+        cfl_limit = 1.0 / math.sqrt(16.0 / 3.0 + self.chi0 ** 2)
+        if self.dt > cfl_limit:
             raise ValueError(
-                f"dt={self.dt} exceeds CFL limit {CFL_19PT_MASSIVE:.4f} "
-                f"for 19-point stencil with χ₀={self.chi0}"
+                f"dt={self.dt} exceeds CFL limit {cfl_limit:.4f} "
+                f"for 19-point stencil with \u03c7\u2080={self.chi0}"
             )
-        if self.chi0 <= 0:
-            raise ValueError(f"chi0 must be positive, got {self.chi0}")
-        if self.kappa <= 0:
-            raise ValueError(f"kappa must be positive, got {self.kappa}")
+        if self.chi0 < 0:
+            raise ValueError(f"chi0 must be >= 0, got {self.chi0}")
+        if self.kappa < 0:
+            raise ValueError(f"kappa must be >= 0, got {self.kappa}")
         if self.lambda_self < 0:
             raise ValueError(f"lambda_self must be >= 0, got {self.lambda_self}")
         if not 0 < self.boundary_fraction < 1:

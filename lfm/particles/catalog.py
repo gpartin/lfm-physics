@@ -917,6 +917,82 @@ RHO_MESON = Particle(
     quark_content=("up", "anti-up"),
 )
 
+# omega(782): uu-bar + dd-bar, 782.65 MeV / 0.511 MeV = 1531.6 => l=39, l(l+1)=1560, err=1.9%
+OMEGA_MESON = Particle(
+    name="omega_meson",
+    symbol="omega(782)",
+    mass_ratio=1531.6,
+    charge=0.0,
+    phase=0.0,
+    spin=1.0,
+    color=None,
+    field_level=0,
+    l=39,
+    tau=0,
+    generation=1,
+    category="meson",
+    stable=False,
+    antiparticle=None,
+    quark_content=("up", "anti-up"),  # simplified; (uu-bar + dd-bar)/sqrt(2)
+)
+
+# eta'(958): uubar + ddbar + ssbar, 957.78 MeV / 0.511 MeV = 1874.3 => l=43, l(l+1)=1892, err=0.9%
+ETA_PRIME = Particle(
+    name="eta_prime",
+    symbol="eta'",
+    mass_ratio=1874.3,
+    charge=0.0,
+    phase=0.0,
+    spin=0.0,
+    color=None,
+    field_level=0,
+    l=43,
+    tau=0,
+    generation=1,
+    category="meson",
+    stable=False,
+    antiparticle=None,
+    quark_content=("up", "anti-up"),  # simplified flavor singlet
+)
+
+# phi(1020): ss-bar, 1019.46 MeV / 0.511 MeV = 1995.0 => l=44, l(l+1)=1980, err=0.8%
+PHI_MESON = Particle(
+    name="phi_meson",
+    symbol="phi(1020)",
+    mass_ratio=1995.0,
+    charge=0.0,
+    phase=0.0,
+    spin=1.0,
+    color=None,
+    field_level=0,
+    l=44,
+    tau=0,
+    generation=2,
+    category="meson",
+    stable=False,
+    antiparticle=None,
+    quark_content=("strange", "anti-strange"),
+)
+
+# K*(892): us-bar (or su-bar), 891.76 MeV / 0.511 MeV = 1745.1 => l=41, l(l+1)=1722, err=1.3%
+K_STAR = Particle(
+    name="k_star",
+    symbol="K*(892)",
+    mass_ratio=1745.1,
+    charge=0.0,
+    phase=0.0,
+    spin=1.0,
+    color=None,
+    field_level=0,
+    l=41,
+    tau=0,
+    generation=2,
+    category="meson",
+    stable=False,
+    antiparticle=None,
+    quark_content=("up", "anti-strange"),
+)
+
 # ---------------------------------------------------------------------------
 # Tier 11: Charm Mesons (D mesons, J/psi)
 # ---------------------------------------------------------------------------
@@ -1300,7 +1376,69 @@ ANTI_OMEGA_BARYON = Particle(
 )
 
 # ---------------------------------------------------------------------------
+# Tier 13b: Baryon Decuplet (spin-3/2 excitations)
+# ---------------------------------------------------------------------------
+# Delta(1232): uuu/uud/udd/ddd, 1232 MeV / 0.511 MeV = 2411.0 => l=49, l(l+1)=2450, err=1.6%
+# Sigma*(1385): uus/uds/dds, 1385 MeV / 0.511 MeV = 2710.4 => l=52, l(l+1)=2756, err=1.7%
+# Xi*(1530): uss/dss, 1530 MeV / 0.511 MeV = 2994.1 => l=54, l(l+1)=2970, err=0.8%
+
+DELTA_BARYON = Particle(
+    name="delta_baryon",
+    symbol="Delta(1232)",
+    mass_ratio=2411.0,
+    charge=+1.0,
+    phase=math.pi,
+    spin=1.5,
+    color=None,
+    field_level=1,
+    l=49,
+    tau=1,
+    generation=1,
+    category="baryon",
+    stable=False,
+    antiparticle=None,
+    quark_content=("up", "up", "down"),
+)
+
+SIGMA_1385 = Particle(
+    name="sigma_1385",
+    symbol="Sigma*(1385)",
+    mass_ratio=2710.4,
+    charge=0.0,
+    phase=0.0,
+    spin=1.5,
+    color=None,
+    field_level=0,
+    l=52,
+    tau=1,
+    generation=2,
+    category="baryon",
+    stable=False,
+    antiparticle=None,
+    quark_content=("up", "down", "strange"),
+)
+
+XI_1530 = Particle(
+    name="xi_1530",
+    symbol="Xi*(1530)",
+    mass_ratio=2994.1,
+    charge=0.0,
+    phase=0.0,
+    spin=1.5,
+    color=None,
+    field_level=0,
+    l=54,
+    tau=1,
+    generation=2,
+    category="baryon",
+    stable=False,
+    antiparticle=None,
+    quark_content=("up", "strange", "strange"),
+)
+
+# ---------------------------------------------------------------------------
 # Tier 14: Heavy Baryons (charm, bottom)
+
 # ---------------------------------------------------------------------------
 # Lambda_c+: udc, 2286.46 MeV / 0.511 MeV = 4475
 # Xi_c+: usc, 2467.87 MeV / 0.511 MeV = 4830
@@ -1471,6 +1609,10 @@ PARTICLES: dict[str, Particle] = {
         ANTI_KAON_ZERO,
         ETA_MESON,
         RHO_MESON,
+        OMEGA_MESON,
+        ETA_PRIME,
+        PHI_MESON,
+        K_STAR,
         # Tier 11: Charm Mesons
         D_PLUS,
         D_MINUS,
@@ -1494,6 +1636,10 @@ PARTICLES: dict[str, Particle] = {
         ANTI_XI_PLUS,
         OMEGA_BARYON,
         ANTI_OMEGA_BARYON,
+        # Tier 13b: Baryon Decuplet
+        DELTA_BARYON,
+        SIGMA_1385,
+        XI_1530,
         # Tier 14: Heavy Baryons
         LAMBDA_C,
         ANTI_LAMBDA_C,

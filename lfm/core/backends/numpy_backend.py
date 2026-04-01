@@ -51,14 +51,22 @@ class NumpyBackend:
         N: int,
         boundary_fraction: float,
     ) -> NDArray[np.float32]:
+        """Return a smooth cos² absorption mask in [0, 1].
+
+        0 = fully transparent (interior), 1 = fully absorbed (boundary).
+        A cosine taper from r_freeze to r_max prevents the leapfrog
+        reflection that a hard (binary) cutoff would cause.
+        """
         center = N / 2.0
         r_max = N / 2.0
         r_freeze = (1.0 - boundary_fraction) * r_max
         coords = np.arange(N, dtype=np.float32) - center + 0.5
         X, Y, Z = np.meshgrid(coords, coords, coords, indexing="ij")
         R = np.sqrt(X**2 + Y**2 + Z**2)
-        mask = (r_freeze < R).astype(np.float32).ravel()
-        return mask
+        # Smooth cosine taper: 0 at r_freeze, 1 at r_max
+        t = np.clip((R - r_freeze) / (r_max - r_freeze), 0.0, 1.0)
+        mask = (np.sin(0.5 * np.pi * t) ** 2).astype(np.float32)
+        return mask.ravel()
 
     def _laplacian_3d(self, flat: NDArray[np.float32], N: int) -> NDArray[np.float32]:
         """19-point Laplacian on a flat (N³,) or (K*N³,) array.
@@ -109,13 +117,15 @@ class NumpyBackend:
         # BH excision
         np.clip(chi_new, -chi0, None, out=chi_new)
 
-        # Frozen boundary
-        E_new *= 1.0 - boundary_mask
-        chi_new = boundary_mask * chi0 + (1.0 - boundary_mask) * chi_new
+        # Absorbing boundary — damp both new field AND prev field so the
+        # leapfrog sees no energy at the boundary on the next step.
+        absorb = 1.0 - boundary_mask
+        E_new *= absorb
+        chi_new = boundary_mask * chi0 + absorb * chi_new
 
         # Write to output buffers (double-buffer swap)
         np.copyto(psi_out, E_new)
-        np.copyto(psi_prev_out, E)
+        np.copyto(psi_prev_out, E * absorb)   # damp prev too — prevents reflection
         np.copyto(chi_out, chi_new)
         np.copyto(chi_prev_out, chi)
 
@@ -181,15 +191,16 @@ class NumpyBackend:
 
         np.clip(chi_new, -chi0, None, out=chi_new)
 
-        # Frozen boundary
-        Pr_new *= 1.0 - boundary_mask
-        Pi_new *= 1.0 - boundary_mask
-        chi_new = boundary_mask * chi0 + (1.0 - boundary_mask) * chi_new
+        # Absorbing boundary — damp both new and prev to prevent reflection.
+        absorb = 1.0 - boundary_mask
+        Pr_new *= absorb
+        Pi_new *= absorb
+        chi_new = boundary_mask * chi0 + absorb * chi_new
 
         np.copyto(psi_r_out, Pr_new)
-        np.copyto(psi_r_prev_out, Pr)
+        np.copyto(psi_r_prev_out, Pr * absorb)   # damp prev — prevents leapfrog reflection
         np.copyto(psi_i_out, Pi_new)
-        np.copyto(psi_i_prev_out, Pi)
+        np.copyto(psi_i_prev_out, Pi * absorb)   # damp prev
         np.copyto(chi_out, chi_new)
         np.copyto(chi_prev_out, chi)
 
@@ -269,6 +280,7 @@ class NumpyBackend:
                 Pr_new -= dt2 * epsilon_cc * chi_sq * (Pr - Pr_avg)
                 Pi_new -= dt2 * epsilon_cc * chi_sq * (Pi - Pi_avg)
 
+            # Boundary is applied below; store un-damped values first
             np.copyto(psi_r_out[s], Pr_new)
             np.copyto(psi_r_prev_out[s], Pr)
             np.copyto(psi_i_out[s], Pi_new)
@@ -357,10 +369,14 @@ class NumpyBackend:
 
         np.clip(chi_new, -chi0, None, out=chi_new)
 
-        # Frozen boundary
-        psi_r_out *= 1.0 - np.tile(boundary_mask, 3)
-        psi_i_out *= 1.0 - np.tile(boundary_mask, 3)
-        chi_new = boundary_mask * chi0 + (1.0 - boundary_mask) * chi_new
+        # Absorbing boundary — damp both new and prev to prevent reflection.
+        absorb3 = 1.0 - np.tile(boundary_mask, 3)
+        absorb1 = 1.0 - boundary_mask
+        psi_r_out *= absorb3
+        psi_i_out *= absorb3
+        psi_r_prev_out *= absorb3   # damp prev too
+        psi_i_prev_out *= absorb3   # damp prev too
+        chi_new = boundary_mask * chi0 + absorb1 * chi_new
 
         np.copyto(chi_out, chi_new)
         np.copyto(chi_prev_out, chi)

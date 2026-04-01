@@ -108,13 +108,20 @@ class CupyBackend:
         N: int,
         boundary_fraction: float,
     ) -> cp.ndarray:
+        """Return a smooth cos² absorption mask in [0, 1].
+
+        0 = fully transparent (interior), 1 = fully absorbed (boundary).
+        A cosine taper prevents the leapfrog reflection of a hard cutoff.
+        """
         center = N / 2.0
         r_max = N / 2.0
         r_freeze = (1.0 - boundary_fraction) * r_max
         coords = np.arange(N, dtype=np.float32) - center + 0.5
         X, Y, Z = np.meshgrid(coords, coords, coords, indexing="ij")
         R = np.sqrt(X**2 + Y**2 + Z**2)
-        mask = (r_freeze < R).astype(np.float32).ravel()
+        # Smooth cosine taper: 0 at r_freeze, 1 at r_max
+        t = np.clip((R - r_freeze) / (r_max - r_freeze), 0.0, 1.0)
+        mask = (np.sin(0.5 * np.pi * t) ** 2).astype(np.float32).ravel()
         return cp.asarray(mask)
 
     def step_real(
