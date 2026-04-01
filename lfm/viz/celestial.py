@@ -178,6 +178,7 @@ def _draw_body_overlays(
     markers are painted directly onto the figure canvas in normalised figure
     coordinates and are guaranteed on top of everything in the 3-D axes.
     """
+    from matplotlib.patches import Circle
     from mpl_toolkits.mplot3d import proj3d
 
     proj_mat = ax.get_proj()  # 4×4 homogeneous projection matrix (valid now)
