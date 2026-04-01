@@ -49,7 +49,7 @@ def plot_trajectories(
     if ax is None:
         fig, ax = plt.subplots(figsize=(6, 6))
     else:
-        fig = cast(Figure, ax.figure)
+        fig = cast("Figure", ax.figure)
 
     steps = flat["step"]
     if steps.size == 0:

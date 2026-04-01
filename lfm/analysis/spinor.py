@@ -17,8 +17,12 @@ Reference: LFM-PAPER-048 (Spinor Representation in the Lattice Field Medium)
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def spinor_density(
@@ -37,9 +41,7 @@ def spinor_density(
     -------
     density : ndarray, shape (N, N, N)
     """
-    return (psi_r[0] ** 2 + psi_i[0] ** 2 + psi_r[1] ** 2 + psi_i[1] ** 2).astype(
-        np.float32
-    )
+    return (psi_r[0] ** 2 + psi_i[0] ** 2 + psi_r[1] ** 2 + psi_i[1] ** 2).astype(np.float32)
 
 
 def spinor_sigma_z(
@@ -87,9 +89,7 @@ def spinor_sigma_x(
     """
     # Re[ψ_↑* ψ_↓] = Re[(u_r − i u_i)(d_r + i d_i)] = u_r d_r + u_i d_i
     cross_real = float(np.sum(psi_r[0] * psi_r[1] + psi_i[0] * psi_i[1]))
-    total = float(
-        np.sum(psi_r[0] ** 2 + psi_i[0] ** 2 + psi_r[1] ** 2 + psi_i[1] ** 2)
-    )
+    total = float(np.sum(psi_r[0] ** 2 + psi_i[0] ** 2 + psi_r[1] ** 2 + psi_i[1] ** 2))
     return 2.0 * cross_real / total if total > 0.0 else 0.0
 
 
@@ -121,7 +121,7 @@ def spinor_interference_energy(
     """
     sumr = psi_r_a + psi_r_b
     sumi = psi_i_a + psi_i_b
-    return float(np.sum(sumr ** 2 + sumi ** 2))
+    return float(np.sum(sumr**2 + sumi**2))
 
 
 def spinor_sigma_y(
@@ -150,9 +150,7 @@ def spinor_sigma_y(
     sigma_y : float in [−1, +1]
     """
     cross = float(np.sum(psi_r[0] * psi_i[1] - psi_i[0] * psi_r[1]))
-    total = float(
-        np.sum(psi_r[0] ** 2 + psi_i[0] ** 2 + psi_r[1] ** 2 + psi_i[1] ** 2)
-    )
+    total = float(np.sum(psi_r[0] ** 2 + psi_i[0] ** 2 + psi_r[1] ** 2 + psi_i[1] ** 2))
     return 2.0 * cross / total if total > 0.0 else 0.0
 
 

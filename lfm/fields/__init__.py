@@ -15,8 +15,6 @@ useful when constructing batched initial conditions outside the
 :class:`Simulation` API.
 """
 
-from lfm.fields.light import spherical_phase_source
-
 from lfm.fields.arrangements import (
     disk_positions,
     disk_velocities,
@@ -31,6 +29,7 @@ from lfm.fields.equilibrium import (
     equilibrate_from_fields,
     poisson_solve_fft,
 )
+from lfm.fields.light import spherical_phase_source
 from lfm.fields.random import seed_noise, uniform_chi
 from lfm.fields.soliton import gaussian_soliton, place_solitons, wave_kick
 from lfm.fields.spinor import (

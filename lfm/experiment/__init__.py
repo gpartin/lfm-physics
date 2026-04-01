@@ -42,16 +42,16 @@ Typical double-slit usage::
 """
 
 from lfm.experiment.barrier import Barrier, Slit
-from lfm.experiment.collision import collision, CollisionResult
+from lfm.experiment.collision import CollisionResult, collision
 from lfm.experiment.common import ExperimentConfig, ExperimentResult, midplane_slice
 from lfm.experiment.detector import DetectorScreen
 from lfm.experiment.dispersion import Dispersion, dispersion
-from lfm.experiment.double_slit import double_slit, DoubleSlit
+from lfm.experiment.double_slit import DoubleSlit, double_slit
 from lfm.experiment.entanglement import (
-    entanglement,
+    SPIN_CONFIGS,
     EntanglementResult,
     EntanglementSuiteResult,
-    SPIN_CONFIGS,
+    entanglement,
 )
 from lfm.experiment.source import ContinuousSource
 

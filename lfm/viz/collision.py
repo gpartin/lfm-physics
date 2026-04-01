@@ -29,8 +29,6 @@ import numpy as np
 
 if TYPE_CHECKING:
     from matplotlib.animation import FuncAnimation
-    from matplotlib.figure import Figure
-    from numpy.typing import NDArray
 
 __all__ = ["animate_collision_3d"]
 
@@ -45,7 +43,7 @@ def _require_matplotlib() -> None:
         )
 
 
-def _save_mp4(anim: "FuncAnimation", path: str, fps: int) -> None:
+def _save_mp4(anim: FuncAnimation, path: str, fps: int) -> None:
     """Save animation — same pattern as the working double-slit code."""
     import matplotlib.animation
 
@@ -82,7 +80,7 @@ def animate_collision_3d(
     title: str = "LFM Particle Collision",
     show_phase_labels: bool = False,
     save_path: str | None = None,
-) -> "FuncAnimation":
+) -> FuncAnimation:
     """Create a 3-D animated movie of a particle collision.
 
     Parameters
@@ -124,7 +122,6 @@ def animate_collision_3d(
     anim : matplotlib.animation.FuncAnimation
     """
     _require_matplotlib()
-    import matplotlib
     import matplotlib.pyplot as plt
     from matplotlib.animation import FuncAnimation
 
@@ -166,6 +163,7 @@ def animate_collision_3d(
     def _to_np(a):
         try:
             import cupy as _cp
+
             if isinstance(a, _cp.ndarray):
                 return _cp.asnumpy(a)
         except ImportError:
@@ -174,9 +172,15 @@ def animate_collision_3d(
 
     if _amplitude_mode:
         global_max = max(
-            (float(np.sqrt(_to_np(snapshots[i]["psi_real"]).astype(np.float32) ** 2
-                           + _to_np(snapshots[i]["psi_imag"]).astype(np.float32) ** 2).max())
-             for i in frame_idx),
+            (
+                float(
+                    np.sqrt(
+                        _to_np(snapshots[i]["psi_real"]).astype(np.float32) ** 2
+                        + _to_np(snapshots[i]["psi_imag"]).astype(np.float32) ** 2
+                    ).max()
+                )
+                for i in frame_idx
+            ),
             default=1.0,
         )
     else:
@@ -353,10 +357,17 @@ def animate_collision_3d(
         if _amplitude_mode and "psi_imag" in snap:
             try:
                 import cupy as _cp
-                pimag = _cp.asnumpy(snap["psi_imag"]) if isinstance(snap["psi_imag"], _cp.ndarray) else np.asarray(snap["psi_imag"])
+
+                pimag = (
+                    _cp.asnumpy(snap["psi_imag"])
+                    if isinstance(snap["psi_imag"], _cp.ndarray)
+                    else np.asarray(snap["psi_imag"])
+                )
             except ImportError:
                 pimag = np.asarray(snap["psi_imag"])
-            arr = np.sqrt(arr.astype(np.float64) ** 2 + pimag.astype(np.float64) ** 2).astype(np.float32)
+            arr = np.sqrt(arr.astype(np.float64) ** 2 + pimag.astype(np.float64) ** 2).astype(
+                np.float32
+            )
 
         # ── Remove old scatter ─────────────────────────────────────────
         if _scatter[0] is not None:

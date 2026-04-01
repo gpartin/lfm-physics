@@ -44,24 +44,23 @@ from __future__ import annotations
 
 import math
 import time
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 
 from lfm.analysis.spinor import (
-    spinor_density,
     spinor_sigma_x,
     spinor_sigma_y,
     spinor_sigma_z,
 )
 from lfm.constants import CHI0, DT_DEFAULT, KAPPA
-from lfm.experiment.common import ExperimentResult, gpu_snapshot_loop, midplane_slice
+from lfm.experiment.common import ExperimentResult, gpu_snapshot_loop
 from lfm.fields.equilibrium import equilibrate_chi
 
 if TYPE_CHECKING:
     from matplotlib.figure import Figure
+
     import lfm as _lfm_t
 
 __all__ = [
@@ -78,8 +77,8 @@ SPIN_CONFIGS: tuple[str, ...] = ("triplet", "antiparallel", "product_x", "single
 # ── Defaults ───────────────────────────────────────────────────────────────
 
 _CHI0: float = 19.0
-_AMPLITUDE: float = 3.0   # shallow chi-wells → matches collision.py default
-_SIGMA: float = 0.0        # 0 = auto (max(3.0, N*0.04)); explicit value overrides
+_AMPLITUDE: float = 3.0  # shallow chi-wells → matches collision.py default
+_SIGMA: float = 0.0  # 0 = auto (max(3.0, N*0.04)); explicit value overrides
 _DT: float = DT_DEFAULT
 _TOTAL_STEPS: int = 4000
 _SNAP_EVERY: int = 100
@@ -132,9 +131,7 @@ def _build_eigenmode_spinors(
         psi_r[0] = (E_A + E_B) / s2
         psi_r[1] = (E_A - E_B) / s2
     else:
-        raise ValueError(
-            f"Unknown spin config {config!r}.  Choose from {SPIN_CONFIGS}."
-        )
+        raise ValueError(f"Unknown spin config {config!r}.  Choose from {SPIN_CONFIGS}.")
     return psi_r, psi_i
 
 
@@ -198,6 +195,7 @@ def _to_numpy(arr: np.ndarray) -> np.ndarray:
     """Move CuPy array to NumPy if needed."""
     try:
         import cupy
+
         if isinstance(arr, cupy.ndarray):
             return cupy.asnumpy(arr)
     except ImportError:
@@ -284,7 +282,7 @@ class EntanglementResult(ExperimentResult):
         *,
         figsize: tuple[float, float] = (16, 10),
         title: str | None = None,
-    ) -> "Figure":
+    ) -> Figure:
         """Summary figure: spinor density slices, spin time-series, χ well."""
         import matplotlib.pyplot as plt
         from matplotlib.gridspec import GridSpec
@@ -307,8 +305,17 @@ class EntanglementResult(ExperimentResult):
             indices = list(range(n))
 
         n_cols = max(len(indices), 3)
-        gs = GridSpec(2, n_cols, figure=fig, hspace=0.40, wspace=0.35,
-                      top=0.91, bottom=0.08, left=0.06, right=0.97)
+        gs = GridSpec(
+            2,
+            n_cols,
+            figure=fig,
+            hspace=0.40,
+            wspace=0.35,
+            top=0.91,
+            bottom=0.08,
+            left=0.06,
+            right=0.97,
+        )
 
         # ── Row 1: spinor density slices (x–z mid-plane) ───────────
         for i, idx in enumerate(indices):
@@ -325,7 +332,8 @@ class EntanglementResult(ExperimentResult):
                 ax.imshow(plane.T, origin="lower", cmap="hot", aspect="equal")
             step = snap.get("step", idx)
             ax.set_title(f"step {step}", fontsize=9)
-            ax.set_xticks([]); ax.set_yticks([])
+            ax.set_xticks([])
+            ax.set_yticks([])
             if i == 0:
                 ax.set_ylabel("|ψ|² (x–z slice)")
 
@@ -346,7 +354,8 @@ class EntanglementResult(ExperimentResult):
             ax_sz.plot(steps_s, szB, color="#d6604d", lw=1.5, label="⟨σ_z^B⟩", ls="--")
             ax_sz.set_ylim(-1.2, 1.2)
             ax_sz.axhline(0, color="grey", lw=0.5)
-            ax_sz.set_xlabel("Step"); ax_sz.set_ylabel("⟨σ_z⟩")
+            ax_sz.set_xlabel("Step")
+            ax_sz.set_ylabel("⟨σ_z⟩")
             ax_sz.set_title("Spin-z Expectation", fontsize=10)
             ax_sz.legend(fontsize=8)
 
@@ -356,7 +365,8 @@ class EntanglementResult(ExperimentResult):
             ax_chi = _bot(1)
             ax_chi.plot(steps_m, self.chi_min_history, color="#4dac26", lw=1.5)
             ax_chi.axhline(_CHI0, color="grey", ls="--", lw=0.8, label=f"χ₀={_CHI0}")
-            ax_chi.set_xlabel("Step"); ax_chi.set_ylabel("χ_min")
+            ax_chi.set_xlabel("Step")
+            ax_chi.set_ylabel("χ_min")
             ax_chi.set_title("χ Well Depth (Spin-Blind)", fontsize=10)
             ax_chi.legend(fontsize=8)
 
@@ -371,10 +381,17 @@ class EntanglementResult(ExperimentResult):
             f"χ_min final: {chi_fin:.4f}",
             f"CHSH S₀    : {self.chsh_initial:.4f}",
             f"CHSH S_f   : {self.chsh_final:.4f}",
-            f"S ≤ 2 (classical)",
+            "S ≤ 2 (classical)",
         ]
-        ax_info.text(0.05, 0.5, "\n".join(lines), transform=ax_info.transAxes,
-                     fontsize=10, family="monospace", va="center")
+        ax_info.text(
+            0.05,
+            0.5,
+            "\n".join(lines),
+            transform=ax_info.transAxes,
+            fontsize=10,
+            family="monospace",
+            va="center",
+        )
         ax_info.set_title("Experiment Summary", fontsize=10)
 
         return fig
@@ -393,6 +410,7 @@ class EntanglementResult(ExperimentResult):
         Returns a dict mapping output type → Path written.
         """
         import matplotlib.pyplot as plt
+
         from lfm.viz.collision import animate_collision_3d
 
         out = Path(directory) if directory else Path(".")
@@ -470,18 +488,15 @@ class EntanglementSuiteResult:
         rows = [header, "-" * len(header)]
         for name, res in self.results.items():
             bound = "✓" if res.chsh_final <= 2.0 + 1e-6 else "✗"
-            rows.append(
-                f"{name:18} {res.chsh_initial:10.4f} {res.chsh_final:10.4f}  {bound:>8}"
-            )
+            rows.append(f"{name:18} {res.chsh_initial:10.4f} {res.chsh_final:10.4f}  {bound:>8}")
         return "\n".join(rows)
 
-    def plot(self, **kwargs) -> "Figure":
+    def plot(self, **kwargs) -> Figure:
         """Comparison figure showing CHSH, χ_min, and spin-z for all configs."""
         import matplotlib.pyplot as plt
 
         fig, axes = plt.subplots(1, 3, figsize=kwargs.get("figsize", (15, 5)))
-        fig.suptitle("Spin Entanglement — All Configurations", fontsize=13,
-                     fontweight="bold")
+        fig.suptitle("Spin Entanglement — All Configurations", fontsize=13, fontweight="bold")
 
         cfg_names = list(self.results.keys())
         labels = [n.replace("_", "\n") for n in cfg_names]
@@ -502,11 +517,10 @@ class EntanglementSuiteResult:
 
         # ── Spin-z ────────────────────────────────────────────────
         ax = axes[0]
-        ax.bar(x - 0.2, sz_A_vals, width=0.35, label="⟨σ_z^A⟩",
-               color="#2166ac", alpha=0.85)
-        ax.bar(x + 0.2, sz_B_vals, width=0.35, label="⟨σ_z^B⟩",
-               color="#d6604d", alpha=0.85)
-        ax.set_xticks(x); ax.set_xticklabels(labels, fontsize=9)
+        ax.bar(x - 0.2, sz_A_vals, width=0.35, label="⟨σ_z^A⟩", color="#2166ac", alpha=0.85)
+        ax.bar(x + 0.2, sz_B_vals, width=0.35, label="⟨σ_z^B⟩", color="#d6604d", alpha=0.85)
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, fontsize=9)
         ax.set_ylim(-1.3, 1.3)
         ax.axhline(0, color="grey", lw=0.5)
         ax.set_title("z-Polarisation (initial)", fontsize=11)
@@ -516,9 +530,9 @@ class EntanglementSuiteResult:
         # ── χ_min spin-blindness ──────────────────────────────────
         ax = axes[1]
         ax.bar(x, chi_mins, color="#4dac26", alpha=0.85)
-        ax.axhline(_CHI0, color="grey", ls="--", lw=1.0,
-                   label=f"χ₀={_CHI0}")
-        ax.set_xticks(x); ax.set_xticklabels(labels, fontsize=9)
+        ax.axhline(_CHI0, color="grey", ls="--", lw=1.0, label=f"χ₀={_CHI0}")
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, fontsize=9)
         ax.set_title("χ_min (Spin-Blind Gravity)", fontsize=11)
         ax.legend(fontsize=9)
         ax.grid(axis="y", alpha=0.25)
@@ -527,11 +541,16 @@ class EntanglementSuiteResult:
         ax = axes[2]
         colors = ["#d73027" if s > 2.0 + 1e-6 else "#4dac26" for s in chsh_vals]
         ax.bar(x, chsh_vals, color=colors, alpha=0.85)
-        ax.axhline(2.0, color="#d73027", lw=1.5, ls="--",
-                   label="Classical bound (S=2)")
-        ax.axhline(2.0 * math.sqrt(2.0), color="#762a83", lw=1.0, ls=":",
-                   label=f"Quantum bound (S≈{2*math.sqrt(2):.3f})")
-        ax.set_xticks(x); ax.set_xticklabels(labels, fontsize=9)
+        ax.axhline(2.0, color="#d73027", lw=1.5, ls="--", label="Classical bound (S=2)")
+        ax.axhline(
+            2.0 * math.sqrt(2.0),
+            color="#762a83",
+            lw=1.0,
+            ls=":",
+            label=f"Quantum bound (S≈{2 * math.sqrt(2):.3f})",
+        )
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, fontsize=9)
         ax.set_ylim(0, 3.0)
         ax.set_title("CHSH Bell Parameter", fontsize=11)
         ax.legend(fontsize=8)
@@ -587,7 +606,7 @@ def _build_entanglement_sim(
     sigma: float,
     chi0: float,
     verbose: bool,
-) -> tuple["_lfm_t.Simulation", np.ndarray, np.ndarray, float, float, float, float]:
+) -> tuple[_lfm_t.Simulation, np.ndarray, np.ndarray, float, float, float, float]:
     """Create and populate a spinor entanglement simulation.
 
     Uses eigenmode relaxation (same algorithm as collision.py) for stable
@@ -605,6 +624,7 @@ def _build_entanglement_sim(
     xA, xB : float
     """
     import warnings
+
     import lfm
     from lfm.particles.solver import relax_eigenmode
 
@@ -644,7 +664,7 @@ def _build_entanglement_sim(
         )
 
     E_template = sol.psi_r  # (N,N,N) real scalar eigenmode
-    omega = sol.eigenvalue   # oscillation frequency
+    omega = sol.eigenvalue  # oscillation frequency
 
     # ── Step 2: roll eigenmode to particle positions ──────────────
     def _roll_to_x(arr: np.ndarray, x_target: int) -> np.ndarray:
@@ -691,10 +711,10 @@ def _build_entanglement_sim(
     psi_i_prev = (-psi_r * sin_dt).astype(np.float32)
 
     sim.set_psi_real(psi_r)
-    sim.set_psi_imag(psi_i)               # zero at t=0
+    sim.set_psi_imag(psi_i)  # zero at t=0
     sim.set_psi_real_prev(psi_r_prev)
     sim.set_psi_imag_prev(psi_i_prev)
-    sim.set_chi(chi_eq)                   # sets both current + prev chi buffers
+    sim.set_chi(chi_eq)  # sets both current + prev chi buffers
     sim._equilibrated = True
 
     return sim, psi_r, psi_i, chi_min_initial, chsh_initial, float(xA), float(xB)
@@ -716,7 +736,7 @@ def entanglement(
     metrics_every: int = _METRICS_EVERY,
     animate: bool = True,
     verbose: bool = False,
-) -> "EntanglementResult | EntanglementSuiteResult":
+) -> EntanglementResult | EntanglementSuiteResult:
     """Run the spin entanglement experiment.
 
     Two eigenmode spinor solitons (GOV-01 COLOR level with n_colors=3,
@@ -759,9 +779,9 @@ def entanglement(
         results: dict[str, EntanglementResult] = {}
         for cfg in SPIN_CONFIGS:
             if verbose:
-                print(f"\n{'='*50}")
+                print(f"\n{'=' * 50}")
                 print(f"Running config: {cfg}")
-                print(f"{'='*50}")
+                print(f"{'=' * 50}")
             r = entanglement(
                 cfg,
                 N=N,
@@ -780,9 +800,7 @@ def entanglement(
 
     # ── Single configuration ──────────────────────────────────────
     if config not in SPIN_CONFIGS:
-        raise ValueError(
-            f"Unknown config {config!r}.  Choose from {SPIN_CONFIGS} or 'all'."
-        )
+        raise ValueError(f"Unknown config {config!r}.  Choose from {SPIN_CONFIGS} or 'all'.")
 
     t0 = time.perf_counter()
 
@@ -804,9 +822,9 @@ def entanglement(
         sim,
         total_steps=total_steps,
         snap_every=snap_every,
-        fields=["psi_real", "psi_imag", "chi"],   # full snapshots for spin analysis
+        fields=["psi_real", "psi_imag", "chi"],  # full snapshots for spin analysis
         movie_every=_movie_every,
-        movie_fields=["chi"],                       # only chi needed for chi_deficit movie
+        movie_fields=["chi"],  # only chi needed for chi_deficit movie
         metrics_every=metrics_every,
         verbose=verbose,
         label=config,
@@ -823,11 +841,17 @@ def entanglement(
         pi_np = _to_numpy(pi_s) if pi_s is not None else np.zeros_like(pr_np)
         szA, sxA, syA = _local_spin(pr_np, pi_np, xA_int, N)
         szB, sxB, syB = _local_spin(pr_np, pi_np, xB_int, N)
-        spin_history.append({
-            "step": snap.get("step", 0),
-            "sz_A": szA, "sx_A": sxA, "sy_A": syA,
-            "sz_B": szB, "sx_B": sxB, "sy_B": syB,
-        })
+        spin_history.append(
+            {
+                "step": snap.get("step", 0),
+                "sz_A": szA,
+                "sx_A": sxA,
+                "sy_A": syA,
+                "sz_B": szB,
+                "sx_B": sxB,
+                "sy_B": syB,
+            }
+        )
 
     # ── Final CHSH ─────────────────────────────────────────────────
     chsh_final = chsh_init  # default if no snapshots

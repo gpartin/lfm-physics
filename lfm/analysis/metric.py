@@ -204,7 +204,7 @@ def find_apparent_horizon(
     min_pos = tuple(int(x) for x in np.unravel_index(np.argmin(chi_arr), chi_arr.shape))
 
     if center is None:
-        center = cast(tuple[int, int, int], min_pos)
+        center = cast("tuple[int, int, int]", min_pos)
 
     inside = chi_arr <= threshold
     n_cells = int(inside.sum())

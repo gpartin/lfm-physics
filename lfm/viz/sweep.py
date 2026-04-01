@@ -47,7 +47,7 @@ def plot_sweep(
     if ax is None:
         fig, ax = plt.subplots(figsize=(7, 4.5))
     else:
-        fig = cast(Figure, ax.figure)
+        fig = cast("Figure", ax.figure)
 
     ax.plot(xs, ys, "o-", ms=6, lw=1.5, color="#2563eb")
     ax.set_xlabel(x_param.replace("_", " ").title())

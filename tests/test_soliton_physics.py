@@ -11,32 +11,23 @@ Each test must PASS or we know the particle catalog entries are fake.
 from __future__ import annotations
 
 import math
-import time
 
 import numpy as np
 import pytest
 
-from lfm.config import BoundaryType, FieldLevel, SimulationConfig
-from lfm.constants import CHI0, DT_DEFAULT, KAPPA
+from lfm.config import FieldLevel, SimulationConfig
+from lfm.constants import CHI0, DT_DEFAULT
+from lfm.core.evolver import Evolver
 from lfm.particles.catalog import (
     ELECTRON,
-    MUON,
-    PROTON,
-    Particle,
-    amplitude_for_particle,
-    sigma_for_particle,
 )
-from lfm.core.evolver import Evolver
 from lfm.particles.solver import (
-    SolitonSolution,
     _laplacian_19pt,
     _spherical_boundary_mask,
     boost_fields,
     relax_eigenmode,
     ylm_seed,
 )
-from lfm.simulation import Simulation
-
 
 # ===================================================================
 # Helper: GPU-accelerated evolution via Evolver (CUDA 19-pt stencil)
@@ -234,7 +225,7 @@ class TestRelaxL0:
         )
 
         com_f = measure_com(E_f)
-        drift = math.sqrt(sum((a - b) ** 2 for a, b in zip(com_0, com_f)))
+        drift = math.sqrt(sum((a - b) ** 2 for a, b in zip(com_0, com_f, strict=False)))
         assert drift < 1.0, f"COM drifted {drift:.2f} cells (should be < 1.0)"
 
 
@@ -481,7 +472,7 @@ class TestParticleTypes:
         )
 
         com_f = measure_com(E_f)
-        drift = math.sqrt(sum((a - b) ** 2 for a, b in zip(com_0, com_f)))
+        drift = math.sqrt(sum((a - b) ** 2 for a, b in zip(com_0, com_f, strict=False)))
         assert drift < 1.0, f"ELECTRON COM drifted {drift:.2f} cells"
 
     def test_electron_moves(self):

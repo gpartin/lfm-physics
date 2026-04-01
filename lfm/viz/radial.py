@@ -61,7 +61,7 @@ def plot_radial_profile(
     if ax is None:
         fig, ax = plt.subplots(figsize=(7, 4.5))
     else:
-        fig = cast(Figure, ax.figure)
+        fig = cast("Figure", ax.figure)
 
     ax.plot(r, vals, "o-", ms=3, color="#2563eb", lw=1.5, label="χ(r)")
 

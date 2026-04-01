@@ -34,6 +34,7 @@ from scipy.optimize import curve_fit
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
+
     from lfm.particles.solver import SolitonSolution
 
 # ---------------------------------------------------------------------------
@@ -212,7 +213,7 @@ def flux_tube_profile(
     chi = np.asarray(chi, dtype=np.float32)
     scv = np.asarray(scv, dtype=np.float32)
     if scv.ndim == 4:  # COLOR level (3,N,N,N) → collapse to (N,N,N) magnitude
-        scv = np.sqrt((scv ** 2).sum(axis=0))
+        scv = np.sqrt((scv**2).sum(axis=0))
     N = chi.shape[0]
 
     # Axis unit vector
@@ -557,7 +558,7 @@ def classify_potential(
 
 
 def static_interaction_potential(
-    sol: "SolitonSolution",
+    sol: SolitonSolution,
     separations: NDArray,
     axis: int = 0,
     chi0: float = 19.0,

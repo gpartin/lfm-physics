@@ -14,7 +14,7 @@ from __future__ import annotations
 import base64
 import gzip
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
@@ -29,12 +29,12 @@ class HookSpec:
     # continuous_source fields
     omega: float = 1.0
     amplitude: float = 1.0
-    envelope_sigma: Optional[float] = None
+    envelope_sigma: float | None = None
     boost: float = 1.0
     # detector_screen fields
-    tag: Optional[str] = None
+    tag: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {k: v for k, v in self.__dict__.items() if v is not None}
 
 
@@ -43,12 +43,12 @@ class SnapshotSpec:
     every_n_steps: int = 0
     include_chi: bool = True
     include_psi: bool = True
-    detector_z_slice: Optional[int] = (
+    detector_z_slice: int | None = (
         None  # legacy: server returns 2D slice; use downsample_stride instead
     )
-    downsample_stride: Optional[int] = None  # 3D spatial stride: N=256+stride=4 → 64³ per snapshot
+    downsample_stride: int | None = None  # 3D spatial stride: N=256+stride=4 → 64³ per snapshot
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         d = {k: v for k, v in self.__dict__.items() if v is not None}
         # always include the booleans even if False
         d.setdefault("include_chi", self.include_chi)
@@ -59,10 +59,10 @@ class SnapshotSpec:
 @dataclass
 class RunPlanStep:
     steps: int
-    hooks: List[HookSpec] = field(default_factory=list)
+    hooks: list[HookSpec] = field(default_factory=list)
     snapshots: SnapshotSpec = field(default_factory=SnapshotSpec)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "steps": self.steps,
             "hooks": [h.to_dict() for h in self.hooks],
@@ -75,19 +75,19 @@ class SimulationJob:
     """Full simulation job specification sent to POST /v1/simulate_job."""
 
     grid_size: int
-    run_plan: List[RunPlanStep]
+    run_plan: list[RunPlanStep]
     chi0: float = 19.0
     kappa: float = 1.0 / 63.0
     dt: float = 0.02
-    initial_psi: Optional[np.ndarray] = None  # shape (N,N,N) float32
-    initial_chi: Optional[np.ndarray] = None  # shape (N,N,N) float32
-    fusion_depth: Optional[int] = None
+    initial_psi: np.ndarray | None = None  # shape (N,N,N) float32
+    initial_chi: np.ndarray | None = None  # shape (N,N,N) float32
+    fusion_depth: int | None = None
     pruner_enabled: bool = False
     freeze_chi: bool = False
 
-    def to_request_dict(self) -> Dict[str, Any]:
+    def to_request_dict(self) -> dict[str, Any]:
         """Serialise to the JSON body expected by the WaveGuard API."""
-        d: Dict[str, Any] = {
+        d: dict[str, Any] = {
             "grid_size": self.grid_size,
             "chi0": self.chi0,
             "kappa": self.kappa,
@@ -113,17 +113,17 @@ class Snapshot:
     """Decoded snapshot from a simulation response."""
 
     step: int
-    psi: Optional[np.ndarray] = None  # shape (N,N,N) or (N,N) when 2D slice
-    chi: Optional[np.ndarray] = None
+    psi: np.ndarray | None = None  # shape (N,N,N) or (N,N) when 2D slice
+    chi: np.ndarray | None = None
 
     @classmethod
-    def from_response_dict(cls, d: Dict[str, Any], N: int) -> "Snapshot":
+    def from_response_dict(cls, d: dict[str, Any], N: int) -> Snapshot:
         stride = int(d.get("psi_downsample_stride", 1))
         eff_N = N // stride  # effective grid size after spatial downsampling
 
         def _decode(
-            b64: Optional[str], is_2d: bool = False, downsampled: bool = False
-        ) -> Optional[np.ndarray]:
+            b64: str | None, is_2d: bool = False, downsampled: bool = False
+        ) -> np.ndarray | None:
             if b64 is None:
                 return None
             raw = base64.b64decode(b64)
@@ -154,14 +154,14 @@ class JobResult:
     active_fraction: float
     pruning_efficiency: str
     backend: str
-    energy_initial: Optional[float]
-    energy_final: Optional[float]
-    energy_drift_pct: Optional[float]
-    snapshots: List[Snapshot] = field(default_factory=list)
-    detector_patterns: Dict[str, Any] = field(default_factory=dict)
+    energy_initial: float | None
+    energy_final: float | None
+    energy_drift_pct: float | None
+    snapshots: list[Snapshot] = field(default_factory=list)
+    detector_patterns: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_response_dict(cls, d: Dict[str, Any], N: int) -> "JobResult":
+    def from_response_dict(cls, d: dict[str, Any], N: int) -> JobResult:
         ki = d.get("kernel_info", {})
         metrics = d.get("metrics", {})
         snapshots = [Snapshot.from_response_dict(s, N) for s in d.get("snapshots", [])]
@@ -181,7 +181,7 @@ class JobResult:
         )
 
     @property
-    def psi_final(self) -> Optional[np.ndarray]:
+    def psi_final(self) -> np.ndarray | None:
         """Return psi from the last snapshot, or None."""
         for s in reversed(self.snapshots):
             if s.psi is not None:
@@ -189,7 +189,7 @@ class JobResult:
         return None
 
     @property
-    def chi_final(self) -> Optional[np.ndarray]:
+    def chi_final(self) -> np.ndarray | None:
         """Return chi from the last snapshot, or None."""
         for s in reversed(self.snapshots):
             if s.chi is not None:

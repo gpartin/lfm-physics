@@ -12,14 +12,12 @@ shares.
 
 from __future__ import annotations
 
-import math
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 import numpy as np
-
 
 # ── Slice utilities ────────────────────────────────────────────────────────
 
@@ -59,8 +57,8 @@ def midplane_slice(
 
 
 if TYPE_CHECKING:
-    from matplotlib.figure import Figure
-    from numpy.typing import NDArray
+    from collections.abc import Callable
+
     import lfm as _lfm_t
 
 __all__ = [
@@ -98,7 +96,7 @@ class ExperimentConfig:
 # ── Simulation builder ─────────────────────────────────────────────────────
 
 
-def build_sim(cfg: ExperimentConfig) -> "_lfm_t.Simulation":
+def build_sim(cfg: ExperimentConfig) -> _lfm_t.Simulation:
     """Create a :class:`~lfm.Simulation` from an :class:`ExperimentConfig`.
 
     This centralises the pattern used by every experiment so that backend
@@ -140,14 +138,14 @@ def build_sim(cfg: ExperimentConfig) -> "_lfm_t.Simulation":
 
 
 def gpu_snapshot_loop(
-    sim: "_lfm_t.Simulation",
+    sim: _lfm_t.Simulation,
     *,
     total_steps: int,
     snap_every: int = 200,
     fields: list[str] | None = None,
     movie_every: int | None = None,
     movie_fields: list[str] | None = None,
-    step_callback: Callable[["_lfm_t.Simulation", int], None] | None = None,
+    step_callback: Callable[[_lfm_t.Simulation, int], None] | None = None,
     verbose: bool = True,
     label: str = "experiment",
     evolve_chi: bool = True,

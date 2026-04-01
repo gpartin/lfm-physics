@@ -37,7 +37,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -50,6 +50,8 @@ from lfm.experiment.common import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from matplotlib.figure import Figure
 
     import lfm as _lfm_t
@@ -475,9 +477,7 @@ def _build_collision_sim(
         coords = np.arange(geo.N, dtype=np.float64) - center
         gz, gy, gx = np.meshgrid(coords, coords, coords, indexing="ij")
         r2 = (gx**2 + gy**2 + gz**2).astype(np.float64)
-        E_template = (geo.amplitude * np.exp(-r2 / (2.0 * geo.sigma**2))).astype(
-            np.float32
-        )
+        E_template = (geo.amplitude * np.exp(-r2 / (2.0 * geo.sigma**2))).astype(np.float32)
         kx = np.fft.fftfreq(geo.N) * 2.0 * np.pi
         KX, KY, KZ = np.meshgrid(kx, kx, kx, indexing="ij")
         K2 = (KX**2 + KY**2 + KZ**2).astype(np.float64)
@@ -485,9 +485,7 @@ def _build_collision_sim(
         e2 = E_template.astype(np.float64) ** 2
         dchi_hat = -KAPPA * np.fft.fftn(e2) / K2
         dchi_hat[0, 0, 0] = 0.0
-        chi_template = (
-            geo.chi0 + np.fft.ifftn(dchi_hat).real
-        ).astype(np.float32)
+        chi_template = (geo.chi0 + np.fft.ifftn(dchi_hat).real).astype(np.float32)
         np.clip(chi_template, 0.01, None, out=chi_template)
         dchi_template = chi_template - np.float32(geo.chi0)
         # Use chi_min as approximate eigenvalue (wave frequency inside well)
@@ -646,10 +644,17 @@ def _run_physics(
     animate: bool = False,
     lambda_self: float = 0.0,
     poisson_only: bool = False,
-    step_callback: "Callable[['_lfm_t.Simulation', int], None] | None" = None,
+    step_callback: Callable[[_lfm_t.Simulation, int], None] | None = None,
 ) -> tuple[list[dict], list[dict], float, list[dict]]:
     """Run physics + optional movie capture in a single pass."""
-    sim = _build_collision_sim(geo, particle_a, particle_b, lambda_self=lambda_self, poisson_only=poisson_only, verbose=verbose)
+    sim = _build_collision_sim(
+        geo,
+        particle_a,
+        particle_b,
+        lambda_self=lambda_self,
+        poisson_only=poisson_only,
+        verbose=verbose,
+    )
 
     # Record initial energy before any evolution
     try:
@@ -712,7 +717,7 @@ def collision(
     chi0: float = _CHI0,
     lambda_self: float = 0.0,
     poisson_only: bool = False,
-    step_callback: "Callable[['_lfm_t.Simulation', int], None] | None" = None,
+    step_callback: Callable[[_lfm_t.Simulation, int], None] | None = None,
     animate: bool = True,
     label: str | None = None,
     verbose: bool = True,

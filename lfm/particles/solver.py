@@ -146,15 +146,9 @@ def _energy_in_sphere(
     mask = r2 <= radius**2
 
     # Sum |Ψ|² over colour components if multi-colour
-    if psi_r.ndim == 4:
-        e2 = np.sum(psi_r**2, axis=0)
-    else:
-        e2 = psi_r**2
+    e2 = np.sum(psi_r**2, axis=0) if psi_r.ndim == 4 else psi_r**2
     if psi_i is not None:
-        if psi_i.ndim == 4:
-            e2 = e2 + np.sum(psi_i**2, axis=0)
-        else:
-            e2 = e2 + psi_i**2
+        e2 = e2 + np.sum(psi_i**2, axis=0) if psi_i.ndim == 4 else e2 + psi_i**2
 
     return float(np.sum(e2[mask]))
 
@@ -643,7 +637,7 @@ def _relax_loop_gpu(
     Imaginary-time E relaxation runs entirely on GPU (many steps, heavy).
     Returns (E, chi, converged, total_steps, last_cycle) as numpy.
     """
-    bmask_gpu = _spherical_boundary_mask_gpu(N, boundary_fraction)
+    _spherical_boundary_mask_gpu(N, boundary_fraction)
     bmask_cpu = _spherical_boundary_mask(N, boundary_fraction)
 
     # FFT wavenumber grid (CPU — used for Poisson solve)

@@ -301,7 +301,6 @@ class TestBarrierCallback:
         that (1−γ)^10 = 0.5, giving per-step scale = (1−γ) = 0.5^(1/10).
         After one callback call the slit mean must equal 5.0 * (1−γ).
         """
-        import math
 
         sim = _sim()
         slits = [Slit(center=SLIT_CENTER_A, width=4, detector=True, detector_strength=0.5)]
@@ -858,7 +857,7 @@ class TestSnapshotIO:
         snaps = self._snapshots(3)
         path = save_snapshots(snaps, tmp_path / "test.npz")
         loaded = load_snapshots(path)
-        for orig, loaded_s in zip(snaps, loaded):
+        for orig, loaded_s in zip(snaps, loaded, strict=False):
             assert loaded_s["step"] == orig["step"]
 
     def test_roundtrip_preserves_fields(self, tmp_path):
@@ -867,7 +866,7 @@ class TestSnapshotIO:
         snaps = self._snapshots(2)
         path = save_snapshots(snaps, tmp_path / "test.npz")
         loaded = load_snapshots(path)
-        for orig, loaded_s in zip(snaps, loaded):
+        for orig, loaded_s in zip(snaps, loaded, strict=False):
             np.testing.assert_array_almost_equal(
                 loaded_s["energy_density"], orig["energy_density"], decimal=5
             )

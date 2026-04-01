@@ -101,7 +101,7 @@ def plot_energy_components(
     if ax is None:
         fig, ax = plt.subplots(figsize=(9, 5))
     else:
-        fig = cast(Figure, ax.figure)
+        fig = cast("Figure", ax.figure)
 
     import numpy as np
 

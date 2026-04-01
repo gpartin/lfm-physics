@@ -27,9 +27,12 @@ Reference: LFM-PAPER-048 (Spinor Representation in the Lattice Field Medium)
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 
-from numpy.typing import NDArray
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def gaussian_spinor(
@@ -68,7 +71,7 @@ def gaussian_spinor(
     X, Y, Z = np.meshgrid(x, x, x, indexing="ij")
     px, py, pz = position
     r2 = (X - px) ** 2 + (Y - py) ** 2 + (Z - pz) ** 2
-    envelope = (amplitude * np.exp(-r2 / (2.0 * sigma ** 2))).astype(np.float32)
+    envelope = (amplitude * np.exp(-r2 / (2.0 * sigma**2))).astype(np.float32)
 
     psi_r = np.zeros((2, N, N, N), dtype=np.float32)
     psi_i = np.zeros((2, N, N, N), dtype=np.float32)
@@ -119,7 +122,7 @@ def vortex_spinor(
     px, py, pz = position
 
     r2 = (X - px) ** 2 + (Y - py) ** 2 + (Z - pz) ** 2
-    envelope = (amplitude * np.exp(-r2 / (2.0 * sigma ** 2))).astype(np.float32)
+    envelope = (amplitude * np.exp(-r2 / (2.0 * sigma**2))).astype(np.float32)
 
     # Azimuthal angle in x-y plane around the vortex centre
     theta = np.arctan2(Y - py, X - px).astype(np.float32)

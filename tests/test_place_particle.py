@@ -10,8 +10,6 @@ Covers:
 - Motion verification (COM tracking over time steps)
 """
 
-import math
-
 import numpy as np
 import pytest
 
@@ -24,7 +22,6 @@ from lfm import (
     create_particle,
     create_two_particles,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -127,7 +124,6 @@ class TestChargePhase:
         """Positron (phase=π) should have nonzero psi_imag."""
         sim = _make_sim(N=32)
         sim.place_particle("positron", position=(16, 16, 16))
-        pi = sim.psi_imag
         # Phase π rotates real → mostly -real with tiny imag (from sin(π)≈0
         # but cos(π)=-1, so psi_r should be inverted)
         pr = sim.psi_real

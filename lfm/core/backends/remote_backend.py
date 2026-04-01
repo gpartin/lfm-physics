@@ -29,22 +29,21 @@ Usage::
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
 from .job_schema import HookSpec, JobResult, RunPlanStep, SimulationJob, SnapshotSpec
 
-
 # ─── Global remote config ─────────────────────────────────────────────────────
 
-_REMOTE_API_KEY: Optional[str] = None
+_REMOTE_API_KEY: str | None = None
 _REMOTE_ENDPOINT: str = "https://gpartin--waveguard-api-fastapi-app.modal.run"
 
 
 def configure_remote(
-    api_key: Optional[str] = None,
-    endpoint: Optional[str] = None,
+    api_key: str | None = None,
+    endpoint: str | None = None,
 ) -> None:
     """Configure the remote backend credentials.
 
@@ -82,8 +81,8 @@ class RemoteBackend:
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        endpoint: Optional[str] = None,
+        api_key: str | None = None,
+        endpoint: str | None = None,
     ) -> None:
         # Per-instance key/endpoint override (falls back to globals)
         self._api_key = api_key
@@ -128,14 +127,10 @@ class RemoteBackend:
         RuntimeError
             On HTTP error or network failure.
         """
-        import json
 
         try:
             import requests  # type: ignore[import]
         except ImportError:
-            import urllib.request
-            import urllib.error
-
             return self._run_job_urllib(job, timeout)
 
         url = f"{self._resolved_endpoint()}/v1/simulate_job"
@@ -162,8 +157,8 @@ class RemoteBackend:
     def _run_job_urllib(self, job: SimulationJob, timeout: float) -> JobResult:
         """Fallback using stdlib urllib when ``requests`` is not installed."""
         import json
-        import urllib.request
         import urllib.error
+        import urllib.request
 
         url = f"{self._resolved_endpoint()}/v1/simulate_job"
         payload_bytes = json.dumps(job.to_request_dict()).encode("utf-8")
@@ -199,7 +194,7 @@ class RemoteBackend:
         kappa: float = 1.0 / 63.0,
         chi0: float = 19.0,
         snapshot_every: int = 0,
-        hooks: Optional[List[HookSpec]] = None,
+        hooks: list[HookSpec] | None = None,
     ) -> JobResult:
         """Run ``n_steps`` leapfrog steps starting from ``psi``/``chi`` state.
 
@@ -237,7 +232,7 @@ class RemoteBackend:
         )
         return self.run_job(job)
 
-    def health_check(self) -> Dict[str, Any]:
+    def health_check(self) -> dict[str, Any]:
         """Call GET /v1/health and return the JSON response dict."""
         try:
             import requests

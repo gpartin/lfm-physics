@@ -56,7 +56,7 @@ def plot_power_spectrum(
     if ax is None:
         fig, ax = plt.subplots(figsize=(7, 4.5))
     else:
-        fig = cast(Figure, ax.figure)
+        fig = cast("Figure", ax.figure)
 
     if log and np.all(P[P > 0]):
         ax.loglog(k, P, "o-", ms=3, color="#7c3aed", lw=1.4)

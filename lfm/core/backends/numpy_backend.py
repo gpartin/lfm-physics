@@ -125,7 +125,7 @@ class NumpyBackend:
 
         # Write to output buffers (double-buffer swap)
         np.copyto(psi_out, E_new)
-        np.copyto(psi_prev_out, E * absorb)   # damp prev too — prevents reflection
+        np.copyto(psi_prev_out, E * absorb)  # damp prev too — prevents reflection
         np.copyto(chi_out, chi_new)
         np.copyto(chi_prev_out, chi)
 
@@ -198,9 +198,9 @@ class NumpyBackend:
         chi_new = boundary_mask * chi0 + absorb * chi_new
 
         np.copyto(psi_r_out, Pr_new)
-        np.copyto(psi_r_prev_out, Pr * absorb)   # damp prev — prevents leapfrog reflection
+        np.copyto(psi_r_prev_out, Pr * absorb)  # damp prev — prevents leapfrog reflection
         np.copyto(psi_i_out, Pi_new)
-        np.copyto(psi_i_prev_out, Pi * absorb)   # damp prev
+        np.copyto(psi_i_prev_out, Pi * absorb)  # damp prev
         np.copyto(chi_out, chi_new)
         np.copyto(chi_prev_out, chi)
 
@@ -374,8 +374,8 @@ class NumpyBackend:
         absorb1 = 1.0 - boundary_mask
         psi_r_out *= absorb3
         psi_i_out *= absorb3
-        psi_r_prev_out *= absorb3   # damp prev too
-        psi_i_prev_out *= absorb3   # damp prev too
+        psi_r_prev_out *= absorb3  # damp prev too
+        psi_i_prev_out *= absorb3  # damp prev too
         chi_new = boundary_mask * chi0 + absorb1 * chi_new
 
         np.copyto(chi_out, chi_new)

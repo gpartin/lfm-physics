@@ -22,20 +22,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING
 
 import numpy as np
 
-from lfm.constants import CHI0
 from lfm.config import FieldLevel
-
-if TYPE_CHECKING:
-    pass  # Simulation imported inside place_bodies to avoid circular imports
-
+from lfm.constants import CHI0
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Body type definitions
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 class BodyType(str, Enum):
     """Astronomical object class.
@@ -43,53 +39,55 @@ class BodyType(str, Enum):
     Inheriting from ``str`` means instances compare equal to their string
     value, e.g. ``BodyType.STAR == "star"`` is True.
     """
+
     ROCKY_PLANET = "rocky_planet"
-    GAS_PLANET   = "gas_planet"
-    STAR         = "star"
+    GAS_PLANET = "gas_planet"
+    STAR = "star"
     NEUTRON_STAR = "neutron_star"
-    BLACK_HOLE   = "black_hole"
-    SMBH         = "smbh"
+    BLACK_HOLE = "black_hole"
+    SMBH = "smbh"
 
 
 # Visual overlay style per type (no physics — only affects the rendered movie)
 _VISUAL: dict[str, dict] = {
-    BodyType.ROCKY_PLANET: dict(color="#CD853F", size=50,  ring="#FF8C00"),
-    BodyType.GAS_PLANET:   dict(color="#4488FF", size=120, ring="#88CCFF"),
-    BodyType.STAR:         dict(color="#FFD700", size=200, ring="#FFFFFF"),
-    BodyType.NEUTRON_STAR: dict(color="#00FFFF", size=60,  ring="#00AAAA"),
-    BodyType.BLACK_HOLE:   dict(color="#330033", size=180, ring="#FF00FF"),
-    BodyType.SMBH:         dict(color="#1A0000", size=320, ring="#FF4400"),
+    BodyType.ROCKY_PLANET: dict(color="#CD853F", size=50, ring="#FF8C00"),
+    BodyType.GAS_PLANET: dict(color="#4488FF", size=120, ring="#88CCFF"),
+    BodyType.STAR: dict(color="#FFD700", size=200, ring="#FFFFFF"),
+    BodyType.NEUTRON_STAR: dict(color="#00FFFF", size=60, ring="#00AAAA"),
+    BodyType.BLACK_HOLE: dict(color="#330033", size=180, ring="#FF00FF"),
+    BodyType.SMBH: dict(color="#1A0000", size=320, ring="#FF4400"),
 }
 
 # LFM soliton width (sigma, in lattice cells) by type.
 # Compact objects (BH, NS) have small sigma; diffuse objects have large sigma.
 _SIGMA: dict[str, float] = {
     BodyType.ROCKY_PLANET: 1.5,
-    BodyType.GAS_PLANET:   2.5,
-    BodyType.STAR:         2.5,
+    BodyType.GAS_PLANET: 2.5,
+    BodyType.STAR: 2.5,
     BodyType.NEUTRON_STAR: 1.0,
-    BodyType.BLACK_HOLE:   3.0,
-    BodyType.SMBH:         4.0,
+    BodyType.BLACK_HOLE: 3.0,
+    BodyType.SMBH: 4.0,
 }
 
 # Amplitude cap per type (prevents extreme chi excursions and Nyquist issues)
 _AMP_MAX: dict[str, float] = {
     BodyType.ROCKY_PLANET: 2.0,
-    BodyType.GAS_PLANET:   4.0,
-    BodyType.STAR:         8.0,
+    BodyType.GAS_PLANET: 4.0,
+    BodyType.STAR: 8.0,
     BodyType.NEUTRON_STAR: 10.0,
-    BodyType.BLACK_HOLE:   13.0,
-    BodyType.SMBH:         15.0,
+    BodyType.BLACK_HOLE: 13.0,
+    BodyType.SMBH: 15.0,
 }
 
-_AMP_SCALE    = 7.0   # 1 M☉ → amplitude 7.0   (calibrated so Sun fills grid nicely)
+_AMP_SCALE = 7.0  # 1 M☉ → amplitude 7.0   (calibrated so Sun fills grid nicely)
 _AMP_EXPONENT = 0.45  # amplitude ∝ mass^0.45   (sub-linear to keep dynamic range sane)
-_AMP_MIN      = 0.3   # minimum visible amplitude
+_AMP_MIN = 0.3  # minimum visible amplitude
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # CelestialBody dataclass
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 @dataclass
 class CelestialBody:
@@ -132,15 +130,16 @@ class CelestialBody:
     * Gas giants: broad shallow chi well (large sigma + small amplitude).
     * SMBH: wide AND deep chi well → extended flat rotation curve.
     """
-    name:           str
-    body_type:      BodyType
-    mass_solar:     float
+
+    name: str
+    body_type: BodyType
+    mass_solar: float
     orbital_radius: float
-    orbital_phase:  float = 0.0
+    orbital_phase: float = 0.0
 
     @property
     def amplitude(self) -> float:
-        raw = _AMP_SCALE * (self.mass_solar ** _AMP_EXPONENT)
+        raw = _AMP_SCALE * (self.mass_solar**_AMP_EXPONENT)
         return float(np.clip(raw, _AMP_MIN, _AMP_MAX[self.body_type]))
 
     @property
@@ -164,6 +163,7 @@ class CelestialBody:
 # Prebuilt scenario factories
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 def solar_system() -> list[CelestialBody]:
     """Inner solar system: Sun + 4 rocky planets.
 
@@ -186,11 +186,11 @@ def solar_system() -> list[CelestialBody]:
     Recommended grid: N = 128\u2013256.
     """
     return [
-        CelestialBody("Sun",     BodyType.STAR,         0.15,  0),
+        CelestialBody("Sun", BodyType.STAR, 0.15, 0),
         CelestialBody("Mercury", BodyType.ROCKY_PLANET, 0.05, 12, 0.0),
-        CelestialBody("Venus",   BodyType.ROCKY_PLANET, 0.05, 18, 0.8),
-        CelestialBody("Earth",   BodyType.ROCKY_PLANET, 0.05, 25, 2.1),
-        CelestialBody("Mars",    BodyType.ROCKY_PLANET, 0.05, 33, 3.7),
+        CelestialBody("Venus", BodyType.ROCKY_PLANET, 0.05, 18, 0.8),
+        CelestialBody("Earth", BodyType.ROCKY_PLANET, 0.05, 25, 2.1),
+        CelestialBody("Mars", BodyType.ROCKY_PLANET, 0.05, 33, 3.7),
     ]
 
 
@@ -200,13 +200,13 @@ def black_hole_system() -> list[CelestialBody]:
     Recommended grid: N = 128.
     """
     return [
-        CelestialBody("Black Hole", BodyType.BLACK_HOLE,   10.0,  0),
-        CelestialBody("Star A",     BodyType.STAR,          1.2,  38, 0.0),
-        CelestialBody("Star B",     BodyType.STAR,          0.9,  50, 1.7),
-        CelestialBody("Debris 1",   BodyType.ROCKY_PLANET,  0.05, 22, 3.0),
-        CelestialBody("Debris 2",   BodyType.ROCKY_PLANET,  0.05, 26, 5.2),
-        CelestialBody("Debris 3",   BodyType.ROCKY_PLANET,  0.05, 30, 1.0),
-        CelestialBody("Debris 4",   BodyType.ROCKY_PLANET,  0.05, 34, 4.3),
+        CelestialBody("Black Hole", BodyType.BLACK_HOLE, 10.0, 0),
+        CelestialBody("Star A", BodyType.STAR, 1.2, 38, 0.0),
+        CelestialBody("Star B", BodyType.STAR, 0.9, 50, 1.7),
+        CelestialBody("Debris 1", BodyType.ROCKY_PLANET, 0.05, 22, 3.0),
+        CelestialBody("Debris 2", BodyType.ROCKY_PLANET, 0.05, 26, 5.2),
+        CelestialBody("Debris 3", BodyType.ROCKY_PLANET, 0.05, 30, 1.0),
+        CelestialBody("Debris 4", BodyType.ROCKY_PLANET, 0.05, 34, 4.3),
     ]
 
 
@@ -222,11 +222,11 @@ def galaxy_core(n_stars: int = 18) -> list[CelestialBody]:
     bodies: list[CelestialBody] = [
         CelestialBody("Sgr A*", BodyType.SMBH, 4_000_000.0, 0),
     ]
-    radii  = np.linspace(15, 88, n_stars)
+    radii = np.linspace(15, 88, n_stars)
     phases = rng.uniform(0, 2 * np.pi, n_stars)
     masses = rng.uniform(0.5, 3.0, n_stars)
-    for i, (r, theta, m) in enumerate(zip(radii, phases, masses)):
-        bodies.append(CelestialBody(f"S{i+1}", BodyType.STAR, float(m), float(r), float(theta)))
+    for i, (r, theta, m) in enumerate(zip(radii, phases, masses, strict=False)):
+        bodies.append(CelestialBody(f"S{i + 1}", BodyType.STAR, float(m), float(r), float(theta)))
     return bodies
 
 
@@ -290,15 +290,17 @@ def place_bodies(
     # Deferred import avoids circular dependency lfm → lfm.scenarios → lfm
     from lfm.analysis.observables import rotation_curve
 
-    N  = sim.chi.shape[0]
+    N = sim.chi.shape[0]
     cx = cy = cz = N // 2
 
     # ── 1. Place central body ─────────────────────────────────────────────────
     central = next((b for b in bodies if b.orbital_radius == 0), None)
     if central is not None:
         if verbose:
-            print(f"Placing central body: {central.name}  "
-                  f"amp={central.amplitude:.3f}  σ={central.sigma:.1f}")
+            print(
+                f"Placing central body: {central.name}  "
+                f"amp={central.amplitude:.3f}  σ={central.sigma:.1f}"
+            )
         sim.place_soliton(
             (cx, cy, cz),
             amplitude=central.amplitude,
@@ -311,7 +313,7 @@ def place_bodies(
 
     # ── 2. Rotation curve + Keplerian extrapolation ───────────────────────────
     rc = rotation_curve(sim.chi, sim.energy_density, center=(cx, cy, cz), plane_axis=2)
-    r_arr     = np.asarray(rc["r"],     dtype=np.float64)
+    r_arr = np.asarray(rc["r"], dtype=np.float64)
     v_chi_raw = np.asarray(rc["v_chi"], dtype=np.float64)
 
     # chi propagates at c=1; after equilibrate(), the wave front is only at
@@ -330,7 +332,7 @@ def place_bodies(
         v_arr = v_chi_raw
 
     # Nyquist velocity limit: |v| < 0.8π/χ₀  (from leapfrog stability)
-    v_nyq = 0.8 * np.pi / CHI0 * v_nyquist_fraction   # ≈ 0.121c
+    v_nyq = 0.8 * np.pi / CHI0 * v_nyquist_fraction  # ≈ 0.121c
 
     # ── 3. Place orbiting bodies ──────────────────────────────────────────────
     body_omega: dict[str, float] = {}
@@ -342,16 +344,16 @@ def place_bodies(
             body_omega[b.name] = 0.0
             continue
 
-        r     = b.orbital_radius
+        r = b.orbital_radius
         theta = b.orbital_phase
-        bx    = cx + r * np.cos(theta)
-        by    = cy + r * np.sin(theta)
+        bx = cx + r * np.cos(theta)
+        by = cy + r * np.sin(theta)
 
         v_circ = float(np.interp(r, r_arr, v_arr)) * v_scale
         v_circ = min(v_circ, v_nyq)
 
         vx = -np.sin(theta) * v_circ
-        vy =  np.cos(theta) * v_circ
+        vy = np.cos(theta) * v_circ
         omega = v_circ / r if r > 0 else 0.0
         body_omega[b.name] = omega
 
@@ -370,7 +372,7 @@ def place_bodies(
         except ValueError as exc:
             if verbose:
                 print(f"    ⚠ {b.name}: {exc}")
-                print(f"    Placing without velocity (orbit will be non-circular).")
+                print("    Placing without velocity (orbit will be non-circular).")
             sim.place_soliton((bx, by, cz), amplitude=b.amplitude, sigma=b.sigma)
             body_omega[b.name] = 0.0
 
@@ -390,7 +392,7 @@ def place_bodies(
     # the ENTIRE complex field as exp(−iωt), making |Ψ|² exactly constant.
     # Only the *prev* buffers are modified; the t=0 state is preserved unchanged.
     if sim.config.field_level != FieldLevel.REAL:
-        dt    = sim.config.dt
+        dt = sim.config.dt
         psi_r = np.array(sim.psi_real, dtype=np.float64)
         pi_now = sim.psi_imag
         psi_i = np.array(pi_now, dtype=np.float64) if pi_now is not None else np.zeros_like(psi_r)
