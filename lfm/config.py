@@ -106,26 +106,26 @@ class PhysicsScale(enum.Enum):
 
 # Physical size of one grid cell at each named scale (metres).
 _SCALE_CELL_SIZE_M: dict[PhysicsScale, float] = {
-    PhysicsScale.PLANCK:    1.616e-35,   # 1 Planck length
-    PhysicsScale.NUCLEAR:   1.0e-15,     # 1 fm
-    PhysicsScale.ATOMIC:    1.0e-11,     # 0.1 Angstrom
-    PhysicsScale.MOLECULAR: 1.0e-9,      # 1 nm
-    PhysicsScale.CLASSICAL: 1.0e-4,      # 0.1 mm
-    PhysicsScale.SOLAR:     1.5e11,      # 1 AU
-    PhysicsScale.GALACTIC:  3.086e16,    # 1 parsec
-    PhysicsScale.COSMIC:    3.086e22,    # 1 Mpc
+    PhysicsScale.PLANCK: 1.616e-35,  # 1 Planck length
+    PhysicsScale.NUCLEAR: 1.0e-15,  # 1 fm
+    PhysicsScale.ATOMIC: 1.0e-11,  # 0.1 Angstrom
+    PhysicsScale.MOLECULAR: 1.0e-9,  # 1 nm
+    PhysicsScale.CLASSICAL: 1.0e-4,  # 0.1 mm
+    PhysicsScale.SOLAR: 1.5e11,  # 1 AU
+    PhysicsScale.GALACTIC: 3.086e16,  # 1 parsec
+    PhysicsScale.COSMIC: 3.086e22,  # 1 Mpc
 }
 
 # Regime default: (FieldLevel, ChiMode, lambda_self, kappa_c)
 _SCALE_DEFAULTS: dict[PhysicsScale, tuple[FieldLevel, ChiMode, float, float]] = {
-    PhysicsScale.PLANCK:    (FieldLevel.COLOR,   ChiMode.WAVE,   LAMBDA_H, KAPPA_C),
-    PhysicsScale.NUCLEAR:   (FieldLevel.COLOR,   ChiMode.WAVE,   LAMBDA_H, KAPPA_C),
-    PhysicsScale.ATOMIC:    (FieldLevel.COMPLEX, ChiMode.WAVE,   0.0,      0.0),
-    PhysicsScale.MOLECULAR: (FieldLevel.COMPLEX, ChiMode.WAVE,   0.0,      0.0),
-    PhysicsScale.CLASSICAL: (FieldLevel.REAL,    ChiMode.WAVE,   0.0,      0.0),
-    PhysicsScale.SOLAR:     (FieldLevel.REAL,    ChiMode.WAVE,   0.0,      0.0),
-    PhysicsScale.GALACTIC:  (FieldLevel.REAL,    ChiMode.MEMORY, 0.0,      0.0),
-    PhysicsScale.COSMIC:    (FieldLevel.REAL,    ChiMode.MEMORY, 0.0,      0.0),
+    PhysicsScale.PLANCK: (FieldLevel.COLOR, ChiMode.WAVE, LAMBDA_H, KAPPA_C),
+    PhysicsScale.NUCLEAR: (FieldLevel.COLOR, ChiMode.WAVE, LAMBDA_H, KAPPA_C),
+    PhysicsScale.ATOMIC: (FieldLevel.COMPLEX, ChiMode.WAVE, 0.0, 0.0),
+    PhysicsScale.MOLECULAR: (FieldLevel.COMPLEX, ChiMode.WAVE, 0.0, 0.0),
+    PhysicsScale.CLASSICAL: (FieldLevel.REAL, ChiMode.WAVE, 0.0, 0.0),
+    PhysicsScale.SOLAR: (FieldLevel.REAL, ChiMode.WAVE, 0.0, 0.0),
+    PhysicsScale.GALACTIC: (FieldLevel.REAL, ChiMode.MEMORY, 0.0, 0.0),
+    PhysicsScale.COSMIC: (FieldLevel.REAL, ChiMode.MEMORY, 0.0, 0.0),
 }
 
 
@@ -306,6 +306,7 @@ class SimulationConfig:
     def _validate(self) -> None:
         """Validate configuration parameters."""
         import warnings
+
         if self.grid_size < 8:
             raise ValueError(f"grid_size must be >= 8, got {self.grid_size}")
         if self.dt <= 0:
@@ -313,7 +314,8 @@ class SimulationConfig:
         # CFL limit depends on chi0: dt < 1/sqrt(16/3 + chi0^2)
         # For chi0=0 (massless/EM) the limit is the wave-only CFL: 1/sqrt(16/3)
         import math
-        cfl_limit = 1.0 / math.sqrt(16.0 / 3.0 + self.chi0 ** 2)
+
+        cfl_limit = 1.0 / math.sqrt(16.0 / 3.0 + self.chi0**2)
         if self.dt > cfl_limit:
             raise ValueError(
                 f"dt={self.dt} exceeds CFL limit {cfl_limit:.4f} "
