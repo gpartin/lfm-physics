@@ -18,7 +18,6 @@ if TYPE_CHECKING:
 from lfm.constants import (
     BOUNDARY_FRACTION_DEFAULT,
     C_DEFAULT,
-    CFL_19PT_MASSIVE,
     CHI0,
     DT_DEFAULT,
     E0_SQ_DEFAULT,
@@ -320,8 +319,8 @@ class SimulationConfig:
                 f"dt={self.dt} exceeds CFL limit {cfl_limit:.4f} "
                 f"for 19-point stencil with \u03c7\u2080={self.chi0}"
             )
-        if self.chi0 < 0:
-            raise ValueError(f"chi0 must be >= 0, got {self.chi0}")
+        if self.chi0 <= 0:
+            raise ValueError(f"chi0 must be > 0, got {self.chi0}")
         if self.kappa < 0:
             raise ValueError(f"kappa must be >= 0, got {self.kappa}")
         if self.lambda_self < 0:
