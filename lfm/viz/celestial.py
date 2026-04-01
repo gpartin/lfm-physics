@@ -33,7 +33,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
-from matplotlib.patches import Circle
 
 from lfm.constants import CHI0
 
@@ -75,6 +74,7 @@ def _render_frame_3d(
 ) -> np.ndarray:
     """Pre-render one frame to an RGB numpy array."""
     import matplotlib.pyplot as plt
+    from matplotlib.patches import Circle
 
     fig = plt.figure(figsize=figsize, facecolor="#050510", dpi=dpi)
     ax = fig.add_subplot(111, projection="3d")
