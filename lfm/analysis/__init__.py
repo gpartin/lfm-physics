@@ -27,7 +27,7 @@ from lfm.analysis.angular_momentum import (
 from lfm.analysis.color import (
     color_variance,
 )
-from lfm.analysis.confinement import (
+from lfm.analysis.confinement import (  # noqa: F401
     classify_potential,
     color_current_variance,
     fit_cornell,
@@ -88,13 +88,6 @@ from lfm.analysis.phase import (
 )
 from lfm.analysis.sparc import list_sparc_galaxies, sparc_load
 from lfm.analysis.spectrum import power_spectrum
-from lfm.analysis.structure import (
-    chi_statistics,
-    count_clusters,
-    interior_mask,
-    void_fraction,
-    well_fraction,
-)
 from lfm.analysis.spinor import (
     spinor_center_of_energy,
     spinor_density,
@@ -102,6 +95,13 @@ from lfm.analysis.spinor import (
     spinor_sigma_x,
     spinor_sigma_y,
     spinor_sigma_z,
+)
+from lfm.analysis.structure import (
+    chi_statistics,
+    count_clusters,
+    interior_mask,
+    void_fraction,
+    well_fraction,
 )
 from lfm.analysis.tracker import (
     collider_event_display,

@@ -40,14 +40,14 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 
-from lfm.experiment.barrier import Barrier, Slit
-from lfm.experiment.detector import DetectorScreen
+from lfm.experiment.barrier import Slit
 from lfm.experiment.dispersion import dispersion
-from lfm.experiment.source import ContinuousSource
 
 if TYPE_CHECKING:
     from matplotlib.figure import Figure
+
     import lfm as _lfm_t
+    from lfm.experiment.detector import DetectorScreen
 
 __all__ = [
     "double_slit",
@@ -132,7 +132,7 @@ def _compute_geometry(N: int, *, far_field: bool = False) -> _Geometry:
     return make_geometry(N, far_field=far_field)
 
 
-def make_geometry(N: int, *, far_field: bool = False) -> "_Geometry":
+def make_geometry(N: int, *, far_field: bool = False) -> _Geometry:
     """Compute all experiment geometry from *N* and the regime flag.
 
     This is the **only** function that should configure a double-slit run.
@@ -365,7 +365,7 @@ class DoubleSlit:
         show_profile: bool = True,
         figsize: tuple[float, float] = (12, 5),
         title: str | None = None,
-    ) -> "Figure":
+    ) -> Figure:
         """Return a matplotlib figure with the interference-pattern heatmap
         and 1-D transverse profile."""
         import lfm.viz as viz
@@ -413,9 +413,10 @@ class DoubleSlit:
             ``"snapshots"``) to the path written.
         """
         import matplotlib.pyplot as plt
+
         import lfm.viz as viz
-        from lfm.viz.quantum import animate_double_slit_3d
         from lfm.io import save_snapshots as _save_snaps
+        from lfm.viz.quantum import animate_double_slit_3d
 
         out = Path(directory) if directory else Path(".")
         out.mkdir(parents=True, exist_ok=True)
@@ -480,11 +481,11 @@ class DoubleSlit:
 
     @staticmethod
     def compare(
-        results: list["DoubleSlit"],
+        results: list[DoubleSlit],
         *,
         save_path: str | Path | None = None,
         dpi: int = 150,
-    ) -> "Figure":
+    ) -> Figure:
         """Side-by-side 1-D profile comparison of multiple results.
 
         Parameters
@@ -517,7 +518,7 @@ class DoubleSlit:
         if n == 1:
             axes = [axes]
         fig.suptitle("LFM Double-Slit: Variant Comparison", fontsize=14, fontweight="bold")
-        for ax, res, color in zip(axes, results, _COLORS):
+        for ax, res, color in zip(axes, results, _COLORS, strict=False):
             N = res.geometry.N
             profile = res.pattern.sum(axis=0).astype(float)
             mx = profile.max()
@@ -539,7 +540,7 @@ class DoubleSlit:
 # ── Internal simulation helpers ────────────────────────────────────────────
 
 
-def _build_sim(geo: _Geometry) -> "_lfm_t.Simulation":
+def _build_sim(geo: _Geometry) -> _lfm_t.Simulation:
     import lfm
 
     cfg = lfm.SimulationConfig(
@@ -624,7 +625,6 @@ def _run_packet_physics(
     verbose: bool,
 ) -> tuple[DetectorScreen, list[dict]]:
     """Wave-packet variant: single soliton boosted toward the barrier."""
-    import lfm
 
     sim = _build_sim(geo)
     mid = geo.N // 2
@@ -656,7 +656,7 @@ def _run_packet_physics(
     if verbose:
         print(f"    packet run: {total_steps} steps", flush=True)
 
-    def _cb(s: "_lfm_t.Simulation", step: int) -> None:
+    def _cb(s: _lfm_t.Simulation, step: int) -> None:
         barrier.step_callback(s, step)
         screen.record()
 
@@ -680,8 +680,8 @@ def _run_movie(
 
 
 def make_movie_snapshots(
-    geo: "_Geometry",
-    slits: "list[Slit]",
+    geo: _Geometry,
+    slits: list[Slit],
     *,
     mode: str = "cw",
 ) -> list[dict]:
@@ -754,7 +754,7 @@ def make_movie_snapshots(
         absorb=True,
     )
 
-    def _cb(s: "_lfm_t.Simulation", step: int) -> None:
+    def _cb(s: _lfm_t.Simulation, step: int) -> None:
         barrier.step_callback(s, step)
 
     max_frames = min(200, max(40, int(1_000_000_000 // (geo.N**3 * 4))))
@@ -767,7 +767,7 @@ def make_movie_snapshots(
         snapshot_every=snap_every,
         fields=["psi_real"],
         step_callback=_cb,
-        evolve_chi=False,  # κ=1e-6 → χ must stay frozen (static medium); device-resident snapshot avoids PCIe overhead
+        evolve_chi=False,  # κ=1e-6 → χ frozen (static medium); avoids PCIe overhead
     )
     return [initial, *rest]
 
@@ -906,7 +906,7 @@ def double_slit(
     movie_snaps: list[dict] = []
     if animate:
         if verbose:
-            print(f"  Movie capture …", end="", flush=True)
+            print("  Movie capture …", end="", flush=True)
         movie_snaps = _run_movie(geo, slits, mode=mode)
         if verbose:
             print(f" {len(movie_snaps)} frames captured")

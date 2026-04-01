@@ -17,9 +17,8 @@ Or locally (uses fallback _local_simulate, no network):
 from __future__ import annotations
 
 import os
-import json
 import time
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -30,11 +29,9 @@ from lfm.core.backends.job_schema import (
     JobResult,
     RunPlanStep,
     SimulationJob,
-    Snapshot,
     SnapshotSpec,
 )
 from lfm.core.backends.remote_backend import RemoteBackend, configure_remote
-
 
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -110,7 +107,7 @@ class TestSimulationJob:
 
 
 class TestJobResult:
-    def _make_raw(self, N: int, n_snaps: int = 2) -> Dict[str, Any]:
+    def _make_raw(self, N: int, n_snaps: int = 2) -> dict[str, Any]:
         import base64
 
         snaps = []
@@ -204,10 +201,8 @@ class TestRemoteBackendMocked:
         resp = MagicMock()
         resp.status_code = status_code
         if body is None:
-            import base64
-
             N = 8
-            arr = np.ones((N, N, N), dtype=np.float32)
+            np.ones((N, N, N), dtype=np.float32)
             body = {
                 "job_id": "sim-mocked",
                 "steps_completed": 100,
@@ -234,23 +229,27 @@ class TestRemoteBackendMocked:
 
     def test_run_job_http_error(self, tiny_job, mock_backend):
         error_resp = self._make_mock_response(status_code=400, body={"detail": "bad request"})
-        with patch("requests.post", return_value=error_resp):
-            with pytest.raises(RuntimeError, match="HTTP 400"):
-                mock_backend.run_job(tiny_job)
+        with (
+            patch("requests.post", return_value=error_resp),
+            pytest.raises(RuntimeError, match="HTTP 400"),
+        ):
+            mock_backend.run_job(tiny_job)
 
     def test_run_job_403_blocked(self, tiny_job, mock_backend):
         forbidden = self._make_mock_response(
             status_code=403, body={"detail": "Simulation jobs require an API key."}
         )
-        with patch("requests.post", return_value=forbidden):
-            with pytest.raises(RuntimeError, match="HTTP 403"):
-                mock_backend.run_job(tiny_job)
+        with (
+            patch("requests.post", return_value=forbidden),
+            pytest.raises(RuntimeError, match="HTTP 403"),
+        ):
+            mock_backend.run_job(tiny_job)
 
     def test_run_steps_wrapper(self, mock_backend):
         N = 8
         psi = np.zeros((N, N, N), dtype=np.float32)
         chi = np.full((N, N, N), 19.0, dtype=np.float32)
-        with patch("requests.post", return_value=self._make_mock_response()) as mock_post:
+        with patch("requests.post", return_value=self._make_mock_response()):
             result = mock_backend.run_steps(psi, chi, n_steps=100)
         assert result.job_id == "sim-mocked"
 
