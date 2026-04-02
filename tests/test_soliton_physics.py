@@ -234,6 +234,7 @@ class TestRelaxL0:
 # ===================================================================
 
 
+@pytest.mark.slow
 class TestBoostL0:
     """Test that a boosted soliton actually moves.
 

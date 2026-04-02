@@ -95,6 +95,7 @@ class TestPlaceParticleStationary:
 class TestPlaceParticleMoving:
     """Place a particle with velocity and verify it moves."""
 
+    @pytest.mark.slow
     def test_moving_particle_shifts(self):
         """A boosted particle's peak should move along the velocity axis."""
         sim = _make_sim(N=64)

@@ -202,6 +202,7 @@ class TestCreateAtom:
         assert hasattr(atom, "bound")
         assert hasattr(atom, "fraction_near_nucleus")
 
+    @pytest.mark.slow
     def test_hydrogen_bound(self):
         """H atom must be bound (fraction_near_nucleus >= 0.40) with enough steps."""
         atom = create_atom("H", N=32, steps=5_000)
@@ -218,6 +219,7 @@ class TestCreateAtom:
         with pytest.raises(ValueError, match="element"):
             create_atom("Xe", N=32)
 
+    @pytest.mark.slow
     def test_helium_bound(self):
         """He atom (deeper well) should also be bound."""
         atom = create_atom("He", N=32, steps=5_000)
@@ -255,6 +257,7 @@ class TestCreateMolecule:
         mol = create_molecule("H2", N=32, bond_length=10.0, steps=1_000)
         assert mol.chi_nuclear.min() < CHI0
 
+    @pytest.mark.slow
     def test_h2_bond_stable(self):
         """H2 with default depth should be bond-stable at reasonable bond length."""
         mol = create_molecule("H2", N=64, bond_length=16.0, steps=5_000)
