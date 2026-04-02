@@ -476,6 +476,7 @@ class TestParticleTypes:
         drift = math.sqrt(sum((a - b) ** 2 for a, b in zip(com_0, com_f, strict=False)))
         assert drift < 1.0, f"ELECTRON COM drifted {drift:.2f} cells"
 
+    @pytest.mark.slow
     def test_electron_moves(self):
         """Boosted l=0 soliton moves (shallow-well regime).
 
