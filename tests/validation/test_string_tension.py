@@ -64,15 +64,20 @@ def _make_pair(sep: int) -> Simulation:
 class TestStringTension:
     """Tube energy between colored quarks should grow with separation."""
 
-    def test_tube_energy_increases(self) -> None:
-        """Tube integral should be monotonically increasing with separation."""
+    def test_string_tension(self) -> None:
+        """Tube energy should increase monotonically and yield positive σ.
+
+        Both assertions share the same simulation runs to avoid doubling CI
+        runtime (each run at GRID_TWO=48 with full_physics is expensive on
+        CPU-only runners).
+        """
         energies: list[float] = []
         for sep in _SEPS:
             sim = _make_pair(sep)
             sim.run(steps=STEPS)
             energies.append(_tube_energy(sim, sep))
 
-        # Every increase should be strictly positive.
+        # Assertion 1: monotonically increasing tube energy.
         for i in range(1, len(energies)):
             assert energies[i] > energies[i - 1], (
                 f"Tube energy did not increase: sep={_SEPS[i]} gave "
@@ -80,14 +85,7 @@ class TestStringTension:
                 f"sep={_SEPS[i - 1]}.  Full: {list(zip(_SEPS, energies, strict=True))}"
             )
 
-    def test_positive_string_tension(self) -> None:
-        """Linear fit σ = dE_tube/d(sep) should be positive."""
-        energies: list[float] = []
-        for sep in _SEPS:
-            sim = _make_pair(sep)
-            sim.run(steps=STEPS)
-            energies.append(_tube_energy(sim, sep))
-
+        # Assertion 2: positive string tension from linear fit σ = dE_tube/d(sep).
         seps_arr = np.array(_SEPS, dtype=float)
         e_arr = np.array(energies, dtype=float)
         slope, _intercept = np.polyfit(seps_arr, e_arr, 1)
