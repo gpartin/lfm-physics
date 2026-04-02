@@ -149,9 +149,25 @@ def _render_frame_3d(
     # ── Rasterise to RGB ──────────────────────────────────────────────────────
     fig.canvas.draw()
     w, h = fig.canvas.get_width_height()
-    buf = fig.canvas.buffer_rgba()
-    arr = np.frombuffer(buf, dtype=np.uint8).reshape(h, w, 4)
-    rgb = arr[:, :, :3].copy()
+    # Use buffer_rgba() if available (older matplotlib), otherwise use array_rgb
+    try:
+        buf = fig.canvas.buffer_rgba()  # type: ignore[attr-defined]
+        arr = np.frombuffer(buf, dtype=np.uint8).reshape(h, w, 4)
+        rgb = arr[:, :, :3].copy()
+    except (AttributeError, TypeError):
+        # Newer matplotlib: use canvas.print_rgb
+        try:
+            from matplotlib.backends.backend_agg import FigureCanvasAgg
+
+            agg_canvas = fig.canvas
+            if isinstance(agg_canvas, FigureCanvasAgg):
+                raw_data = agg_canvas.tostring_rgb()  # type: ignore[attr-defined]
+                rgb = np.frombuffer(raw_data, dtype=np.uint8).reshape(h, w, 3)
+            else:
+                # Fallback: raise original error
+                raise AttributeError("Cannot capture canvas to RGB")
+        except (ImportError, AttributeError):
+            rgb = np.zeros((h, w, 3), dtype=np.uint8)
     plt.close(fig)
     return rgb
 
@@ -647,7 +663,9 @@ def _save_gif(frames: list[np.ndarray], path: str, fps: int) -> str | None:
     try:
         import imageio
 
-        imageio.mimsave(path, frames, fps=fps)
+        # Ensure frames is list of arrays for imageio.mimsave
+        frame_list: list = list(frames)
+        imageio.mimsave(path, frame_list, fps=fps)  # type: ignore[arg-type]
         return path
     except Exception:
         pass

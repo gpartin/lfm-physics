@@ -53,6 +53,13 @@ from lfm.experiment.entanglement import (
     EntanglementSuiteResult,
     entanglement,
 )
+from lfm.experiment.ringdown import (
+    DEFAULT_RINGDOWN_K_MODES,
+    Next5FalsificationResult,
+    QNMProjectionResult,
+    next5_falsification_projection_v2,
+    qnm_mode_projection_check,
+)
 from lfm.experiment.source import ContinuousSource
 
 __all__ = [
@@ -66,11 +73,16 @@ __all__ = [
     "DoubleSlit",
     "collision",
     "CollisionResult",
+    "DEFAULT_RINGDOWN_K_MODES",
     "entanglement",
     "EntanglementResult",
     "EntanglementSuiteResult",
+    "Next5FalsificationResult",
     "SPIN_CONFIGS",
+    "QNMProjectionResult",
     "ExperimentConfig",
     "ExperimentResult",
     "midplane_slice",
+    "next5_falsification_projection_v2",
+    "qnm_mode_projection_check",
 ]

@@ -41,6 +41,7 @@ from lfm.analysis import (
     fit_cornell,
     fit_coulomb,
     fit_power_law,
+    fit_ringdown_series,
     fit_yukawa,
     flatten_trajectories,
     fluid_fields,
@@ -64,7 +65,9 @@ from lfm.analysis import (
     phase_field,
     power_spectrum,
     precession_rate,
+    project_field_onto_modes,
     radial_profile,
+    relative_spread,
     rotation_curve,
     rotation_curve_fit,
     schwarzschild_chi,
@@ -77,8 +80,10 @@ from lfm.analysis import (
     spinor_sigma_x,
     spinor_sigma_y,
     spinor_sigma_z,
+    split_frequency_bands,
     static_interaction_potential,
     string_tension,
+    target_band_summary,
     time_dilation_factor,
     total_angular_momentum,
     total_energy,
@@ -128,6 +133,7 @@ from lfm.core.backends import get_backend, gpu_available
 from lfm.core.backends.remote_backend import configure_remote
 from lfm.core.evolver import Evolver
 from lfm.experiment import (
+    DEFAULT_RINGDOWN_K_MODES,
     Barrier,
     CollisionResult,
     ContinuousSource,
@@ -135,9 +141,13 @@ from lfm.experiment import (
     Dispersion,
     ExperimentConfig,
     ExperimentResult,
+    Next5FalsificationResult,
+    QNMProjectionResult,
     Slit,
     collision,
     dispersion,
+    next5_falsification_projection_v2,
+    qnm_mode_projection_check,
 )
 from lfm.fields import (
     apply_rotation_x,
@@ -372,6 +382,11 @@ __all__ = [
     "dispersion",
     "collision",
     "CollisionResult",
+    "qnm_mode_projection_check",
+    "QNMProjectionResult",
+    "next5_falsification_projection_v2",
+    "Next5FalsificationResult",
+    "DEFAULT_RINGDOWN_K_MODES",
     "ExperimentConfig",
     "ExperimentResult",
     # Planning
@@ -420,6 +435,12 @@ __all__ = [
     "fit_coulomb",
     "fit_yukawa",
     "static_interaction_potential",
+    # Ringdown extraction
+    "fit_ringdown_series",
+    "project_field_onto_modes",
+    "relative_spread",
+    "split_frequency_bands",
+    "target_band_summary",
     # Spectrum & Tracker
     "power_spectrum",
     "track_peaks",

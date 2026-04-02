@@ -86,6 +86,13 @@ from lfm.analysis.phase import (
     phase_coherence,
     phase_field,
 )
+from lfm.analysis.ringdown import (
+    fit_ringdown_series,
+    project_field_onto_modes,
+    relative_spread,
+    split_frequency_bands,
+    target_band_summary,
+)
 from lfm.analysis.sparc import list_sparc_galaxies, sparc_load
 from lfm.analysis.spectrum import power_spectrum
 from lfm.analysis.spinor import (
@@ -170,6 +177,12 @@ __all__ = [
     "charge_density",
     "phase_coherence",
     "coulomb_interaction_energy",
+    # ringdown extraction
+    "fit_ringdown_series",
+    "project_field_onto_modes",
+    "relative_spread",
+    "split_frequency_bands",
+    "target_band_summary",
     # angular momentum
     "angular_momentum_density",
     "total_angular_momentum",
