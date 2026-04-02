@@ -18,6 +18,7 @@ Methodology:
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from lfm import create_two_particles
 
@@ -25,6 +26,7 @@ from lfm import create_two_particles
 class TestCoulombPotential:
     """Constructive interference → higher energy at smaller separation."""
 
+    @pytest.mark.slow
     def test_energy_increases_at_smaller_separation(self) -> None:
         """chi_min should be shallower (higher) for closer same-charge pairs."""
         separations = [8, 12, 18, 24]
