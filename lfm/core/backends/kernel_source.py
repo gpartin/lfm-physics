@@ -217,9 +217,9 @@ void evolve_gov01_gov02(
     // Mexican hat: -4*lam*chi*(chi^2 - chi0^2)
     float chi_self = -4.0f * lam * chi_c * (chi_sq - chi0 * chi0);
 
-    // GOV-02 v16: colorblind gravity + color variance + CCV + SCV
+    // GOV-02 v28.0: colorblind gravity + color variance + CCV + SCV
     float chi_new = 2.0f * chi_c - chi_prev[idx] + dt2 * (
-        lap_chi - kappa * (psi_sq_total + eps_w * j_total - E0_sq)
+        lap_chi - (kappa / chi0) * chi_c * (psi_sq_total + eps_w * j_total - E0_sq)
         - color_var_term + chi_self
         - kappa_string * ccv - kappa_tube * scv);
 
@@ -398,9 +398,9 @@ void evolve_real(
     // Mexican hat self-interaction
     float chi_self = -4.0f * lam * chi_c * (chi_sq - chi0 * chi0);
 
-    // GOV-02
+    // GOV-02 v28.0
     float chi_new = 2.0f * chi_c - chi_prev[idx] + dt2 * (
-        lap_chi - kappa * (E_c * E_c - E0_sq) + chi_self);
+        lap_chi - (kappa / chi0) * chi_c * (E_c * E_c - E0_sq) + chi_self);
 
     // BH excision
     if (chi_new < -chi0) chi_new = -chi0;
@@ -518,7 +518,7 @@ void evolve_complex(
 
     // GOV-02
     float chi_new = 2.0f * chi_c - chi_prev[idx] + dt2 * (
-        lap_chi - kappa * (psi_sq + eps_w * j_scalar - E0_sq) + chi_self);
+        lap_chi - (kappa / chi0) * chi_c * (psi_sq + eps_w * j_scalar - E0_sq) + chi_self);
 
     // BH excision
     if (chi_new < -chi0) chi_new = -chi0;

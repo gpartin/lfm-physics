@@ -107,8 +107,8 @@ class NumpyBackend:
         # GOV-01
         E_new = 2.0 * E - E_prev + dt2 * (lap_E - chi_sq * E)
 
-        # GOV-02
-        chi_source = kappa * (E * E - e0_sq)
+        # GOV-02 v28.0
+        chi_source = (kappa / chi0) * chi * (E * E - e0_sq)
         chi_accel = lap_chi - chi_source
         if lambda_self > 0:
             chi_accel -= 4.0 * lambda_self * chi * (chi_sq - chi0 * chi0)
@@ -182,8 +182,8 @@ class NumpyBackend:
         j_z = (Pr3 * dPi_dz - Pi3 * dPr_dz).ravel()
         j_total = 0.5 * (j_x + j_y + j_z)
 
-        # GOV-02
-        chi_source = kappa * (psi_sq + epsilon_w * j_total - e0_sq)
+        # GOV-02 v28.0
+        chi_source = (kappa / chi0) * chi * (psi_sq + epsilon_w * j_total - e0_sq)
         chi_accel = lap_chi - chi_source
         if lambda_self > 0:
             chi_accel -= 4.0 * lambda_self * chi * (chi_sq - chi0 * chi0)
@@ -357,9 +357,9 @@ class NumpyBackend:
             # SCV = Σ_a S_a² - (1/N_c)(Σ_a S_a)²
             scv_term = sa_sq_sum - (1.0 / n_colors) * sa_sum**2
 
-        # GOV-02
+        # GOV-02 v28.0
         lap_chi = self._laplacian_3d(chi, N)
-        chi_source = kappa * (psi_sq_total + epsilon_w * j_total_acc - e0_sq)
+        chi_source = (kappa / chi0) * chi * (psi_sq_total + epsilon_w * j_total_acc - e0_sq)
         chi_accel = (
             lap_chi - chi_source - color_var_term - kappa_string * ccv_term - kappa_tube * scv_term
         )

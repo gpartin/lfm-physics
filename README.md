@@ -66,16 +66,16 @@ Everything in LFM follows from two coupled wave equations evaluated on a
 Ψⁿ⁺¹ = 2Ψⁿ − Ψⁿ⁻¹ + Δt²[ c²∇²Ψⁿ − (χⁿ)²Ψⁿ ]
 ```
 
-**GOV-02** — substrate field equation (complete, v17):
+**GOV-02** --- substrate field equation (complete, v28.0):
 
 ```
-χⁿ⁺¹ = 2χⁿ − χⁿ⁻¹ + Δt²[ c²∇²χⁿ
-        − κ(Σₐ|Ψₐⁿ|² + ε_W·jⁿ − E₀²)          ← gravity + weak
-        − 4λ_H·χⁿ((χⁿ)² − χ₀²)                  ← Higgs self-interaction
-        − κ_c·f_c·Σₐ|Ψₐⁿ|²                       ← color screening (v14)
-        − ε_cc·χ²·(Ψₐ − Ψ̄)  (in GOV-01)         ← cross-color coupling (v15)
-        − κ_string·CCV·Σₐ|Ψₐⁿ|²                  ← color current variance (v16)
-        − κ_tube·SCV·Σₐ|Ψₐⁿ|² ]                  ← flux tube confinement (v17)
+chn+1 = 2chn - chn-1 + dt^2[ c^2 laplacian(chn)
+        - (kappa/chi0)*chn*(Sum_a|Psi_a^n|^2 + eps_W*j^n - E0^2)   <-- gravity + weak
+        - 4*lambda_H*chn*((chn)^2 - chi0^2)                        <-- Higgs self-interaction
+        - kappa_c*f_c*Sum_a|Psi_a^n|^2                              <-- color screening (v14)
+        - eps_cc*chi^2*(Psi_a - Psi_bar)  (in GOV-01)               <-- cross-color coupling (v15)
+        - kappa_string*CCV*Sum_a|Psi_a^n|^2                         <-- color current variance (v16)
+        - kappa_tube*SCV*Sum_a|Psi_a^n|^2 ]                         <-- flux tube confinement (v17)
 ```
 
 **S_a auxiliary** — Helmholtz-smoothed color density (v17):

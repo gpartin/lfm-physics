@@ -5,7 +5,10 @@ Leapfrog Time Integrator
 Coupled GOV-01 + GOV-02 evolution using Verlet (leapfrog) integration.
 
 GOV-01: Ψⁿ⁺¹ = 2Ψⁿ − Ψⁿ⁻¹ + Δt²[c²∇²Ψⁿ − (χⁿ)²Ψⁿ]
-GOV-02: χⁿ⁺¹ = 2χⁿ − χⁿ⁻¹ + Δt²[c²∇²χⁿ − κ(|Ψⁿ|² − E₀²) − 4λ_H·χⁿ((χⁿ)²−χ₀²)]
+GOV-02: χⁿ⁺¹ = 2χⁿ − χⁿ⁻¹ + Δt²[c²∇²χⁿ − (κ/χ₀)χⁿ(|Ψⁿ|² − E₀²) − 4λ_H·χⁿ((χⁿ)²−χ₀²)]
+
+v28.0: χ-dependent coupling (κ/χ₀)·χ replaces constant κ for exact Lagrangian
+consistency and Noether-conserved Hamiltonian.
 """
 
 from __future__ import annotations
@@ -141,9 +144,9 @@ def _step_real(
     # Energy density for GOV-02
     energy_density = E**2
 
-    # GOV-02: chi_next = 2chi - chi_prev + dt²[c²∇²chi - κ(E² - E₀²) - self_interaction]
+    # GOV-02 v28.0: chi_next = 2chi - chi_prev + dt²[c²∇²chi - (κ/χ₀)χ(E² - E₀²) - self_interaction]
     lap_chi = laplacian_19pt(chi)
-    chi_source = config.kappa * (energy_density - config.e0_sq)
+    chi_source = (config.kappa / config.chi0) * chi * (energy_density - config.e0_sq)
 
     chi_accel = c2 * lap_chi - chi_source
     if config.lambda_self > 0:
@@ -188,9 +191,9 @@ def _step_complex(
     # |Ψ|² = Pr² + Pi²
     energy_density = Pr**2 + Pi**2
 
-    # GOV-02
+    # GOV-02 v28.0
     lap_chi = laplacian_19pt(chi)
-    chi_source = config.kappa * (energy_density - config.e0_sq)
+    chi_source = (config.kappa / config.chi0) * chi * (energy_density - config.e0_sq)
     chi_accel = c2 * lap_chi - chi_source
     if config.lambda_self > 0:
         chi_accel -= 4 * config.lambda_self * chi * (chi**2 - config.chi0**2)
@@ -276,9 +279,9 @@ def _step_color(
         f_c = np.where(safe, sum_sq / total_sq - 1.0 / n_colors, 0.0)
         color_variance_term = config.kappa_c * f_c * energy_density
 
-    # GOV-02 with colorblind source + color variance
+    # GOV-02 v28.0 with colorblind source + color variance
     lap_chi = laplacian_19pt(chi)
-    chi_source = config.kappa * (energy_density - config.e0_sq)
+    chi_source = (config.kappa / config.chi0) * chi * (energy_density - config.e0_sq)
     chi_accel = c2 * lap_chi - chi_source - color_variance_term
     if config.lambda_self > 0:
         chi_accel -= 4 * config.lambda_self * chi * (chi**2 - config.chi0**2)
