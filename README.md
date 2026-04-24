@@ -72,7 +72,7 @@ Everything in LFM follows from two coupled wave equations evaluated on a
 chn+1 = 2chn - chn-1 + dt^2[ c^2 laplacian(chn)
         - (kappa/chi0)*chn*(Sum_a|Psi_a^n|^2 + eps_W*j^n - E0^2)   <-- gravity + weak
         - 4*lambda_H*chn*((chn)^2 - chi0^2)                        <-- Higgs self-interaction
-        - kappa_c*f_c*Sum_a|Psi_a^n|^2                              <-- color screening (v14)
+        - (kappa_c/chi0)*chn*f_c*Sum_a|Psi_a^n|^2                  <-- color screening (v14, V28.0)
         - eps_cc*chi^2*(Psi_a - Psi_bar)  (in GOV-01)               <-- cross-color coupling (v15)
         - kappa_string*CCV*Sum_a|Psi_a^n|^2                         <-- color current variance (v16)
         - kappa_tube*SCV*Sum_a|Psi_a^n|^2 ]                         <-- flux tube confinement (v17)
