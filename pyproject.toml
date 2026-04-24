@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "lfm-physics"
@@ -64,10 +64,6 @@ Issues = "https://github.com/gpartin/lfm-physics/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["lfm"]
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["lfm*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
