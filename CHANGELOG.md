@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.4.1] - 2026-04-24
+
+### Fixed
+
+- **mypy type annotation** (`lfm/core/backends/numpy_backend.py`): added
+  `.astype(np.float32)` cast on `color_var_term` to satisfy mypy strict NDArray
+  shape inference; no runtime behaviour change.
+- **README GOV-02 formula**: updated color screening term from
+  `kappa_c*f_c*Sum|Psi_a|^2` to `(kappa_c/chi0)*chn*f_c*Sum|Psi_a|^2`
+  to match V28.0 canonical form.
+
 ## [1.4.0] - 2026-04-24
 
 ### Fixed
