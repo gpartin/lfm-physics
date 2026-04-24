@@ -323,7 +323,7 @@ class NumpyBackend:
                 0.0,
             )
             f_c = ((ratio - 1.0 / n_colors) * safe).astype(np.float32)
-            color_var_term = kappa_c * f_c * psi_sq_total
+            color_var_term = (kappa_c / chi0) * chi * f_c * psi_sq_total
 
         # v15 GOV-02: color current variance (CCV)
         # CCV = Σ_d [ Σ_a j²_{a,d} - (1/N_c)(Σ_a j_{a,d})² ]

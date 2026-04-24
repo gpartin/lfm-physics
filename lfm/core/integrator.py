@@ -277,7 +277,7 @@ def _step_color(
         total_sq = energy_density**2  # (Σₐ|Ψₐ|²)²
         safe = total_sq > 1e-30
         f_c = np.where(safe, sum_sq / total_sq - 1.0 / n_colors, 0.0)
-        color_variance_term = config.kappa_c * f_c * energy_density
+        color_variance_term = (config.kappa_c / config.chi0) * chi * f_c * energy_density
 
     # GOV-02 v28.0 with colorblind source + color variance
     lap_chi = laplacian_19pt(chi)

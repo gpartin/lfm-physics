@@ -203,7 +203,7 @@ void evolve_gov01_gov02(
         if (total_sq > 1e-30f) {
             float sum_sq = ea[0]*ea[0] + ea[1]*ea[1] + ea[2]*ea[2];
             float f_c = sum_sq / total_sq - (1.0f / 3.0f);
-            color_var_term = kappa_c * f_c * psi_sq_total;
+            color_var_term = (kappa_c / chi0) * chi_c * f_c * psi_sq_total;
         }
     }
 

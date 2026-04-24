@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.4.0] - 2026-04-24
+
+### Fixed
+
+- **GOV-02 V28.0 color variance chi/chi0 factor** (`lfm/core/integrator.py`,
+  `lfm/core/backends/numpy_backend.py`, `lfm/core/backends/kernel_source.py`):
+  the canonical GOV-02 V28.0 color variance term is
+  `-(kappa_c/chi0)*chi*f_c*Sum|Psi_a|^2`, but all three backends were computing
+  `kappa_c*f_c*Sum|Psi_a|^2`, omitting the `chi/chi0` factor that makes the color
+  coupling consistent with the V28.0 gravity coupling form `(kappa/chi0)*chi`.
+  At chi = chi0 (vacuum) the terms are numerically identical, so gravity-only
+  simulations are completely unaffected. At chi < chi0 (inside particle wells)
+  the color coupling was proportionally weaker than canonical; in BH interiors
+  (chi < 0) the sign was inverted. Only impacts COLOR-level simulations
+  (`FieldLevel.COLOR`) with `kappa_c > 0`. All gravity-only (`FieldLevel.REAL`)
+  and EM-level (`FieldLevel.COMPLEX`) simulations are unaffected.
+  GPU parity (NumPy vs CuPy) is preserved: both backends received the identical
+  fix, so `test_gpu_parity` continues to pass.
+
 ## [1.3.0] - 2026-03-31
 
 ### Added
