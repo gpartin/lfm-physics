@@ -133,13 +133,39 @@ CFL_19PT_MASSIVE: float = 1.0 / math.sqrt(16.0 / 3.0 + CHI0**2)
 # ============================================================
 
 STENCIL_FACE_WEIGHT: float = 1.0 / 3.0
-"""Weight for 6 face neighbors (distance 1). O(h⁴) isotropy."""
+"""Weight for 6 face neighbors (distance 1). O(h^4) isotropy (19-pt)."""
 
 STENCIL_EDGE_WEIGHT: float = 1.0 / 6.0
-"""Weight for 12 edge neighbors (distance √2). O(h⁴) isotropy."""
+"""Weight for 12 edge neighbors (distance sqrt(2)). O(h^4) isotropy (19-pt)."""
 
 STENCIL_CENTER_WEIGHT: float = -4.0
-"""Center coefficient = −(6×⅓ + 12×⅙) = −4."""
+"""Center coefficient = -(6x(1/3) + 12x(1/6)) = -4 (19-pt)."""
+
+# ============================================================
+# STENCIL WEIGHTS -- 7-point Laplacian (face only)
+# ============================================================
+
+STENCIL_7PT_FACE_WEIGHT: float = 1.0
+"""Weight for 6 face neighbors (distance 1). O(h^2) accuracy, 12.3% anisotropy."""
+
+STENCIL_7PT_CENTER_WEIGHT: float = -6.0
+"""Center coefficient = -(6x1) = -6 (7-pt)."""
+
+# ============================================================
+# STENCIL WEIGHTS -- 27-point full-cube Laplacian (face+edge+corner)
+# ============================================================
+
+STENCIL_27PT_FACE_WEIGHT: float = 1.0 / 2.0
+"""Weight for 6 face neighbors (distance 1). O(h^4) isotropic 27-pt stencil."""
+
+STENCIL_27PT_EDGE_WEIGHT: float = 1.0 / 12.0
+"""Weight for 12 edge neighbors (distance sqrt(2)). O(h^4) isotropic 27-pt stencil."""
+
+STENCIL_27PT_CORNER_WEIGHT: float = 1.0 / 24.0
+"""Weight for 8 corner neighbors (distance sqrt(3)). O(h^4) isotropic 27-pt stencil."""
+
+STENCIL_27PT_CENTER_WEIGHT: float = -13.0 / 3.0
+"""Center coefficient = -(6x(1/2) + 12x(1/12) + 8x(1/24)) = -13/3 (27-pt)."""
 
 # ============================================================
 # PER-GRID AMPLITUDE SCALING

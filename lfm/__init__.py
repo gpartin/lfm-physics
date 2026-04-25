@@ -15,7 +15,7 @@ Quick start::
     print(sim.metrics())
 """
 
-__version__ = "1.4.1"
+__version__ = "1.4.2"
 
 from lfm.analysis import (
     angular_momentum_density,
@@ -298,6 +298,7 @@ from lfm.units import CosmicScale, PlanckScale
 from lfm.viz.celestial import animate_celestial_3d
 from lfm.viz.collision import animate_collision_3d
 from lfm.viz.quantum import animate_3d_slices, animate_double_slit_3d
+from lfm.core.stencils import laplacian_7pt, laplacian_19pt, laplacian_27pt
 
 __all__ = [
     "__version__",
@@ -620,4 +621,8 @@ __all__ = [
     "black_hole_system",
     "galaxy_core",
     "place_bodies",
+    # Laplacian stencils
+    "laplacian_7pt",
+    "laplacian_19pt",
+    "laplacian_27pt",
 ]
