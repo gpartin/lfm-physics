@@ -64,13 +64,14 @@ def poisson_solve_fft_19pt(
     source: NDArray[np.floating],
     N: int | None = None,
     dx: float = 1.0,
-) -> NDArray[np.float32]:
+) -> NDArray[np.floating]:
     """Solve L19(phi) = source with the exact 19-point stencil symbol."""
     if source.ndim != 3:
         raise ValueError("source must have shape (N, N, N)")
     N = int(N or source.shape[0])
     if source.shape != (N, N, N):
         raise ValueError("source shape must match N")
+    out_dtype = np.float64 if np.dtype(source.dtype) == np.dtype(np.float64) else np.float32
 
     src_hat = np.fft.rfftn(source.astype(np.float64))
     kx = np.fft.fftfreq(N) * 2.0 * np.pi
@@ -81,7 +82,7 @@ def poisson_solve_fft_19pt(
     lam[0, 0, 0] = 1.0
     phi_hat = src_hat / lam
     phi_hat[0, 0, 0] = 0.0
-    return np.fft.irfftn(phi_hat, s=(N, N, N), axes=(0, 1, 2)).astype(np.float32)
+    return np.fft.irfftn(phi_hat, s=(N, N, N), axes=(0, 1, 2)).astype(out_dtype)
 
 
 def equilibrate_chi(
@@ -130,12 +131,12 @@ def equilibrate_chi_19pt(
     kappa: float = KAPPA,
     e0_sq: float = 0.0,
     boundary_mask: NDArray[np.bool_] | None = None,
-) -> NDArray[np.float32]:
+) -> NDArray[np.floating]:
     """Compute chi equilibrium with a 19-point-consistent Poisson solve."""
     N = psi_sq.shape[0]
     rhs = kappa * (psi_sq - e0_sq)
     delta_chi = poisson_solve_fft_19pt(rhs, N)
-    chi = (chi0 + delta_chi).astype(np.float32)
+    chi = (chi0 + delta_chi).astype(delta_chi.dtype, copy=False)
     if boundary_mask is not None:
         chi[boundary_mask] = chi0
     return chi

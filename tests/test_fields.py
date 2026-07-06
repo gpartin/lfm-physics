@@ -154,8 +154,18 @@ class TestPoissonSolve:
         source = rng.standard_normal((N, N, N)).astype(np.float32)
         source -= np.mean(source)
         phi = poisson_solve_fft_19pt(source, N)
+        assert phi.dtype == np.float32
         lap = laplacian_19pt(phi)
         np.testing.assert_allclose(lap, source, atol=1e-4)
+
+    def test_19pt_preserves_float64_for_small_sources(self):
+        N = 16
+        source = np.zeros((N, N, N), dtype=np.float64)
+        source[N // 2, N // 2, N // 2] = 1e-9
+        source -= np.mean(source)
+        phi = poisson_solve_fft_19pt(source, N)
+        assert phi.dtype == np.float64
+        assert np.max(np.abs(phi)) > 0.0
 
 
 class TestEquilibrateChi:
@@ -192,12 +202,29 @@ class TestEquilibrateChi:
         chi = equilibrate_chi_19pt(psi_sq)
         assert chi[c, c, c] < CHI0
 
+    def test_19pt_preserves_float64_chi_perturbation(self):
+        N = 24
+        psi_sq = np.zeros((N, N, N), dtype=np.float64)
+        c = N // 2
+        psi_sq[c, c, c] = 1e-7
+        chi = equilibrate_chi_19pt(psi_sq)
+        assert chi.dtype == np.float64
+        assert np.min(chi) < CHI0
+
 
 class TestR1Light:
     def test_vacuum_subtracted_potential_zero_in_uniform_vacuum(self):
         chi = np.full((8, 8, 8), CHI0, dtype=np.float32)
         pot = r1_vacuum_subtracted_potential(chi)
+        assert pot.dtype == np.float32
         np.testing.assert_allclose(pot, 0.0)
+
+    def test_vacuum_subtracted_potential_preserves_float64_delta(self):
+        chi = np.full((8, 8, 8), CHI0, dtype=np.float64)
+        chi[4, 4, 4] -= 1e-9
+        pot = r1_vacuum_subtracted_potential(chi)
+        assert pot.dtype == np.float64
+        assert pot[4, 4, 4] < 0.0
 
     def test_uniform_vacuum_acceleration_matches_flat_laplacian(self):
         rng = np.random.default_rng(5)
@@ -223,6 +250,22 @@ class TestR1Light:
         dpi = 0.5 * (np.roll(pi, -1, axis=0) - np.roll(pi, 1, axis=0))
         current = np.sum(pr * dpi - pi * dpr)
         assert current > 0.0
+
+    def test_planar_packet_float64_and_step_preserve_dtype(self):
+        pr, pi, prp, pip = planar_r1_light_packet(
+            12,
+            center=(4.0, 6.0, 6.0),
+            sigma=(2.0, 2.5, 2.5),
+            carrier_k=0.3,
+            dtype=np.float64,
+        )
+        chi = np.full((12, 12, 12), CHI0, dtype=np.float64)
+        nr, ni, npr, npi = r1_light_step(pr, pi, prp, pip, dt=0.1, chi=chi)
+        assert pr.dtype == np.float64
+        assert nr.dtype == np.float64
+        assert ni.dtype == np.float64
+        assert npr.dtype == np.float64
+        assert npi.dtype == np.float64
 
     def test_r1_light_step_shapes(self):
         pr, pi, prp, pip = planar_r1_light_packet(

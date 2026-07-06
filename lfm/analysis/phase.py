@@ -19,6 +19,14 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
+def _runtime_float_dtype(*arrays: object) -> type[np.float32] | type[np.float64]:
+    for arr in arrays:
+        dtype = getattr(arr, "dtype", None)
+        if dtype is not None and np.dtype(dtype) == np.dtype(np.float64):
+            return np.float64
+    return np.float32
+
+
 def phase_field(
     psi_r: NDArray,
     psi_i: NDArray,
@@ -90,7 +98,8 @@ def noether_spatial_current(
         raise ValueError("axis must be 0, 1, or 2")
     dpsi_r = 0.5 * (np.roll(psi_r, -1, axis=axis) - np.roll(psi_r, 1, axis=axis))
     dpsi_i = 0.5 * (np.roll(psi_i, -1, axis=axis) - np.roll(psi_i, 1, axis=axis))
-    return (psi_r * dpsi_i - psi_i * dpsi_r).astype(np.float32)
+    out_dtype = _runtime_float_dtype(psi_r, psi_i)
+    return (psi_r * dpsi_i - psi_i * dpsi_r).astype(out_dtype)
 
 
 def positive_noether_current(
@@ -99,7 +108,10 @@ def positive_noether_current(
     axis: int = 0,
 ) -> NDArray:
     """Return only the positive outgoing part of spatial Noether current."""
-    return np.maximum(noether_spatial_current(psi_r, psi_i, axis=axis), 0.0).astype(np.float32)
+    out_dtype = _runtime_float_dtype(psi_r, psi_i)
+    return np.maximum(noether_spatial_current(psi_r, psi_i, axis=axis), out_dtype(0.0)).astype(
+        out_dtype
+    )
 
 
 def phase_coherence(

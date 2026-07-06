@@ -158,6 +158,17 @@ class TestPhase:
         jx = noether_spatial_current(psi_r, psi_i, axis=0)
         np.testing.assert_allclose(jx, np.sin(k), rtol=1e-5, atol=1e-6)
 
+    def test_noether_spatial_current_preserves_float64(self):
+        N = 16
+        k = 2.0 * np.pi / N
+        x = np.arange(N, dtype=np.float64)
+        phase = k * x[:, None, None]
+        psi_r = np.broadcast_to(np.cos(phase), (N, N, N)).astype(np.float64)
+        psi_i = np.broadcast_to(np.sin(phase), (N, N, N)).astype(np.float64)
+        jx = positive_noether_current(psi_r, psi_i, axis=0)
+        assert jx.dtype == np.float64
+        np.testing.assert_allclose(jx, np.sin(k), rtol=1e-12, atol=1e-12)
+
     def test_positive_noether_current_clips_reverse_wave(self):
         N = 16
         k = 2.0 * np.pi / N
