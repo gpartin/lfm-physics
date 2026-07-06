@@ -63,7 +63,10 @@ from lfm.analysis.metric import (
     gravitational_potential,
     horizon_mass,
     metric_perturbation,
+    metric_refractive_index,
+    op05_spherical_chi_deflection,
     schwarzschild_chi,
+    schwarzschild_radius_si,
     time_dilation_factor,
 )
 from lfm.analysis.metrics import compute_metrics
@@ -172,6 +175,9 @@ __all__ = [
     "time_dilation_factor",
     "gravitational_potential",
     "schwarzschild_chi",
+    "schwarzschild_radius_si",
+    "metric_refractive_index",
+    "op05_spherical_chi_deflection",
     "find_apparent_horizon",
     "horizon_mass",
     # phase (EM / charge)

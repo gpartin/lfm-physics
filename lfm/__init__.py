@@ -15,7 +15,7 @@ Quick start::
     print(sim.metrics())
 """
 
-__version__ = "1.4.4"
+__version__ = "1.4.5"
 
 from lfm.analysis import (
     angular_momentum_density,
@@ -60,8 +60,10 @@ from lfm.analysis import (
     measure_force,
     measure_separation,
     metric_perturbation,
+    metric_refractive_index,
     momentum_density,
     noether_spatial_current,
+    op05_spherical_chi_deflection,
     phase_coherence,
     phase_field,
     positive_noether_current,
@@ -73,6 +75,7 @@ from lfm.analysis import (
     rotation_curve,
     rotation_curve_fit,
     schwarzschild_chi,
+    schwarzschild_radius_si,
     smoothed_color_variance,
     sparc_load,
     spinor_center_of_energy,
@@ -101,7 +104,9 @@ from lfm.constants import (
     AGE_UNIVERSE_GYR,
     ALPHA_EM,
     ALPHA_S,
+    ARCSEC_PER_RADIAN,
     BETA_0,
+    C_SI,
     CHI0,
     D_ST,
     DT_DEFAULT,
@@ -109,6 +114,7 @@ from lfm.constants import (
     E_AMPLITUDE_BY_GRID,
     EPSILON_CC,
     EPSILON_W,
+    G_SI,
     KAPPA,
     KAPPA_C,
     KAPPA_STRING,
@@ -127,6 +133,8 @@ from lfm.constants import (
     SA_GAMMA,
     SA_L,
     SIN2_THETA_W,
+    SOLAR_MASS_KG,
+    SOLAR_RADIUS_M,
     TOTAL_RADIUS_LOWER_BOUND_PLANCK,
     Z2_COORD,
     D,
@@ -314,6 +322,11 @@ __all__ = [
     "CHI0",
     "D",
     "D_ST",
+    "G_SI",
+    "C_SI",
+    "SOLAR_MASS_KG",
+    "SOLAR_RADIUS_M",
+    "ARCSEC_PER_RADIAN",
     "KAPPA",
     "KAPPA_C",
     "KAPPA_STRING",
@@ -470,6 +483,9 @@ __all__ = [
     "time_dilation_factor",
     "gravitational_potential",
     "schwarzschild_chi",
+    "schwarzschild_radius_si",
+    "metric_refractive_index",
+    "op05_spherical_chi_deflection",
     "find_apparent_horizon",
     "horizon_mass",
     # Phase (EM / charge)

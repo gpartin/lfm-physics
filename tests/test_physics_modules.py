@@ -12,7 +12,10 @@ from lfm.analysis.metric import (
     effective_metric_00,
     gravitational_potential,
     metric_perturbation,
+    metric_refractive_index,
+    op05_spherical_chi_deflection,
     schwarzschild_chi,
+    schwarzschild_radius_si,
     time_dilation_factor,
 )
 from lfm.analysis.phase import (
@@ -24,6 +27,7 @@ from lfm.analysis.phase import (
     positive_noether_current,
 )
 from lfm.config import SimulationConfig
+from lfm.constants import SOLAR_MASS_KG, SOLAR_RADIUS_M
 from lfm.fields.boosted import boosted_soliton
 from lfm.sweep import sweep_2d
 
@@ -78,6 +82,42 @@ class TestMetric:
         assert chi[0, 0, 0] > 17.5
         # At center → 0 (inside horizon)
         assert chi[16, 16, 16] == pytest.approx(0.0, abs=0.1)
+
+    def test_metric_refractive_index_increases_in_chi_well(self):
+        chi = np.array([19.0, 18.99], dtype=np.float64)
+        n_eff = metric_refractive_index(chi)
+        assert n_eff[0] == pytest.approx(1.0)
+        assert n_eff[1] > 1.0
+
+    def test_op05_solar_limb_deflection_recovers_arcsecond_scale(self):
+        result = op05_spherical_chi_deflection(
+            SOLAR_MASS_KG,
+            SOLAR_RADIUS_M,
+            x_extent_multiplier=500.0,
+            sample_count=20001,
+        )
+        assert result["schwarzschild_radius_m"] == pytest.approx(
+            schwarzschild_radius_si(SOLAR_MASS_KG),
+            rel=1e-14,
+        )
+        assert result["recovered_angle_arcsec"] == pytest.approx(1.751243281, rel=1e-3)
+        assert abs(result["comparator_relative_error"]) < 1e-4
+
+    def test_op05_deflection_is_linear_in_weak_lens_mass(self):
+        half = op05_spherical_chi_deflection(
+            0.5 * SOLAR_MASS_KG,
+            SOLAR_RADIUS_M,
+            x_extent_multiplier=250.0,
+            sample_count=5001,
+        )
+        full = op05_spherical_chi_deflection(
+            SOLAR_MASS_KG,
+            SOLAR_RADIUS_M,
+            x_extent_multiplier=250.0,
+            sample_count=5001,
+        )
+        ratio = half["recovered_angle_arcsec"] / full["recovered_angle_arcsec"]
+        assert ratio == pytest.approx(0.5, rel=1e-5)
 
 
 # ── Phase ────────────────────────────────────────────────────────────
