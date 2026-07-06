@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from lfm.constants import CHI0, KAPPA
+from lfm.core.stencils import eigenvalue_19pt
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -56,6 +57,30 @@ def poisson_solve_fft(
     phi_hat = -src_hat / K2
     phi_hat[0, 0, 0] = 0.0
 
+    return np.fft.irfftn(phi_hat, s=(N, N, N), axes=(0, 1, 2)).astype(np.float32)
+
+
+def poisson_solve_fft_19pt(
+    source: NDArray[np.floating],
+    N: int | None = None,
+    dx: float = 1.0,
+) -> NDArray[np.float32]:
+    """Solve L19(phi) = source with the exact 19-point stencil symbol."""
+    if source.ndim != 3:
+        raise ValueError("source must have shape (N, N, N)")
+    N = int(N or source.shape[0])
+    if source.shape != (N, N, N):
+        raise ValueError("source shape must match N")
+
+    src_hat = np.fft.rfftn(source.astype(np.float64))
+    kx = np.fft.fftfreq(N) * 2.0 * np.pi
+    ky = np.fft.fftfreq(N) * 2.0 * np.pi
+    kz = np.fft.rfftfreq(N) * 2.0 * np.pi
+    KX, KY, KZ = np.meshgrid(kx, ky, kz, indexing="ij")
+    lam = eigenvalue_19pt(KX, KY, KZ) / (dx * dx)
+    lam[0, 0, 0] = 1.0
+    phi_hat = src_hat / lam
+    phi_hat[0, 0, 0] = 0.0
     return np.fft.irfftn(phi_hat, s=(N, N, N), axes=(0, 1, 2)).astype(np.float32)
 
 
@@ -99,6 +124,23 @@ def equilibrate_chi(
     return chi
 
 
+def equilibrate_chi_19pt(
+    psi_sq: NDArray[np.floating],
+    chi0: float = CHI0,
+    kappa: float = KAPPA,
+    e0_sq: float = 0.0,
+    boundary_mask: NDArray[np.bool_] | None = None,
+) -> NDArray[np.float32]:
+    """Compute chi equilibrium with a 19-point-consistent Poisson solve."""
+    N = psi_sq.shape[0]
+    rhs = kappa * (psi_sq - e0_sq)
+    delta_chi = poisson_solve_fft_19pt(rhs, N)
+    chi = (chi0 + delta_chi).astype(np.float32)
+    if boundary_mask is not None:
+        chi[boundary_mask] = chi0
+    return chi
+
+
 def equilibrate_from_fields(
     psi_r: NDArray[np.float32],
     psi_i: NDArray[np.float32] | None = None,
@@ -137,10 +179,33 @@ def equilibrate_from_fields(
             psi_sq = psi_sq + psi_i**2
     elif psi_r.ndim == 4:
         # Multi-color: (n_colors, N, N, N)
-        psi_sq = np.sum(psi_r**2, axis=0)
+        psi_sq = np.sum(psi_r**2, axis=0).astype(np.float32)
         if psi_i is not None:
-            psi_sq = psi_sq + np.sum(psi_i**2, axis=0)
+            psi_sq = (psi_sq + np.sum(psi_i**2, axis=0)).astype(np.float32)
     else:
         raise ValueError(f"Unexpected psi_r shape: {psi_r.shape}")
 
     return equilibrate_chi(psi_sq, chi0, kappa, e0_sq, boundary_mask)
+
+
+def equilibrate_from_fields_19pt(
+    psi_r: NDArray[np.float32],
+    psi_i: NDArray[np.float32] | None = None,
+    chi0: float = CHI0,
+    kappa: float = KAPPA,
+    e0_sq: float = 0.0,
+    boundary_mask: NDArray[np.bool_] | None = None,
+) -> NDArray[np.float32]:
+    """Compute chi from fields using the 19-point-consistent Poisson solve."""
+    if psi_r.ndim == 3:
+        psi_sq = psi_r**2
+        if psi_i is not None:
+            psi_sq = psi_sq + psi_i**2
+    elif psi_r.ndim == 4:
+        psi_sq = np.sum(psi_r**2, axis=0).astype(np.float32)
+        if psi_i is not None:
+            psi_sq = (psi_sq + np.sum(psi_i**2, axis=0)).astype(np.float32)
+    else:
+        raise ValueError(f"Unexpected psi_r shape: {psi_r.shape}")
+
+    return equilibrate_chi_19pt(psi_sq, chi0, kappa, e0_sq, boundary_mask)

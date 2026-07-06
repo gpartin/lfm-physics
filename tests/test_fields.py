@@ -4,13 +4,20 @@ import numpy as np
 import pytest
 
 from lfm.constants import CHI0
+from lfm.core.stencils import laplacian_19pt
 from lfm.fields import (
     equilibrate_chi,
+    equilibrate_chi_19pt,
     equilibrate_from_fields,
     gaussian_soliton,
     grid_positions,
     place_solitons,
+    planar_r1_light_packet,
     poisson_solve_fft,
+    poisson_solve_fft_19pt,
+    r1_light_acceleration,
+    r1_light_step,
+    r1_vacuum_subtracted_potential,
     seed_noise,
     sparse_positions,
     tetrahedral_positions,
@@ -141,6 +148,15 @@ class TestPoissonSolve:
         laplacian = np.fft.irfftn(lap_hat, s=(N, N, N), axes=(0, 1, 2))
         assert np.allclose(laplacian, source, atol=1e-3)
 
+    def test_roundtrip_19pt(self):
+        N = 16
+        rng = np.random.default_rng(123)
+        source = rng.standard_normal((N, N, N)).astype(np.float32)
+        source -= np.mean(source)
+        phi = poisson_solve_fft_19pt(source, N)
+        lap = laplacian_19pt(phi)
+        np.testing.assert_allclose(lap, source, atol=1e-4)
+
 
 class TestEquilibrateChi:
     def test_zero_energy_gives_chi0(self):
@@ -167,6 +183,59 @@ class TestEquilibrateChi:
         chi = equilibrate_chi(psi_sq, boundary_mask=mask)
         assert np.allclose(chi[0], CHI0)
         assert np.allclose(chi[-1], CHI0)
+
+    def test_19pt_energy_creates_well(self):
+        N = 24
+        psi_sq = np.zeros((N, N, N), dtype=np.float32)
+        c = N // 2
+        psi_sq[c - 1 : c + 2, c - 1 : c + 2, c - 1 : c + 2] = 20.0
+        chi = equilibrate_chi_19pt(psi_sq)
+        assert chi[c, c, c] < CHI0
+
+
+class TestR1Light:
+    def test_vacuum_subtracted_potential_zero_in_uniform_vacuum(self):
+        chi = np.full((8, 8, 8), CHI0, dtype=np.float32)
+        pot = r1_vacuum_subtracted_potential(chi)
+        np.testing.assert_allclose(pot, 0.0)
+
+    def test_uniform_vacuum_acceleration_matches_flat_laplacian(self):
+        rng = np.random.default_rng(5)
+        psi_r = rng.standard_normal((8, 8, 8)).astype(np.float32)
+        psi_i = rng.standard_normal((8, 8, 8)).astype(np.float32)
+        chi = np.full((8, 8, 8), CHI0, dtype=np.float32)
+        acc_r, acc_i = r1_light_acceleration(psi_r, psi_i, chi=chi)
+        np.testing.assert_allclose(acc_r, laplacian_19pt(psi_r), atol=1e-6)
+        np.testing.assert_allclose(acc_i, laplacian_19pt(psi_i), atol=1e-6)
+
+    def test_planar_packet_shapes_and_forward_current(self):
+        pr, pi, prp, pip = planar_r1_light_packet(
+            16,
+            center=(5.0, 8.0, 8.0),
+            sigma=(2.0, 3.0, 3.0),
+            carrier_k=0.4,
+        )
+        assert pr.shape == (16, 16, 16)
+        assert pi.dtype == np.float32
+        assert prp.shape == pr.shape
+        assert pip.shape == pi.shape
+        dpr = 0.5 * (np.roll(pr, -1, axis=0) - np.roll(pr, 1, axis=0))
+        dpi = 0.5 * (np.roll(pi, -1, axis=0) - np.roll(pi, 1, axis=0))
+        current = np.sum(pr * dpi - pi * dpr)
+        assert current > 0.0
+
+    def test_r1_light_step_shapes(self):
+        pr, pi, prp, pip = planar_r1_light_packet(
+            12,
+            center=(4.0, 6.0, 6.0),
+            sigma=(2.0, 2.5, 2.5),
+            carrier_k=0.3,
+        )
+        nr, ni, npr, npi = r1_light_step(pr, pi, prp, pip, dt=0.1)
+        assert nr.shape == pr.shape
+        assert ni.shape == pi.shape
+        assert npr.shape == pr.shape
+        assert npi.shape == pi.shape
 
 
 class TestEquilibrateFromFields:
@@ -295,5 +364,8 @@ class TestTopLevelImport:
 
         assert hasattr(lfm, "gaussian_soliton")
         assert hasattr(lfm, "equilibrate_chi")
+        assert hasattr(lfm, "equilibrate_chi_19pt")
+        assert hasattr(lfm, "planar_r1_light_packet")
+        assert hasattr(lfm, "r1_light_step")
         assert hasattr(lfm, "seed_noise")
         assert hasattr(lfm, "tetrahedral_positions")

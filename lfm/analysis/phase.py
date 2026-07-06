@@ -76,6 +76,32 @@ def charge_density(
     return psi_r * dpsi_i_dt - psi_i * dpsi_r_dt
 
 
+def noether_spatial_current(
+    psi_r: NDArray,
+    psi_i: NDArray,
+    axis: int = 0,
+) -> NDArray:
+    """Compute spatial Noether current along one lattice axis.
+
+    j_axis = Im(conj(Psi) * d_axis Psi). A centered finite difference is
+    used on the periodic lattice.
+    """
+    if axis not in (0, 1, 2):
+        raise ValueError("axis must be 0, 1, or 2")
+    dpsi_r = 0.5 * (np.roll(psi_r, -1, axis=axis) - np.roll(psi_r, 1, axis=axis))
+    dpsi_i = 0.5 * (np.roll(psi_i, -1, axis=axis) - np.roll(psi_i, 1, axis=axis))
+    return (psi_r * dpsi_i - psi_i * dpsi_r).astype(np.float32)
+
+
+def positive_noether_current(
+    psi_r: NDArray,
+    psi_i: NDArray,
+    axis: int = 0,
+) -> NDArray:
+    """Return only the positive outgoing part of spatial Noether current."""
+    return np.maximum(noether_spatial_current(psi_r, psi_i, axis=axis), 0.0).astype(np.float32)
+
+
 def phase_coherence(
     psi_r: NDArray,
     psi_i: NDArray,

@@ -19,5 +19,6 @@ custom multi-grid schemes).
 """
 
 from lfm.core.evolver import Evolver
+from lfm.core.stencils import eigenvalue_19pt, laplacian_19pt
 
-__all__ = ["Evolver"]
+__all__ = ["Evolver", "eigenvalue_19pt", "laplacian_19pt"]

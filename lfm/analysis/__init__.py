@@ -83,8 +83,10 @@ from lfm.analysis.observables import (
 from lfm.analysis.phase import (
     charge_density,
     coulomb_interaction_energy,
+    noether_spatial_current,
     phase_coherence,
     phase_field,
+    positive_noether_current,
 )
 from lfm.analysis.ringdown import (
     fit_ringdown_series,
@@ -175,6 +177,8 @@ __all__ = [
     # phase (EM / charge)
     "phase_field",
     "charge_density",
+    "noether_spatial_current",
+    "positive_noether_current",
     "phase_coherence",
     "coulomb_interaction_energy",
     # ringdown extraction

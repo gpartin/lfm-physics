@@ -18,8 +18,10 @@ from lfm.analysis.metric import (
 from lfm.analysis.phase import (
     charge_density,
     coulomb_interaction_energy,
+    noether_spatial_current,
     phase_coherence,
     phase_field,
+    positive_noether_current,
 )
 from lfm.config import SimulationConfig
 from lfm.fields.boosted import boosted_soliton
@@ -145,6 +147,26 @@ class TestPhase:
         zero = np.zeros((8, 8, 8))
         e_int = coulomb_interaction_energy(psi, zero, -psi, zero)
         assert e_int < 0
+
+    def test_noether_spatial_current_plane_wave(self):
+        N = 16
+        k = 2.0 * np.pi / N
+        x = np.arange(N, dtype=np.float32)
+        phase = k * x[:, None, None]
+        psi_r = np.broadcast_to(np.cos(phase), (N, N, N)).astype(np.float32)
+        psi_i = np.broadcast_to(np.sin(phase), (N, N, N)).astype(np.float32)
+        jx = noether_spatial_current(psi_r, psi_i, axis=0)
+        np.testing.assert_allclose(jx, np.sin(k), rtol=1e-5, atol=1e-6)
+
+    def test_positive_noether_current_clips_reverse_wave(self):
+        N = 16
+        k = 2.0 * np.pi / N
+        x = np.arange(N, dtype=np.float32)
+        phase = -k * x[:, None, None]
+        psi_r = np.broadcast_to(np.cos(phase), (N, N, N)).astype(np.float32)
+        psi_i = np.broadcast_to(np.sin(phase), (N, N, N)).astype(np.float32)
+        jx = positive_noether_current(psi_r, psi_i, axis=0)
+        np.testing.assert_allclose(jx, 0.0, atol=1e-6)
 
 
 # ── Angular Momentum ─────────────────────────────────────────────────

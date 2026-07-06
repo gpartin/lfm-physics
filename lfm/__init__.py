@@ -15,7 +15,7 @@ Quick start::
     print(sim.metrics())
 """
 
-__version__ = "1.4.1"
+__version__ = "1.4.3"
 
 from lfm.analysis import (
     angular_momentum_density,
@@ -61,8 +61,10 @@ from lfm.analysis import (
     measure_separation,
     metric_perturbation,
     momentum_density,
+    noether_spatial_current,
     phase_coherence,
     phase_field,
+    positive_noether_current,
     power_spectrum,
     precession_rate,
     project_field_onto_modes,
@@ -156,13 +158,20 @@ from lfm.fields import (
     disk_positions,
     disk_velocities,
     equilibrate_chi,
+    equilibrate_chi_19pt,
     equilibrate_from_fields,
+    equilibrate_from_fields_19pt,
     gaussian_soliton,
     gaussian_spinor,
     grid_positions,
     initialize_disk,
     place_solitons,
+    planar_r1_light_packet,
     poisson_solve_fft,
+    poisson_solve_fft_19pt,
+    r1_light_acceleration,
+    r1_light_step,
+    r1_vacuum_subtracted_potential,
     seed_noise,
     sparse_positions,
     spherical_phase_source,
@@ -362,13 +371,20 @@ __all__ = [
     "place_solitons",
     "wave_kick",
     "poisson_solve_fft",
+    "poisson_solve_fft_19pt",
     "equilibrate_chi",
+    "equilibrate_chi_19pt",
     "equilibrate_from_fields",
+    "equilibrate_from_fields_19pt",
     "seed_noise",
     "uniform_chi",
     "tetrahedral_positions",
     "sparse_positions",
     "spherical_phase_source",
+    "planar_r1_light_packet",
+    "r1_vacuum_subtracted_potential",
+    "r1_light_acceleration",
+    "r1_light_step",
     "grid_positions",
     "disk_positions",
     "disk_velocities",
@@ -459,6 +475,8 @@ __all__ = [
     # Phase (EM / charge)
     "phase_field",
     "charge_density",
+    "noether_spatial_current",
+    "positive_noether_current",
     "phase_coherence",
     "coulomb_interaction_energy",
     # Angular momentum
