@@ -65,6 +65,7 @@ from lfm.analysis import (
     noether_spatial_current,
     op05_spherical_chi_deflection,
     phase_coherence,
+    phase_current_energy_density,
     phase_field,
     positive_noether_current,
     power_spectrum,
@@ -493,6 +494,7 @@ __all__ = [
     "charge_density",
     "noether_spatial_current",
     "positive_noether_current",
+    "phase_current_energy_density",
     "phase_coherence",
     "coulomb_interaction_energy",
     # Angular momentum

@@ -23,6 +23,7 @@ from lfm.analysis.phase import (
     coulomb_interaction_energy,
     noether_spatial_current,
     phase_coherence,
+    phase_current_energy_density,
     phase_field,
     positive_noether_current,
 )
@@ -218,6 +219,93 @@ class TestPhase:
         psi_i = np.broadcast_to(np.sin(phase), (N, N, N)).astype(np.float32)
         jx = positive_noether_current(psi_r, psi_i, axis=0)
         np.testing.assert_allclose(jx, 0.0, atol=1e-6)
+
+    def test_phase_current_energy_static_uniform_zero(self):
+        psi_r = np.ones((8, 8, 8), dtype=np.float64)
+        psi_i = np.zeros((8, 8, 8), dtype=np.float64)
+        rho = phase_current_energy_density(psi_r, psi_i, psi_r, psi_i, dt=0.02)
+        assert rho.dtype == np.float64
+        np.testing.assert_allclose(rho, 0.0, atol=1e-14)
+
+    def test_phase_current_energy_global_phase_invariant(self):
+        N = 16
+        dt = 0.02
+        k = 2.0 * np.pi / N
+        omega = 0.35
+        x = np.arange(N, dtype=np.float64)
+        phase = k * x[:, None, None]
+        psi_r = np.broadcast_to(np.cos(phase), (N, N, N)).astype(np.float64)
+        psi_i = np.broadcast_to(np.sin(phase), (N, N, N)).astype(np.float64)
+        prev_phase = phase - omega * dt
+        psi_r_prev = np.broadcast_to(np.cos(prev_phase), (N, N, N)).astype(np.float64)
+        psi_i_prev = np.broadcast_to(np.sin(prev_phase), (N, N, N)).astype(np.float64)
+
+        rho = phase_current_energy_density(psi_r, psi_i, psi_r_prev, psi_i_prev, dt=dt)
+
+        phi0 = 1.234
+        psi_r_rot = np.cos(phi0) * psi_r - np.sin(phi0) * psi_i
+        psi_i_rot = np.sin(phi0) * psi_r + np.cos(phi0) * psi_i
+        psi_r_prev_rot = np.cos(phi0) * psi_r_prev - np.sin(phi0) * psi_i_prev
+        psi_i_prev_rot = np.sin(phi0) * psi_r_prev + np.cos(phi0) * psi_i_prev
+        rho_rot = phase_current_energy_density(
+            psi_r_rot,
+            psi_i_rot,
+            psi_r_prev_rot,
+            psi_i_prev_rot,
+            dt=dt,
+        )
+        np.testing.assert_allclose(rho_rot, rho, rtol=1e-12, atol=1e-12)
+
+    def test_phase_current_energy_sees_constant_amplitude_plane_wave(self):
+        N = 32
+        dt = 0.01
+        amp = 0.4
+        k = 2.0 * np.pi / N
+        omega = k
+        x = np.arange(N, dtype=np.float64)
+        phase = k * x[:, None, None]
+        prev_phase = phase - omega * dt
+        psi_r = np.broadcast_to(amp * np.cos(phase), (N, N, N)).astype(np.float64)
+        psi_i = np.broadcast_to(amp * np.sin(phase), (N, N, N)).astype(np.float64)
+        psi_r_prev = np.broadcast_to(amp * np.cos(prev_phase), (N, N, N)).astype(np.float64)
+        psi_i_prev = np.broadcast_to(amp * np.sin(prev_phase), (N, N, N)).astype(np.float64)
+
+        amp_sq = psi_r * psi_r + psi_i * psi_i
+        rho = phase_current_energy_density(psi_r, psi_i, psi_r_prev, psi_i_prev, dt=dt)
+
+        np.testing.assert_allclose(amp_sq, amp * amp, rtol=1e-14, atol=1e-14)
+        assert float(np.mean(rho)) > 0.0
+        assert float(np.std(rho)) < 1e-12
+
+    def test_phase_current_energy_scales_with_carrier(self):
+        N = 64
+        dt = 0.005
+        amp = 0.25
+        x = np.arange(N, dtype=np.float64)
+
+        def mean_rho(mode: int) -> float:
+            k = 2.0 * np.pi * mode / N
+            phase = k * x[:, None, None]
+            prev_phase = phase - k * dt
+            psi_r = np.broadcast_to(amp * np.cos(phase), (N, N, N)).astype(np.float64)
+            psi_i = np.broadcast_to(amp * np.sin(phase), (N, N, N)).astype(np.float64)
+            psi_r_prev = np.broadcast_to(amp * np.cos(prev_phase), (N, N, N)).astype(np.float64)
+            psi_i_prev = np.broadcast_to(amp * np.sin(prev_phase), (N, N, N)).astype(np.float64)
+            return float(
+                np.mean(
+                    phase_current_energy_density(
+                        psi_r,
+                        psi_i,
+                        psi_r_prev,
+                        psi_i_prev,
+                        dt=dt,
+                    )
+                )
+            )
+
+        rho_1 = mean_rho(1)
+        rho_2 = mean_rho(2)
+        assert rho_2 / rho_1 == pytest.approx(4.0, rel=0.08)
 
 
 # ── Angular Momentum ─────────────────────────────────────────────────

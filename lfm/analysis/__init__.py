@@ -88,6 +88,7 @@ from lfm.analysis.phase import (
     coulomb_interaction_energy,
     noether_spatial_current,
     phase_coherence,
+    phase_current_energy_density,
     phase_field,
     positive_noether_current,
 )
@@ -185,6 +186,7 @@ __all__ = [
     "charge_density",
     "noether_spatial_current",
     "positive_noether_current",
+    "phase_current_energy_density",
     "phase_coherence",
     "coulomb_interaction_energy",
     # ringdown extraction
