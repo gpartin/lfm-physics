@@ -12,6 +12,7 @@ LFM-ONLY:
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from lfm import Simulation
 from lfm.config_presets import full_physics
@@ -64,6 +65,7 @@ def _make_pair(sep: int) -> Simulation:
 class TestStringTension:
     """Tube energy between colored quarks should grow with separation."""
 
+    @pytest.mark.timeout(300)
     def test_string_tension(self) -> None:
         """Tube energy should increase monotonically and yield positive σ.
 

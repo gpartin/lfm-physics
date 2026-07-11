@@ -19,6 +19,14 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
+def _runtime_float_dtype(*arrays: object) -> type[np.float32] | type[np.float64]:
+    for arr in arrays:
+        dtype = getattr(arr, "dtype", None)
+        if dtype is not None and np.dtype(dtype) == np.dtype(np.float64):
+            return np.float64
+    return np.float32
+
+
 def phase_field(
     psi_r: NDArray,
     psi_i: NDArray,
@@ -74,6 +82,84 @@ def charge_density(
     dpsi_i_dt = (psi_i - psi_i_prev) / dt
     # ρ = Im(Ψ* · dΨ/dt) = psi_r * dpsi_i_dt - psi_i * dpsi_r_dt
     return psi_r * dpsi_i_dt - psi_i * dpsi_r_dt
+
+
+def noether_spatial_current(
+    psi_r: NDArray,
+    psi_i: NDArray,
+    axis: int = 0,
+) -> NDArray:
+    """Compute spatial Noether current along one lattice axis.
+
+    j_axis = Im(conj(Psi) * d_axis Psi). A centered finite difference is
+    used on the periodic lattice.
+    """
+    if axis not in (0, 1, 2):
+        raise ValueError("axis must be 0, 1, or 2")
+    dpsi_r = 0.5 * (np.roll(psi_r, -1, axis=axis) - np.roll(psi_r, 1, axis=axis))
+    dpsi_i = 0.5 * (np.roll(psi_i, -1, axis=axis) - np.roll(psi_i, 1, axis=axis))
+    out_dtype = _runtime_float_dtype(psi_r, psi_i)
+    return (psi_r * dpsi_i - psi_i * dpsi_r).astype(out_dtype)
+
+
+def positive_noether_current(
+    psi_r: NDArray,
+    psi_i: NDArray,
+    axis: int = 0,
+) -> NDArray:
+    """Return only the positive outgoing part of spatial Noether current."""
+    out_dtype = _runtime_float_dtype(psi_r, psi_i)
+    return np.maximum(noether_spatial_current(psi_r, psi_i, axis=axis), out_dtype(0.0)).astype(
+        out_dtype
+    )
+
+
+def phase_current_energy_density(
+    psi_r: NDArray,
+    psi_i: NDArray,
+    psi_r_prev: NDArray,
+    psi_i_prev: NDArray,
+    dt: float,
+    c_speed: float = 1.0,
+    amplitude_floor: float = 1.0e-30,
+) -> NDArray:
+    """Return the phase-current stress-energy component of a complex wave.
+
+    A pure phase photon can carry energy while ``|Psi|^2`` remains nearly
+    constant. This observable extracts that missing source from the U(1)
+    Noether current:
+
+        rho_phase = 0.5 * (j_0^2 + c^2 |j_space|^2) / |Psi|^2
+
+    where ``j_0 = Im(conj(Psi) d_t Psi)`` and
+    ``j_i = Im(conj(Psi) d_i Psi)``. For ``Psi = A exp(i theta)``, this is
+    ``0.5 * A^2 * (theta_t^2 + c^2 |grad theta|^2)``. It is invariant under
+    global phase rotations and vanishes for a static uniform phase.
+    """
+    if dt <= 0.0:
+        raise ValueError("dt must be positive")
+    if c_speed < 0.0:
+        raise ValueError("c_speed must be non-negative")
+    out_dtype = _runtime_float_dtype(psi_r, psi_i, psi_r_prev, psi_i_prev)
+
+    psi_r_f = psi_r.astype(out_dtype, copy=False)
+    psi_i_f = psi_i.astype(out_dtype, copy=False)
+    psi_r_prev_f = psi_r_prev.astype(out_dtype, copy=False)
+    psi_i_prev_f = psi_i_prev.astype(out_dtype, copy=False)
+
+    dpsi_r_dt = (psi_r_f - psi_r_prev_f) / out_dtype(dt)
+    dpsi_i_dt = (psi_i_f - psi_i_prev_f) / out_dtype(dt)
+    j0 = psi_r_f * dpsi_i_dt - psi_i_f * dpsi_r_dt
+
+    jx = noether_spatial_current(psi_r_f, psi_i_f, axis=0)
+    jy = noether_spatial_current(psi_r_f, psi_i_f, axis=1)
+    jz = noether_spatial_current(psi_r_f, psi_i_f, axis=2)
+
+    amp_sq = psi_r_f * psi_r_f + psi_i_f * psi_i_f
+    amp_safe = np.maximum(amp_sq, out_dtype(amplitude_floor))
+    c2 = out_dtype(c_speed * c_speed)
+    energy = 0.5 * (j0 * j0 + c2 * (jx * jx + jy * jy + jz * jz)) / amp_safe
+    return energy.astype(out_dtype)
 
 
 def phase_coherence(

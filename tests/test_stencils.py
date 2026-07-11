@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from lfm.core.stencils import laplacian_7pt, laplacian_19pt
+from lfm.core.stencils import eigenvalue_19pt, laplacian_7pt, laplacian_19pt
 
 
 class TestLaplacian19pt:
@@ -54,6 +54,19 @@ class TestLaplacian19pt:
         field = np.random.default_rng(42).standard_normal((20, 20, 20))
         lap = laplacian_19pt(field)
         assert lap.shape == field.shape
+
+    def test_eigenvalue_matches_single_fourier_mode(self):
+        N = 16
+        coords = np.arange(N, dtype=np.float64)
+        X, Y, Z = np.meshgrid(coords, coords, coords, indexing="ij")
+        kx_i, ky_i, kz_i = 2, 1, 0
+        kx = 2.0 * np.pi * kx_i / N
+        ky = 2.0 * np.pi * ky_i / N
+        kz = 2.0 * np.pi * kz_i / N
+        field = np.cos(kx * X + ky * Y + kz * Z)
+        lap = laplacian_19pt(field)
+        lam = float(eigenvalue_19pt(np.array(kx), np.array(ky), np.array(kz)))
+        np.testing.assert_allclose(lap, lam * field, atol=1e-12)
 
 
 class TestLaplacian7pt:

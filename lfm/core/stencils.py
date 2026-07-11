@@ -71,6 +71,34 @@ def laplacian_19pt(field: NDArray[np.floating]) -> NDArray[np.floating]:
     return STENCIL_FACE_WEIGHT * faces + STENCIL_EDGE_WEIGHT * edges + STENCIL_CENTER_WEIGHT * field
 
 
+def eigenvalue_19pt(
+    kx: NDArray[np.floating],
+    ky: NDArray[np.floating],
+    kz: NDArray[np.floating],
+) -> NDArray[np.floating]:
+    """Return the spectral eigenvalue of the 19-point stencil.
+
+    The result matches :func:`laplacian_19pt` exactly on a periodic grid
+    with dx = 1. It is useful for FFT Poisson solves whose equilibrium
+    must be consistent with the same lattice operator used for evolution.
+    """
+    face = (
+        (2.0 * np.cos(kx) - 2.0) / 3.0
+        + (2.0 * np.cos(ky) - 2.0) / 3.0
+        + (2.0 * np.cos(kz) - 2.0) / 3.0
+    )
+    edge = (
+        np.cos(kx + ky)
+        + np.cos(kx - ky)
+        + np.cos(kx + kz)
+        + np.cos(kx - kz)
+        + np.cos(ky + kz)
+        + np.cos(ky - kz)
+        - 6.0
+    ) / 3.0
+    return face + edge
+
+
 def laplacian_7pt(field: NDArray[np.floating]) -> NDArray[np.floating]:
     """Compute standard 7-point Laplacian on a 3D periodic grid.
 

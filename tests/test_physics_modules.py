@@ -12,16 +12,23 @@ from lfm.analysis.metric import (
     effective_metric_00,
     gravitational_potential,
     metric_perturbation,
+    metric_refractive_index,
+    op05_spherical_chi_deflection,
     schwarzschild_chi,
+    schwarzschild_radius_si,
     time_dilation_factor,
 )
 from lfm.analysis.phase import (
     charge_density,
     coulomb_interaction_energy,
+    noether_spatial_current,
     phase_coherence,
+    phase_current_energy_density,
     phase_field,
+    positive_noether_current,
 )
 from lfm.config import SimulationConfig
+from lfm.constants import SOLAR_MASS_KG, SOLAR_RADIUS_M
 from lfm.fields.boosted import boosted_soliton
 from lfm.sweep import sweep_2d
 
@@ -76,6 +83,42 @@ class TestMetric:
         assert chi[0, 0, 0] > 17.5
         # At center → 0 (inside horizon)
         assert chi[16, 16, 16] == pytest.approx(0.0, abs=0.1)
+
+    def test_metric_refractive_index_increases_in_chi_well(self):
+        chi = np.array([19.0, 18.99], dtype=np.float64)
+        n_eff = metric_refractive_index(chi)
+        assert n_eff[0] == pytest.approx(1.0)
+        assert n_eff[1] > 1.0
+
+    def test_op05_solar_limb_deflection_recovers_arcsecond_scale(self):
+        result = op05_spherical_chi_deflection(
+            SOLAR_MASS_KG,
+            SOLAR_RADIUS_M,
+            x_extent_multiplier=500.0,
+            sample_count=20001,
+        )
+        assert result["schwarzschild_radius_m"] == pytest.approx(
+            schwarzschild_radius_si(SOLAR_MASS_KG),
+            rel=1e-14,
+        )
+        assert result["recovered_angle_arcsec"] == pytest.approx(1.751243281, rel=1e-3)
+        assert abs(result["comparator_relative_error"]) < 1e-4
+
+    def test_op05_deflection_is_linear_in_weak_lens_mass(self):
+        half = op05_spherical_chi_deflection(
+            0.5 * SOLAR_MASS_KG,
+            SOLAR_RADIUS_M,
+            x_extent_multiplier=250.0,
+            sample_count=5001,
+        )
+        full = op05_spherical_chi_deflection(
+            SOLAR_MASS_KG,
+            SOLAR_RADIUS_M,
+            x_extent_multiplier=250.0,
+            sample_count=5001,
+        )
+        ratio = half["recovered_angle_arcsec"] / full["recovered_angle_arcsec"]
+        assert ratio == pytest.approx(0.5, rel=1e-5)
 
 
 # ── Phase ────────────────────────────────────────────────────────────
@@ -145,6 +188,124 @@ class TestPhase:
         zero = np.zeros((8, 8, 8))
         e_int = coulomb_interaction_energy(psi, zero, -psi, zero)
         assert e_int < 0
+
+    def test_noether_spatial_current_plane_wave(self):
+        N = 16
+        k = 2.0 * np.pi / N
+        x = np.arange(N, dtype=np.float32)
+        phase = k * x[:, None, None]
+        psi_r = np.broadcast_to(np.cos(phase), (N, N, N)).astype(np.float32)
+        psi_i = np.broadcast_to(np.sin(phase), (N, N, N)).astype(np.float32)
+        jx = noether_spatial_current(psi_r, psi_i, axis=0)
+        np.testing.assert_allclose(jx, np.sin(k), rtol=1e-5, atol=1e-6)
+
+    def test_noether_spatial_current_preserves_float64(self):
+        N = 16
+        k = 2.0 * np.pi / N
+        x = np.arange(N, dtype=np.float64)
+        phase = k * x[:, None, None]
+        psi_r = np.broadcast_to(np.cos(phase), (N, N, N)).astype(np.float64)
+        psi_i = np.broadcast_to(np.sin(phase), (N, N, N)).astype(np.float64)
+        jx = positive_noether_current(psi_r, psi_i, axis=0)
+        assert jx.dtype == np.float64
+        np.testing.assert_allclose(jx, np.sin(k), rtol=1e-12, atol=1e-12)
+
+    def test_positive_noether_current_clips_reverse_wave(self):
+        N = 16
+        k = 2.0 * np.pi / N
+        x = np.arange(N, dtype=np.float32)
+        phase = -k * x[:, None, None]
+        psi_r = np.broadcast_to(np.cos(phase), (N, N, N)).astype(np.float32)
+        psi_i = np.broadcast_to(np.sin(phase), (N, N, N)).astype(np.float32)
+        jx = positive_noether_current(psi_r, psi_i, axis=0)
+        np.testing.assert_allclose(jx, 0.0, atol=1e-6)
+
+    def test_phase_current_energy_static_uniform_zero(self):
+        psi_r = np.ones((8, 8, 8), dtype=np.float64)
+        psi_i = np.zeros((8, 8, 8), dtype=np.float64)
+        rho = phase_current_energy_density(psi_r, psi_i, psi_r, psi_i, dt=0.02)
+        assert rho.dtype == np.float64
+        np.testing.assert_allclose(rho, 0.0, atol=1e-14)
+
+    def test_phase_current_energy_global_phase_invariant(self):
+        N = 16
+        dt = 0.02
+        k = 2.0 * np.pi / N
+        omega = 0.35
+        x = np.arange(N, dtype=np.float64)
+        phase = k * x[:, None, None]
+        psi_r = np.broadcast_to(np.cos(phase), (N, N, N)).astype(np.float64)
+        psi_i = np.broadcast_to(np.sin(phase), (N, N, N)).astype(np.float64)
+        prev_phase = phase - omega * dt
+        psi_r_prev = np.broadcast_to(np.cos(prev_phase), (N, N, N)).astype(np.float64)
+        psi_i_prev = np.broadcast_to(np.sin(prev_phase), (N, N, N)).astype(np.float64)
+
+        rho = phase_current_energy_density(psi_r, psi_i, psi_r_prev, psi_i_prev, dt=dt)
+
+        phi0 = 1.234
+        psi_r_rot = np.cos(phi0) * psi_r - np.sin(phi0) * psi_i
+        psi_i_rot = np.sin(phi0) * psi_r + np.cos(phi0) * psi_i
+        psi_r_prev_rot = np.cos(phi0) * psi_r_prev - np.sin(phi0) * psi_i_prev
+        psi_i_prev_rot = np.sin(phi0) * psi_r_prev + np.cos(phi0) * psi_i_prev
+        rho_rot = phase_current_energy_density(
+            psi_r_rot,
+            psi_i_rot,
+            psi_r_prev_rot,
+            psi_i_prev_rot,
+            dt=dt,
+        )
+        np.testing.assert_allclose(rho_rot, rho, rtol=1e-12, atol=1e-12)
+
+    def test_phase_current_energy_sees_constant_amplitude_plane_wave(self):
+        N = 32
+        dt = 0.01
+        amp = 0.4
+        k = 2.0 * np.pi / N
+        omega = k
+        x = np.arange(N, dtype=np.float64)
+        phase = k * x[:, None, None]
+        prev_phase = phase - omega * dt
+        psi_r = np.broadcast_to(amp * np.cos(phase), (N, N, N)).astype(np.float64)
+        psi_i = np.broadcast_to(amp * np.sin(phase), (N, N, N)).astype(np.float64)
+        psi_r_prev = np.broadcast_to(amp * np.cos(prev_phase), (N, N, N)).astype(np.float64)
+        psi_i_prev = np.broadcast_to(amp * np.sin(prev_phase), (N, N, N)).astype(np.float64)
+
+        amp_sq = psi_r * psi_r + psi_i * psi_i
+        rho = phase_current_energy_density(psi_r, psi_i, psi_r_prev, psi_i_prev, dt=dt)
+
+        np.testing.assert_allclose(amp_sq, amp * amp, rtol=1e-14, atol=1e-14)
+        assert float(np.mean(rho)) > 0.0
+        assert float(np.std(rho)) < 1e-12
+
+    def test_phase_current_energy_scales_with_carrier(self):
+        N = 64
+        dt = 0.005
+        amp = 0.25
+        x = np.arange(N, dtype=np.float64)
+
+        def mean_rho(mode: int) -> float:
+            k = 2.0 * np.pi * mode / N
+            phase = k * x[:, None, None]
+            prev_phase = phase - k * dt
+            psi_r = np.broadcast_to(amp * np.cos(phase), (N, N, N)).astype(np.float64)
+            psi_i = np.broadcast_to(amp * np.sin(phase), (N, N, N)).astype(np.float64)
+            psi_r_prev = np.broadcast_to(amp * np.cos(prev_phase), (N, N, N)).astype(np.float64)
+            psi_i_prev = np.broadcast_to(amp * np.sin(prev_phase), (N, N, N)).astype(np.float64)
+            return float(
+                np.mean(
+                    phase_current_energy_density(
+                        psi_r,
+                        psi_i,
+                        psi_r_prev,
+                        psi_i_prev,
+                        dt=dt,
+                    )
+                )
+            )
+
+        rho_1 = mean_rho(1)
+        rho_2 = mean_rho(2)
+        assert rho_2 / rho_1 == pytest.approx(4.0, rel=0.08)
 
 
 # ── Angular Momentum ─────────────────────────────────────────────────

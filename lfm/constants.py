@@ -33,6 +33,21 @@ D_ST: int = D + 1
 CHI0: float = float(3**D - 2**D)
 """Background χ value = 19.0. From 3D discrete Laplacian: 1 center + 6 face + 12 edge modes."""
 
+G_SI: float = 6.67430e-11
+"""CODATA Newtonian constant in m^3 kg^-1 s^-2. Observed SI bridge input."""
+
+C_SI: float = 299792458.0
+"""Speed of light in m/s. Exact SI bridge input."""
+
+SOLAR_MASS_KG: float = 1.98847e30
+"""Nominal solar mass in kg. Observed input for solar-limb validation."""
+
+SOLAR_RADIUS_M: float = 6.957e8
+"""Nominal solar radius in m. Observed impact parameter for solar-limb validation."""
+
+ARCSEC_PER_RADIAN: float = 206264.80624709636
+"""Arcseconds per radian."""
+
 N_COLORS: int = 3
 """Number of color components (Ψₐ, a = 1,2,3)."""
 

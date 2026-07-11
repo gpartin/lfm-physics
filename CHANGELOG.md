@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.4.3] - 2026-07-06
+
+### Added
+
+- R1 light-current helpers for package-native gravitational-lensing probes:
+  `planar_r1_light_packet()`, `r1_vacuum_subtracted_potential()`,
+  `r1_light_acceleration()`, and `r1_light_step()`.
+- Noether-current readouts: `noether_spatial_current()` and
+  `positive_noether_current()`.
+- 19-point-stencil-consistent FFT Poisson/equilibrium helpers:
+  `poisson_solve_fft_19pt()`, `equilibrate_chi_19pt()`, and
+  `equilibrate_from_fields_19pt()`.
+
 ## [1.4.1] - 2026-04-24
 
 ### Fixed
