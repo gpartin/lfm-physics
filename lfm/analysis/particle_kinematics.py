@@ -9,11 +9,28 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
-from numba import njit, prange
 from scipy.optimize import least_squares
 
 from lfm.constants import CHI0, KAPPA, LAMBDA_H
 from lfm.core.stencils import laplacian_19pt
+
+try:
+    from numba import njit, prange
+except ModuleNotFoundError:  # pragma: no cover - exercised only without optional numba
+
+    def njit(*jit_args: Any, **jit_kwargs: Any) -> Any:
+        """Return a no-op decorator when numba is unavailable."""
+
+        del jit_kwargs
+        if len(jit_args) == 1 and callable(jit_args[0]):
+            return jit_args[0]
+
+        def decorate(function: Any) -> Any:
+            return function
+
+        return decorate
+
+    prange = range
 
 
 @njit(inline="always")
