@@ -15,6 +15,9 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from lfm.analysis.energy_current import stencil_links
+from lfm.core.stencils import laplacian_19pt, laplacian_27pt
+
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
@@ -82,6 +85,112 @@ def charge_density(
     dpsi_i_dt = (psi_i - psi_i_prev) / dt
     # ρ = Im(Ψ* · dΨ/dt) = psi_r * dpsi_i_dt - psi_i * dpsi_r_dt
     return psi_r * dpsi_i_dt - psi_i * dpsi_r_dt
+
+
+def canonical_charge_density(
+    psi_r: NDArray,
+    psi_i: NDArray,
+    momentum_r: NDArray,
+    momentum_i: NDArray,
+) -> NDArray:
+    """Return the canonical U(1) charge density from phase-space fields.
+
+    The bare complex GOV-01 field has
+    ``rho = psi_r * momentum_i - psi_i * momentum_r``. Unlike a finite
+    difference estimate, this observable uses the canonical momentum directly.
+    """
+    return psi_r * momentum_i - psi_i * momentum_r
+
+
+def oriented_charge_currents(
+    psi_r: NDArray,
+    psi_i: NDArray,
+    *,
+    wave_speed: float = 1.0,
+    stencil: str = "19",
+) -> dict[tuple[int, int, int], NDArray]:
+    """Return exact outgoing U(1) current on every oriented stencil link.
+
+    The current is paired with the selected discrete Laplacian. It therefore
+    obeys an exact semidiscrete continuity identity for the bare complex
+    GOV-01 equation on a periodic lattice.
+    """
+    if wave_speed <= 0.0 or not np.isfinite(wave_speed):
+        raise ValueError("wave_speed must be positive and finite")
+    real = np.asarray(psi_r)
+    imag = np.asarray(psi_i)
+    if real.shape != imag.shape or real.ndim != 3:
+        raise ValueError("psi_r and psi_i must have matching shape (N,N,N)")
+    c2 = wave_speed**2
+    currents: dict[tuple[int, int, int], NDArray] = {}
+    for offset, weight in stencil_links(stencil):
+        shifted_real = np.roll(real, shift=offset, axis=(0, 1, 2))
+        shifted_imag = np.roll(imag, shift=offset, axis=(0, 1, 2))
+        currents[offset] = -c2 * weight * (
+            real * shifted_imag - imag * shifted_real
+        )
+    return currents
+
+
+def charge_current_divergence(
+    psi_r: NDArray,
+    psi_i: NDArray,
+    *,
+    wave_speed: float = 1.0,
+    stencil: str = "19",
+) -> NDArray:
+    """Return the sum of exact outgoing U(1) link currents."""
+    currents = oriented_charge_currents(
+        psi_r,
+        psi_i,
+        wave_speed=wave_speed,
+        stencil=stencil,
+    )
+    result = np.zeros_like(np.asarray(psi_r), dtype=np.float64)
+    for current in currents.values():
+        result += current
+    return result
+
+
+def bare_charge_continuity_residual(
+    psi_r: NDArray,
+    psi_i: NDArray,
+    momentum_r: NDArray,
+    momentum_i: NDArray,
+    chi: NDArray,
+    *,
+    wave_speed: float = 1.0,
+    stencil: str = "19",
+) -> NDArray:
+    """Return the exact semidiscrete residual ``d_t rho + div J``.
+
+    The local ``chi**2 * Psi`` term cancels from the U(1) charge rate. This
+    function tests the identity rather than advancing a new equation.
+    """
+    arrays = tuple(
+        np.asarray(value)
+        for value in (psi_r, psi_i, momentum_r, momentum_i, chi)
+    )
+    if any(array.shape != arrays[0].shape for array in arrays[1:]):
+        raise ValueError("all fields must have matching shapes")
+    if arrays[0].ndim != 3:
+        raise ValueError("all fields must have shape (N,N,N)")
+    if stencil == "19":
+        laplacian = laplacian_19pt
+    elif stencil == "27":
+        laplacian = laplacian_27pt
+    else:
+        raise ValueError("stencil must be '19' or '27'")
+    real, imag, _momentum_real, _momentum_imag, chi_values = arrays
+    momentum_rate_real = wave_speed**2 * laplacian(real) - chi_values**2 * real
+    momentum_rate_imag = wave_speed**2 * laplacian(imag) - chi_values**2 * imag
+    charge_rate = real * momentum_rate_imag - imag * momentum_rate_real
+    return charge_rate + charge_current_divergence(
+        real,
+        imag,
+        wave_speed=wave_speed,
+        stencil=stencil,
+    )
 
 
 def noether_spatial_current(

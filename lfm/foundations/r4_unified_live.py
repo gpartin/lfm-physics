@@ -28,7 +28,6 @@ from lfm.foundations.r3_link_frame_live import (
     _accumulate_oriented_gradient,
     _accumulate_oriented_phase_gradient,
     _dagger,
-    _frame_loop_energy_gradient,
     _link_and_shape_drift,
     _link_table,
     _loop_products,
@@ -37,18 +36,24 @@ from lfm.foundations.r3_link_frame_live import (
     _scatter_gradient_to_base,
     _temporal_shape_projector,
     _tracefree_symmetric,
-    _transpose,
     _validate_state,
     _weighted_bare_kinetic_drift,
-    group_constraint_errors as r3_group_constraint_errors,
-    kinetic_energy as r3_kinetic_energy,
-    potential_energy_and_rates as r3_potential_energy_and_rates,
     so4_generators,
-    state_distance as r3_state_distance,
     su3_generators,
     triangle_loops,
 )
-
+from lfm.foundations.r3_link_frame_live import (
+    group_constraint_errors as r3_group_constraint_errors,
+)
+from lfm.foundations.r3_link_frame_live import (
+    kinetic_energy as r3_kinetic_energy,
+)
+from lfm.foundations.r3_link_frame_live import (
+    potential_energy_and_rates as r3_potential_energy_and_rates,
+)
+from lfm.foundations.r3_link_frame_live import (
+    state_distance as r3_state_distance,
+)
 
 R4_ACTION_ID = "LFM-R4-UNIFIED-LIVE-EXPERIMENT-v1"
 R4_REGISTER_ID = (
@@ -336,6 +341,12 @@ def _link_average(values: np.ndarray, offset: tuple[int, int, int]) -> np.ndarra
     return 0.5 * (values + _neighbor(values, offset))
 
 
+def _frame_weight(base: R3LiveState, parameters: R4Parameters) -> np.ndarray:
+    if parameters.r3.frame_enabled:
+        return np.exp(base.shape[..., 0, 0])
+    return np.ones_like(base.chi)
+
+
 def _add_phase_color_weight_corrections(
     state: R4State,
     parameters: R4Parameters,
@@ -345,9 +356,8 @@ def _add_phase_color_weight_corrections(
     """Weight R3 phase/color loop energy by q and color dielectric."""
 
     base = state.r3
-    q = np.exp(base.shape[..., 0, 0])
+    q = _frame_weight(base, parameters)
     epsilon, epsilon_derivative = color_dielectric(base.chi, parameters)
-    sites = base.chi.shape
     phase_gradient = np.zeros_like(base.phase_links)
     color_gradient = np.zeros_like(base.color_links)
     phase_correction = 0.0
@@ -372,9 +382,10 @@ def _add_phase_color_weight_corrections(
         )
         phase_factor = q
         phase_correction += float(np.sum((phase_factor - 1.0) * phase_bare))
-        base_rates.shape -= (
-            q * phase_bare
-        )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
+        if parameters.r3.frame_enabled:
+            base_rates.shape -= (
+                q * phase_bare
+            )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
         phase_h_gradient = (
             -(phase_factor - 1.0)
             * parameters.r3.phase_stiffness
@@ -424,9 +435,10 @@ def _add_phase_color_weight_corrections(
         )
         color_factor = q * epsilon
         color_correction += float(np.sum((color_factor - 1.0) * color_bare))
-        base_rates.shape -= (
-            q * epsilon * color_bare
-        )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
+        if parameters.r3.frame_enabled:
+            base_rates.shape -= (
+                q * epsilon * color_bare
+            )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
         base_rates.chi -= q * epsilon_derivative * color_bare
         color_h_gradient = (
             -(color_factor - 1.0)
@@ -492,7 +504,7 @@ def potential_energy_and_rates(
     weak_rate = np.zeros_like(state.weak_matter)
     weak_electric_rate = np.zeros_like(state.weak_electric)
     higgs_electric_rate = np.zeros_like(state.higgs_electric)
-    q = np.exp(state.r3.shape[..., 0, 0])
+    q = _frame_weight(state.r3, parameters)
     weak_source_density = np.zeros_like(q)
     components = dict(base_parts)
     correction = _add_phase_color_weight_corrections(
@@ -671,9 +683,10 @@ def potential_energy_and_rates(
             )
         )
         weak_loop_energy += float(np.sum(q * bare_density))
-        base_rates.shape -= (
-            q * bare_density
-        )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
+        if parameters.r3.frame_enabled:
+            base_rates.shape -= (
+                q * bare_density
+            )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
         holonomy_gradient = (
             -q * parameters.weak_stiffness * loop_weight
         )[..., np.newaxis, np.newaxis] * identity2
@@ -715,10 +728,11 @@ def potential_energy_and_rates(
             )
             weak_electric_rate[..., index, generator_index] -= derivative
 
-    base_rates.shape -= (
-        q * weak_source_density
-    )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
-    base_rates.shape = _tracefree_symmetric(base_rates.shape)
+    if parameters.r3.frame_enabled:
+        base_rates.shape -= (
+            q * weak_source_density
+        )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
+        base_rates.shape = _tracefree_symmetric(base_rates.shape)
     components.update(
         {
             "weak_matter_gradient": weak_gradient_energy,
@@ -752,7 +766,7 @@ def _gauge_kinetic_replacements(
     parameters: R4Parameters,
 ) -> tuple[float, dict[str, float]]:
     base = state.r3
-    q = np.exp(base.shape[..., 0, 0])
+    q = _frame_weight(base, parameters)
     epsilon, _ = color_dielectric(base.chi, parameters)
     unique, _ = _link_table(parameters.stencil)
     phase = 0.0
@@ -780,16 +794,17 @@ def _gauge_kinetic_replacements(
                 )
             )
         )
-        frame += float(
-            np.sum(
-                q_link[..., np.newaxis]
-                * base.frame_electric[..., index, :] ** 2
-                / (
-                    2.0
-                    * parameters.r3.frame_inertia
+        if parameters.r3.frame_enabled:
+            frame += float(
+                np.sum(
+                    q_link[..., np.newaxis]
+                    * base.frame_electric[..., index, :] ** 2
+                    / (
+                        2.0
+                        * parameters.r3.frame_inertia
+                    )
                 )
             )
-        )
         weak += float(
             np.sum(
                 q_link[..., np.newaxis]
@@ -820,7 +835,7 @@ def kinetic_energy(
 
     _validate_r4(state, parameters)
     base_energy, base_parts = r3_kinetic_energy(state.r3, parameters.r3)
-    q = np.exp(state.r3.shape[..., 0, 0])
+    q = _frame_weight(state.r3, parameters)
     weak_matter = float(
         np.sum(
             q
@@ -866,10 +881,12 @@ def _potential_kick(
     base = state.r3
     base.matter_momentum += duration * rates.r3.matter
     base.chi_momentum += duration * rates.r3.chi
-    base.shape_momentum += duration * rates.r3.shape
+    if parameters.r3.frame_enabled:
+        base.shape_momentum += duration * rates.r3.shape
     base.phase_electric += duration * rates.r3.phase_electric
     base.color_electric += duration * rates.r3.color_electric
-    base.frame_electric += duration * rates.r3.frame_electric
+    if parameters.r3.frame_enabled:
+        base.frame_electric += duration * rates.r3.frame_electric
     state.weak_momentum += duration * rates.weak_matter
     state.weak_electric += duration * rates.weak_electric
     state.higgs_electric += duration * rates.higgs_electric
@@ -881,7 +898,7 @@ def _extra_gauge_kinetic_drift(
     parameters: R4Parameters,
 ) -> None:
     base = state.r3
-    q = np.exp(base.shape[..., 0, 0])
+    q = _frame_weight(base, parameters)
     epsilon, epsilon_derivative = color_dielectric(base.chi, parameters)
     unique, _ = _link_table(parameters.stencil)
     weak_generators = su2_generators()
@@ -889,7 +906,10 @@ def _extra_gauge_kinetic_drift(
     frame_generators = so4_generators()
     source_density = np.zeros_like(q)
     color_is_live = bool(np.any(base.color_electric != 0.0))
-    frame_is_live = bool(np.any(base.frame_electric != 0.0))
+    frame_is_live = (
+        parameters.r3.frame_enabled
+        and bool(np.any(base.frame_electric != 0.0))
+    )
     weak_is_live = bool(np.any(state.weak_electric != 0.0))
 
     for index, (offset, _) in enumerate(unique):
@@ -948,12 +968,13 @@ def _extra_gauge_kinetic_drift(
             offset,
         )
 
-        frame_density = np.sum(
-            base.frame_electric[..., index, :] ** 2,
-            axis=-1,
-        ) / (4.0 * parameters.r3.frame_inertia)
-        source_density += frame_density
-        source_density += _scatter_from_base(frame_density, offset)
+        if parameters.r3.frame_enabled:
+            frame_density = np.sum(
+                base.frame_electric[..., index, :] ** 2,
+                axis=-1,
+            ) / (4.0 * parameters.r3.frame_inertia)
+            source_density += frame_density
+            source_density += _scatter_from_base(frame_density, offset)
 
         weak_density = np.sum(
             state.weak_electric[..., index, :] ** 2,
@@ -1055,9 +1076,10 @@ def _extra_gauge_kinetic_drift(
         2.0 * parameters.higgs_inertia
     )
     source_density += higgs_density
-    base.shape_momentum -= (
-        duration * q * source_density
-    )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
+    if parameters.r3.frame_enabled:
+        base.shape_momentum -= (
+            duration * q * source_density
+        )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
 
 
 def _weak_matter_kinetic_drift(
@@ -1065,7 +1087,7 @@ def _weak_matter_kinetic_drift(
     duration: float,
     parameters: R4Parameters,
 ) -> None:
-    q = np.exp(state.r3.shape[..., 0, 0])
+    q = _frame_weight(state.r3, parameters)
     density = 0.5 * np.sum(
         np.abs(state.weak_momentum) ** 2,
         axis=-1,
@@ -1073,9 +1095,10 @@ def _weak_matter_kinetic_drift(
     state.weak_matter += (
         duration * q[..., np.newaxis] * state.weak_momentum
     )
-    state.r3.shape_momentum -= (
-        duration * q * density
-    )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
+    if parameters.r3.frame_enabled:
+        state.r3.shape_momentum -= (
+            duration * q * density
+        )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
 
 
 def step_r4(

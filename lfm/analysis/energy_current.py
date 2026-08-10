@@ -116,6 +116,8 @@ class BareLFMParameters:
     background_norm_sq: float = 0.0
     gov01_stencil: str = "19"
     gov02_stencil: str = "19"
+    spacing: float = 1.0
+    chi_potential: str = "quartic"
 
     @property
     def chi_inertia(self) -> float:
@@ -123,16 +125,21 @@ class BareLFMParameters:
         return self.chi0 / self.kappa
 
     def __post_init__(self) -> None:
-        positive = (self.chi0, self.kappa, self.lambda_h, self.wave_speed)
+        positive = (
+            self.chi0,
+            self.kappa,
+            self.lambda_h,
+            self.wave_speed,
+            self.spacing,
+        )
         if not all(np.isfinite(value) and value > 0.0 for value in positive):
             raise ValueError("bare LFM parameters must be positive and finite")
-        if (
-            not np.isfinite(self.background_norm_sq)
-            or self.background_norm_sq < 0.0
-        ):
+        if not np.isfinite(self.background_norm_sq) or self.background_norm_sq < 0.0:
             raise ValueError("background_norm_sq must be finite and nonnegative")
         stencil_links(self.gov01_stencil)
         stencil_links(self.gov02_stencil)
+        if self.chi_potential not in ("quartic", "flat_octic"):
+            raise ValueError("chi_potential must be 'quartic' or 'flat_octic'")
 
 
 @dataclass(frozen=True)
@@ -145,6 +152,51 @@ class BareHamiltonRates:
     chi_momentum: np.ndarray
 
 
+@dataclass(frozen=True)
+class BareLFMState:
+    """Coordinate and momentum registers of the bare six-plus-one system."""
+
+    wave: np.ndarray
+    wave_momentum: np.ndarray
+    chi: np.ndarray
+    chi_momentum: np.ndarray
+
+
+def _chi_potential_density(
+    chi: np.ndarray,
+    parameters: BareLFMParameters,
+) -> np.ndarray:
+    displacement = chi**2 - parameters.chi0**2
+    if parameters.chi_potential == "quartic":
+        return parameters.chi_inertia * parameters.lambda_h * displacement**2
+    return parameters.chi_inertia * parameters.lambda_h * displacement**4 / parameters.chi0**4
+
+
+def _chi_potential_momentum_force(
+    chi: np.ndarray,
+    parameters: BareLFMParameters,
+) -> np.ndarray:
+    displacement = chi**2 - parameters.chi0**2
+    if parameters.chi_potential == "quartic":
+        return -4.0 * parameters.chi_inertia * parameters.lambda_h * chi * displacement
+    return (
+        -8.0
+        * parameters.chi_inertia
+        * parameters.lambda_h
+        * chi
+        * displacement**3
+        / parameters.chi0**4
+    )
+
+
+def _chi_potential_rate(
+    chi: np.ndarray,
+    chi_rate: np.ndarray,
+    parameters: BareLFMParameters,
+) -> np.ndarray:
+    return -_chi_potential_momentum_force(chi, parameters) * chi_rate
+
+
 def _validated_registers(
     wave: np.ndarray,
     wave_momentum: np.ndarray,
@@ -155,16 +207,8 @@ def _validated_registers(
     momentum_components = _as_components(wave_momentum, "wave_momentum")
     chi_source = np.asarray(chi)
     chi_p_source = np.asarray(chi_momentum)
-    chi_dtype = (
-        np.longdouble
-        if chi_source.dtype == np.dtype(np.longdouble)
-        else np.float64
-    )
-    chi_p_dtype = (
-        np.longdouble
-        if chi_p_source.dtype == np.dtype(np.longdouble)
-        else np.float64
-    )
+    chi_dtype = np.longdouble if chi_source.dtype == np.dtype(np.longdouble) else np.float64
+    chi_p_dtype = np.longdouble if chi_p_source.dtype == np.dtype(np.longdouble) else np.float64
     chi_array = np.asarray(chi, dtype=chi_dtype)
     chi_momentum_array = np.asarray(chi_momentum, dtype=chi_p_dtype)
     if wave_components.shape != momentum_components.shape:
@@ -198,11 +242,7 @@ def _gradient_site_density(
     shift = _shift_components if components else _shift_scalar
     for offset, weight in stencil_links(stencil):
         difference = shift(values, offset) - values
-        squared = (
-            np.sum(difference**2, axis=0)
-            if components
-            else difference**2
-        )
+        squared = np.sum(difference**2, axis=0) if components else difference**2
         density += 0.25 * coefficient * weight * squared
     return density
 
@@ -225,22 +265,18 @@ def bare_site_energy(
     onsite = (
         0.5 * np.sum(wave_p**2, axis=0)
         + chi_p**2 / (2.0 * parameters.chi_inertia)
-        + 0.5
-        * chi_values**2
-        * (norm_sq - parameters.background_norm_sq)
-        + parameters.chi_inertia
-        * parameters.lambda_h
-        * (chi_values**2 - parameters.chi0**2) ** 2
+        + 0.5 * chi_values**2 * (norm_sq - parameters.background_norm_sq)
+        + _chi_potential_density(chi_values, parameters)
     )
     wave_gradient = _gradient_site_density(
         wave_values,
-        coefficient=parameters.wave_speed**2,
+        coefficient=parameters.wave_speed**2 / parameters.spacing**2,
         stencil=parameters.gov01_stencil,
         components=True,
     )
     chi_gradient = _gradient_site_density(
         chi_values,
-        coefficient=parameters.chi_inertia * parameters.wave_speed**2,
+        coefficient=(parameters.chi_inertia * parameters.wave_speed**2 / parameters.spacing**2),
         stencil=parameters.gov02_stencil,
         components=False,
     )
@@ -266,6 +302,7 @@ def bare_hamilton_rates(
     wave_momentum_rate = (
         parameters.wave_speed**2
         * _laplacian_components(wave_values, parameters.gov01_stencil)
+        / parameters.spacing**2
         - chi_values[np.newaxis, ...] ** 2 * wave_values
     )
     chi_rate = chi_p / parameters.chi_inertia
@@ -273,12 +310,9 @@ def bare_hamilton_rates(
         parameters.chi_inertia
         * parameters.wave_speed**2
         * _laplacian_scalar(chi_values, parameters.gov02_stencil)
+        / parameters.spacing**2
         - chi_values * (norm_sq - parameters.background_norm_sq)
-        - 4.0
-        * parameters.chi_inertia
-        * parameters.lambda_h
-        * chi_values
-        * (chi_values**2 - parameters.chi0**2)
+        + _chi_potential_momentum_force(chi_values, parameters)
     )
     return BareHamiltonRates(
         wave=wave_rate,
@@ -339,28 +373,21 @@ def bare_site_energy_rate(
     onsite_rate = (
         np.sum(wave_p * rates.wave_momentum, axis=0)
         + (chi_p / parameters.chi_inertia) * rates.chi_momentum
-        + chi_values
-        * rates.chi
-        * (norm_sq - parameters.background_norm_sq)
+        + chi_values * rates.chi * (norm_sq - parameters.background_norm_sq)
         + chi_values**2 * np.sum(wave_values * rates.wave, axis=0)
-        + 4.0
-        * parameters.chi_inertia
-        * parameters.lambda_h
-        * chi_values
-        * (chi_values**2 - parameters.chi0**2)
-        * rates.chi
+        + _chi_potential_rate(chi_values, rates.chi, parameters)
     )
     wave_gradient_rate = _gradient_site_rate(
         wave_values,
         rates.wave,
-        coefficient=parameters.wave_speed**2,
+        coefficient=parameters.wave_speed**2 / parameters.spacing**2,
         stencil=parameters.gov01_stencil,
         components=True,
     )
     chi_gradient_rate = _gradient_site_rate(
         chi_values,
         rates.chi,
-        coefficient=parameters.chi_inertia * parameters.wave_speed**2,
+        coefficient=(parameters.chi_inertia * parameters.wave_speed**2 / parameters.spacing**2),
         stencil=parameters.gov02_stencil,
         components=False,
     )
@@ -382,28 +409,22 @@ def oriented_energy_currents(
         chi_momentum,
     )
     currents: LinkCurrentMap = {}
-    wave_coefficient = -0.5 * parameters.wave_speed**2
+    wave_coefficient = -0.5 * parameters.wave_speed**2 / parameters.spacing**2
     for offset, weight in stencil_links(parameters.gov01_stencil):
         difference = _shift_components(wave_values, offset) - wave_values
-        endpoint_rate_sum = (
-            _shift_components(wave_p, offset) + wave_p
-        )
+        endpoint_rate_sum = _shift_components(wave_p, offset) + wave_p
         currents[offset] = (
-            wave_coefficient
-            * weight
-            * np.sum(difference * endpoint_rate_sum, axis=0)
+            wave_coefficient * weight * np.sum(difference * endpoint_rate_sum, axis=0)
         )
 
     chi_rate = chi_p / parameters.chi_inertia
     chi_coefficient = (
-        -0.5 * parameters.chi_inertia * parameters.wave_speed**2
+        -0.5 * parameters.chi_inertia * parameters.wave_speed**2 / parameters.spacing**2
     )
     for offset, weight in stencil_links(parameters.gov02_stencil):
         difference = _shift_scalar(chi_values, offset) - chi_values
         endpoint_rate_sum = _shift_scalar(chi_rate, offset) + chi_rate
-        contribution = (
-            chi_coefficient * weight * difference * endpoint_rate_sum
-        )
+        contribution = chi_coefficient * weight * difference * endpoint_rate_sum
         if offset in currents:
             currents[offset] = currents[offset] + contribution
         else:
@@ -457,3 +478,84 @@ def bare_energy_continuity_residual(
         chi_momentum,
         parameters,
     )
+
+
+def bare_total_energy(
+    state: BareLFMState,
+    parameters: BareLFMParameters = BareLFMParameters(),
+) -> float:
+    """Return the physical-volume integral of the exact site energy."""
+    density = bare_site_energy(
+        state.wave,
+        state.wave_momentum,
+        state.chi,
+        state.chi_momentum,
+        parameters,
+    )
+    return float(np.sum(density) * parameters.spacing**3)
+
+
+def step_bare_lfm(
+    state: BareLFMState,
+    dt: float,
+    parameters: BareLFMParameters = BareLFMParameters(),
+) -> BareLFMState:
+    """Advance the bare Hamiltonian with one velocity-Verlet step.
+
+    This function introduces no force or register.  It applies the package's
+    exact bare GOV-01/GOV-02 momentum rates in kick-drift-kick order.
+    """
+    if not np.isfinite(dt) or dt <= 0.0:
+        raise ValueError("dt must be positive and finite")
+    wave, wave_p, chi, chi_p = _validated_registers(
+        state.wave,
+        state.wave_momentum,
+        state.chi,
+        state.chi_momentum,
+    )
+    rates_0 = bare_hamilton_rates(wave, wave_p, chi, chi_p, parameters)
+    half_wave_p = wave_p + 0.5 * dt * rates_0.wave_momentum
+    half_chi_p = chi_p + 0.5 * dt * rates_0.chi_momentum
+    next_wave = wave + dt * half_wave_p
+    next_chi = chi + dt * half_chi_p / parameters.chi_inertia
+    rates_1 = bare_hamilton_rates(
+        next_wave,
+        half_wave_p,
+        next_chi,
+        half_chi_p,
+        parameters,
+    )
+    next_wave_p = half_wave_p + 0.5 * dt * rates_1.wave_momentum
+    next_chi_p = half_chi_p + 0.5 * dt * rates_1.chi_momentum
+    return BareLFMState(
+        wave=next_wave,
+        wave_momentum=next_wave_p,
+        chi=next_chi,
+        chi_momentum=next_chi_p,
+    )
+
+
+def wave_component_site_energy(
+    state: BareLFMState,
+    component: int,
+    parameters: BareLFMParameters = BareLFMParameters(),
+) -> np.ndarray:
+    """Return the positive energy assigned to one real GOV-01 component."""
+    wave, wave_p, chi, _ = _validated_registers(
+        state.wave,
+        state.wave_momentum,
+        state.chi,
+        state.chi_momentum,
+    )
+    if component < 0 or component >= wave.shape[0]:
+        raise IndexError("component is outside the GOV-01 register")
+    values = wave[component]
+    momentum = wave_p[component]
+    onsite = 0.5 * momentum**2 + 0.5 * chi**2 * values**2
+    gradient = _gradient_site_density(
+        values,
+        coefficient=parameters.wave_speed**2 / parameters.spacing**2,
+        stencil=parameters.gov01_stencil,
+        components=False,
+    )
+    return onsite + gradient

@@ -3,6 +3,55 @@
 import numpy as np
 import pytest
 
+import lfm
+
+
+def test_localized_weighted_centroid_tracks_extended_peak():
+    field = np.zeros((24, 24, 24), dtype=np.float64)
+    x, y, z = np.meshgrid(
+        np.arange(24),
+        np.arange(24),
+        np.arange(24),
+        indexing="ij",
+    )
+    field += 4.0 * np.exp(
+        -(
+            (x - 8.25) ** 2
+            + (y - 11.50) ** 2
+            + (z - 13.75) ** 2
+        )
+        / (2.0 * 1.5**2)
+    )
+    field += 30.0 * np.exp(
+        -(
+            (x - 19.0) ** 2
+            + (y - 12.0) ** 2
+            + (z - 12.0) ** 2
+        )
+        / (2.0 * 2.0**2)
+    )
+
+    result = lfm.localized_weighted_centroid(
+        field,
+        center=(8.0, 12.0, 14.0),
+        radius=5.0,
+    )
+
+    assert result["valid"]
+    assert float(result["x"]) == pytest.approx(8.25, abs=0.05)
+    assert float(result["y"]) == pytest.approx(11.50, abs=0.05)
+    assert float(result["z"]) == pytest.approx(13.75, abs=0.05)
+    assert float(result["weight"]) > 0.0
+    assert float(result["rms_radius"]) > 0.0
+
+
+def test_localized_weighted_centroid_rejects_bad_inputs():
+    with pytest.raises(ValueError, match="3-D"):
+        lfm.localized_weighted_centroid(np.ones((4, 4)), (1, 1, 1), 2.0)
+    with pytest.raises(ValueError, match="positive"):
+        lfm.localized_weighted_centroid(np.ones((4, 4, 4)), (1, 1, 1), 0.0)
+
+
 from lfm.analysis import (
     chi_statistics,
     compute_metrics,

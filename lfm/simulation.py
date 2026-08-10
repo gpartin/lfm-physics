@@ -38,7 +38,13 @@ import numpy as np
 from lfm.analysis.energy import total_energy
 from lfm.analysis.metrics import compute_metrics
 from lfm.analysis.structure import interior_mask as make_interior_mask
-from lfm.config import BoundaryType, FieldLevel, SimulationConfig
+from lfm.config import (
+    BoundaryType,
+    ChiPotentialModel,
+    FieldLevel,
+    Precision,
+    SimulationConfig,
+)
 from lfm.core.evolver import Evolver
 from lfm.fields.equilibrium import equilibrate_from_fields
 from lfm.fields.soliton import gaussian_soliton, place_solitons
@@ -66,12 +72,13 @@ class Simulation:
             config = SimulationConfig()
         self.config = config
         self._evolver = Evolver(config, backend=backend)
+        self._state_dtype = self._evolver.dtype
         self._interior_mask: NDArray[np.bool_] | None = None
         self._history: list[dict[str, float]] = []
 
         # Cache for previous-step fields (for energy calculation)
-        self._psi_r_prev: NDArray[np.float32] | None = None
-        self._psi_i_prev: NDArray[np.float32] | None = None
+        self._psi_r_prev: NDArray[np.floating] | None = None
+        self._psi_i_prev: NDArray[np.floating] | None = None
 
         # State tracking — prevents misuse like equilibrating before placing
         # solitons, or forgetting to equilibrate entirely.
@@ -96,34 +103,44 @@ class Simulation:
     # ── Field access ──────────────────────────────────────
 
     @property
-    def chi(self) -> NDArray[np.float32]:
+    def chi(self) -> NDArray[np.floating]:
         """Current χ field, shape (N, N, N)."""
         return self._evolver.get_chi()
 
     @chi.setter
-    def chi(self, value: NDArray[np.float32]) -> None:
+    def chi(self, value: NDArray[np.floating]) -> None:
         self._evolver.set_chi(value)
 
     @property
-    def psi_real(self) -> NDArray[np.float32]:
+    def chi_previous(self) -> NDArray[np.floating]:
+        """Previous leapfrog chi field, shape (N, N, N)."""
+
+        return self._evolver.get_chi_prev()
+
+    @chi_previous.setter
+    def chi_previous(self, value: NDArray[np.floating]) -> None:
+        self._evolver.set_chi_prev(value)
+
+    @property
+    def psi_real(self) -> NDArray[np.floating]:
         """Real part of Ψ, shape (N, N, N)."""
         return self._evolver.get_psi_real()
 
     @psi_real.setter
-    def psi_real(self, value: NDArray[np.float32]) -> None:
+    def psi_real(self, value: NDArray[np.floating]) -> None:
         self._evolver.set_psi_real(value)
 
     @property
-    def psi_imag(self) -> NDArray[np.float32] | None:
+    def psi_imag(self) -> NDArray[np.floating] | None:
         """Imaginary part of Ψ (None for real field level)."""
         return self._evolver.get_psi_imag()
 
     @psi_imag.setter
-    def psi_imag(self, value: NDArray[np.float32]) -> None:
+    def psi_imag(self, value: NDArray[np.floating]) -> None:
         self._evolver.set_psi_imag(value)
 
     @property
-    def psi_real_prev(self) -> NDArray[np.float32] | None:
+    def psi_real_prev(self) -> NDArray[np.floating] | None:
         """Real part of Ψ from the step *before* the last ``run()`` call.
 
         Automatically updated after every :meth:`run` and :meth:`run_driven`
@@ -139,7 +156,7 @@ class Simulation:
         return self._psi_r_prev
 
     @property
-    def psi_imag_prev(self) -> NDArray[np.float32] | None:
+    def psi_imag_prev(self) -> NDArray[np.floating] | None:
         """Imaginary part of Ψ from the step *before* the last ``run()`` call.
 
         See :attr:`psi_real_prev` for usage.
@@ -147,35 +164,87 @@ class Simulation:
         return self._psi_i_prev
 
     @property
-    def energy_density(self) -> NDArray[np.float32]:
+    def energy_density(self) -> NDArray[np.floating]:
         """Energy density |Ψ|², shape (N, N, N)."""
         return self._evolver.get_energy_density()
 
-    def get_chi(self) -> NDArray[np.float32]:
+    def get_chi(self) -> NDArray[np.floating]:
         """Get current χ field, shape (N, N, N)."""
         return self._evolver.get_chi()
 
-    def get_psi_real(self) -> NDArray[np.float32]:
+    def get_psi_real(self) -> NDArray[np.floating]:
         """Get real part of Ψ."""
         return self._evolver.get_psi_real()
 
-    def get_psi_imag(self) -> NDArray[np.float32] | None:
+    def get_psi_imag(self) -> NDArray[np.floating] | None:
         """Get imaginary part of Ψ (None for real field level)."""
         return self._evolver.get_psi_imag()
 
-    def get_energy_density(self) -> NDArray[np.float32]:
+    def get_energy_density(self) -> NDArray[np.floating]:
         """Get |Ψ|² energy density, shape (N, N, N)."""
         return self._evolver.get_energy_density()
 
-    def set_psi_real(self, value: NDArray[np.float32]) -> None:
+    def get_boundary_mask(self) -> NDArray[np.floating]:
+        """Get a detached copy of the fixed boundary mask."""
+        return self._evolver.get_boundary_mask().copy()
+
+    def set_boundary_mask(self, value: NDArray[np.floating]) -> None:
+        """Set fixed input-independent geometry before the first run.
+
+        Zero-valued cells evolve normally. One-valued cells absorb ``psi``
+        and restore ``chi`` to ``chi0`` on every production-kernel step.
+        Fractional values provide graded absorption. The mask is immutable
+        once evolution has started.
+        """
+        self._evolver.set_boundary_mask(value)
+
+    def set_local_phase_clock_map(
+        self,
+        dwell_steps: NDArray[np.floating],
+        unit_phase_rad: float,
+        enable_mask: NDArray[np.floating] | None = None,
+    ) -> None:
+        """Set a prelaunch-fixed local Noether phase-clock map.
+
+        The map declares a local dwell class for each complex field cell. It is
+        stored in backend-native memory and can later be applied without a
+        host-side field read or modal projection.
+        """
+
+        self._evolver.set_local_phase_clock_map(
+            dwell_steps,
+            unit_phase_rad,
+            enable_mask,
+        )
+
+    def apply_local_phase_clock_map(self) -> None:
+        """Apply the stored local phase-clock map to the complex phase space."""
+
+        self._evolver.apply_local_phase_clock_map()
+
+    def phase_space_snapshot(self) -> dict[str, object]:
+        """Return detached copies of the complete leapfrog state."""
+        psi_imag = self._evolver.get_psi_imag()
+        psi_imag_prev = self._evolver.get_psi_imag_prev()
+        return {
+            "step": self.step,
+            "psi_real": self._evolver.get_psi_real().copy(),
+            "psi_real_prev": self._evolver.get_psi_real_prev().copy(),
+            "psi_imag": None if psi_imag is None else psi_imag.copy(),
+            "psi_imag_prev": (None if psi_imag_prev is None else psi_imag_prev.copy()),
+            "chi": self._evolver.get_chi().copy(),
+            "chi_prev": self._evolver.get_chi_prev().copy(),
+        }
+
+    def set_psi_real(self, value: NDArray[np.floating]) -> None:
         """Set real part of Ψ."""
         self._evolver.set_psi_real(value)
 
-    def set_psi_imag(self, value: NDArray[np.float32]) -> None:
+    def set_psi_imag(self, value: NDArray[np.floating]) -> None:
         """Set imaginary part of Ψ."""
         self._evolver.set_psi_imag(value)
 
-    def set_psi_real_prev(self, value: NDArray[np.float32]) -> None:
+    def set_psi_real_prev(self, value: NDArray[np.floating]) -> None:
         """Override the previous-timestep Ψ_real for traveling-wave init.
 
         Call *after* :meth:`set_psi_real` to set Ψ(t=−Δt) independently,
@@ -183,11 +252,11 @@ class Simulation:
         """
         self._evolver.set_psi_real_prev(value)
 
-    def set_psi_imag_prev(self, value: NDArray[np.float32]) -> None:
+    def set_psi_imag_prev(self, value: NDArray[np.floating]) -> None:
         """Override the previous-timestep Ψ_imag for traveling-wave init."""
         self._evolver.set_psi_imag_prev(value)
 
-    def set_psi_real_current(self, value: NDArray[np.float32]) -> None:
+    def set_psi_real_current(self, value: NDArray[np.floating]) -> None:
         """Set only the active current-timestep Ψ_real buffer.
 
         Safe to call from a step callback: does **not** touch the prev
@@ -196,16 +265,20 @@ class Simulation:
         """
         self._evolver.set_psi_real_current(value)
 
-    def set_psi_imag_current(self, value: NDArray[np.float32]) -> None:
+    def set_psi_imag_current(self, value: NDArray[np.floating]) -> None:
         """Set only the active current-timestep Ψ_imag buffer.
 
         See :meth:`set_psi_real_current` for the intended usage pattern.
         """
         self._evolver.set_psi_imag_current(value)
 
-    def set_chi(self, value: NDArray[np.float32]) -> None:
+    def set_chi(self, value: NDArray[np.floating]) -> None:
         """Set χ field."""
         self._evolver.set_chi(value)
+
+    def set_chi_prev(self, value: NDArray[np.floating]) -> None:
+        """Override the previous-timestep chi layer."""
+        self._evolver.set_chi_prev(value)
 
     # ── zero-copy native buffer access (avoids GPU↔CPU roundtrips) ─────
 
@@ -253,10 +326,10 @@ class Simulation:
 
     def _to_device(self, arr):
         """Convert a numpy array to the backend's native format."""
-        return self._evolver.backend.from_numpy(arr.ravel().astype(np.float32))
+        return self._evolver.backend.from_numpy(arr.ravel().astype(self._state_dtype))
 
     @property
-    def sa_fields(self) -> NDArray[np.float32] | None:
+    def sa_fields(self) -> NDArray[np.floating] | None:
         """S_a auxiliary confinement fields, shape (3, N, N, N).
 
         Returns ``None`` when ``config.kappa_tube == 0`` (SA disabled).
@@ -266,7 +339,7 @@ class Simulation:
         return self._evolver.get_sa_fields()
 
     @sa_fields.setter
-    def sa_fields(self, value: NDArray[np.float32]) -> None:
+    def sa_fields(self, value: NDArray[np.floating]) -> None:
         """Set S_a auxiliary confinement fields."""
         self._evolver.set_sa_fields(value)
 
@@ -425,12 +498,13 @@ class Simulation:
                 E = np.roll(E, shift, axis=ax)
 
         chi_local = np.full_like(E, chi0)
-        dchi = sol.chi - np.float32(chi0)
+        state_scalar = self._state_dtype.type
+        dchi = sol.chi.astype(self._state_dtype) - state_scalar(chi0)
         for ax in range(3):
             shift = int(position[ax]) - center
             if shift != 0:
                 dchi = np.roll(dchi, shift, axis=ax)
-        chi_local = np.float32(chi0) + dchi
+        chi_local = state_scalar(chi0) + dchi
 
         # --- Step 3: Boost if moving ---
         if has_velocity:
@@ -449,7 +523,7 @@ class Simulation:
             # Stationary eigenmode: ψ(−Δt) = ψ(0)·cos(ωΔt)
             if sol.eigenvalue and sol.eigenvalue > 0:
                 cos_wdt = float(_math.cos(sol.eigenvalue * dt))
-                pr_p = (E * cos_wdt).astype(np.float32)
+                pr_p = (E * cos_wdt).astype(self._state_dtype)
             else:
                 pr_p = E.copy()
             pi_p = np.zeros_like(E)
@@ -459,10 +533,10 @@ class Simulation:
         if abs(phase) > 1e-10:
             cos_p = _math.cos(phase)
             sin_p = _math.sin(phase)
-            pr_c2 = (pr_c * cos_p - pi_c * sin_p).astype(np.float32)
-            pi_c2 = (pr_c * sin_p + pi_c * cos_p).astype(np.float32)
-            pr_p2 = (pr_p * cos_p - pi_p * sin_p).astype(np.float32)
-            pi_p2 = (pr_p * sin_p + pi_p * cos_p).astype(np.float32)
+            pr_c2 = (pr_c * cos_p - pi_c * sin_p).astype(self._state_dtype)
+            pi_c2 = (pr_c * sin_p + pi_c * cos_p).astype(self._state_dtype)
+            pr_p2 = (pr_p * cos_p - pi_p * sin_p).astype(self._state_dtype)
+            pi_p2 = (pr_p * sin_p + pi_p * cos_p).astype(self._state_dtype)
             pr_c, pi_c, pr_p, pi_p = pr_c2, pi_c2, pr_p2, pi_p2
 
         # --- Step 5: Superpose onto existing fields ---
@@ -562,16 +636,18 @@ class Simulation:
             ky = chi0 * vy / c
             kz = chi0 * vz / c
 
-            x = np.arange(N, dtype=np.float32)
+            x = np.arange(N, dtype=self._state_dtype)
             X, Y, Z = np.meshgrid(x, x, x, indexing="ij")
             px, py, pz = position
 
             # --- t = 0: envelope centred at r₀ ---
             r2 = (X - px) ** 2 + (Y - py) ** 2 + (Z - pz) ** 2
-            envelope = (amp * np.exp(-r2 / (2.0 * sig**2))).astype(np.float32)
-            phase_grid = (phase + kx * (X - px) + ky * (Y - py) + kz * (Z - pz)).astype(np.float32)
-            pr = (envelope * np.cos(phase_grid)).astype(np.float32)
-            pi = (envelope * np.sin(phase_grid)).astype(np.float32)
+            envelope = (amp * np.exp(-r2 / (2.0 * sig**2))).astype(self._state_dtype)
+            phase_grid = (
+                phase + kx * (X - px) + ky * (Y - py) + kz * (Z - pz)
+            ).astype(self._state_dtype)
+            pr = (envelope * np.cos(phase_grid)).astype(self._state_dtype)
+            pi = (envelope * np.sin(phase_grid)).astype(self._state_dtype)
 
             # --- t = −Δt: envelope shifted back by v·Δt ---
             # Both the Gaussian centre AND the phase reference point move
@@ -582,13 +658,15 @@ class Simulation:
             py_prev = py - vy * dt
             pz_prev = pz - vz * dt
             r2_prev = (X - px_prev) ** 2 + (Y - py_prev) ** 2 + (Z - pz_prev) ** 2
-            envelope_prev = (amp * np.exp(-r2_prev / (2.0 * sig**2))).astype(np.float32)
+            envelope_prev = (amp * np.exp(-r2_prev / (2.0 * sig**2))).astype(
+                self._state_dtype
+            )
             omega = float(np.sqrt(kx**2 + ky**2 + kz**2 + chi0**2))
             phase_prev = (
                 phase + kx * (X - px_prev) + ky * (Y - py_prev) + kz * (Z - pz_prev) + omega * dt
-            ).astype(np.float32)
-            pr_prev = (envelope_prev * np.cos(phase_prev)).astype(np.float32)
-            pi_prev = (envelope_prev * np.sin(phase_prev)).astype(np.float32)
+            ).astype(self._state_dtype)
+            pr_prev = (envelope_prev * np.cos(phase_prev)).astype(self._state_dtype)
+            pi_prev = (envelope_prev * np.sin(phase_prev)).astype(self._state_dtype)
         else:
             pr, pi = gaussian_soliton(N, position, amp, sig, phase)
             pr_prev = pr
@@ -758,8 +836,8 @@ class Simulation:
             )
         else:
             # Single-component: sum all solitons
-            pr_total = np.zeros((N, N, N), dtype=np.float32)
-            pi_total = np.zeros((N, N, N), dtype=np.float32)
+            pr_total = np.zeros((N, N, N), dtype=self._state_dtype)
+            pi_total = np.zeros((N, N, N), dtype=self._state_dtype)
             if phases is None:
                 phases = [0.0] * len(positions)
             for pos, ph in zip(positions, phases, strict=False):
@@ -843,22 +921,24 @@ class Simulation:
         # ── Transverse Gaussian envelope (centred on grid) ──────────────────
         centre = N / 2.0
         trans_axes = [i for i in range(3) if i != axis]
-        gauss = np.ones((N, N, N), dtype=np.float32)
+        gauss = np.ones((N, N, N), dtype=self._state_dtype)
         for ta in trans_axes:
-            c_t = np.arange(N, dtype=np.float32) - centre
+            c_t = np.arange(N, dtype=self._state_dtype) - centre
             shape = [1, 1, 1]
             shape[ta] = N
             gauss *= np.exp(-(c_t.reshape(shape) ** 2) / (2.0 * beam_waist**2))
 
         # ── Propagating cosine along the propagation axis ────────────────────
-        prop_coord = np.arange(N, dtype=np.float32)  # 0 … N-1
-        cos_cur = (amplitude * np.cos(k * prop_coord + phase)).astype(np.float32)
-        cos_prev = (amplitude * np.cos(k * prop_coord + phase + omega * dt)).astype(np.float32)
+        prop_coord = np.arange(N, dtype=self._state_dtype)  # 0 ... N-1
+        cos_cur = (amplitude * np.cos(k * prop_coord + phase)).astype(self._state_dtype)
+        cos_prev = (amplitude * np.cos(k * prop_coord + phase + omega * dt)).astype(
+            self._state_dtype
+        )
 
         shape_p = [1, 1, 1]
         shape_p[axis] = N
-        psi_3d = (gauss * cos_cur.reshape(shape_p)).astype(np.float32)
-        psi_3d_prev = (gauss * cos_prev.reshape(shape_p)).astype(np.float32)
+        psi_3d = (gauss * cos_cur.reshape(shape_p)).astype(self._state_dtype)
+        psi_3d_prev = (gauss * cos_prev.reshape(shape_p)).astype(self._state_dtype)
 
         # ── Truncate at z_max (don't pre-fill past the barrier) ─────────────
         if z_max is not None:
@@ -934,14 +1014,14 @@ class Simulation:
             self._evolver.set_chi_current(chi_eq)
 
             # Gradient of the equilibrium chi field
-            grad_x = np.gradient(chi_eq, axis=0).astype(np.float32)
-            grad_y = np.gradient(chi_eq, axis=1).astype(np.float32)
-            grad_z = np.gradient(chi_eq, axis=2).astype(np.float32)
+            grad_x = np.gradient(chi_eq, axis=0).astype(self._state_dtype)
+            grad_y = np.gradient(chi_eq, axis=1).astype(self._state_dtype)
+            grad_z = np.gradient(chi_eq, axis=2).astype(self._state_dtype)
 
             # Build density-weighted velocity field from all boosted solitons:
             #   v(r) = Σ_i v_i·ρ_i(r) / Σ_i ρ_i(r)
             N = self.config.grid_size
-            v_dot_grad = np.zeros((N, N, N), dtype=np.float32)
+            v_dot_grad = np.zeros((N, N, N), dtype=self._state_dtype)
             for (vx, vy, vz), rho in self._velocity_boosts:
                 v_dot_grad += rho * (vx * grad_x + vy * grad_y + vz * grad_z)
             total_rho: np.ndarray = sum(rho for _, rho in self._velocity_boosts)  # type: ignore[assignment]
@@ -1187,10 +1267,40 @@ class Simulation:
             freeze_chi=(not evolve_chi),
         )
 
+    def run_gravity_recovery(
+        self,
+        steps: int,
+        potential_model: ChiPotentialModel,
+        *,
+        freeze_psi: bool = True,
+        relaxation_damping: float = 0.0,
+        dt_override: float | None = None,
+        callback: Callable[[Simulation, int], None] | None = None,
+    ) -> None:
+        """Run an experiment-only local GOV-02 stabilization candidate.
+
+        Canonical :meth:`run` behavior is unchanged. This method exists only
+        for the frozen gravity-recovery study and accepts no target profile,
+        inverse solver, or external force law.
+        """
+
+        def _internal_callback(evolver: Evolver, step: int) -> None:
+            if callback is not None:
+                callback(self, step)
+
+        self._evolver.evolve_gravity_recovery(
+            steps,
+            ChiPotentialModel(potential_model),
+            freeze_psi=freeze_psi,
+            relaxation_damping=relaxation_damping,
+            dt_override=dt_override,
+            callback=_internal_callback,
+        )
+
     def run_driven(
         self,
         steps: int,
-        chi_forcing: Callable[[float], NDArray[np.float32]],
+        chi_forcing: Callable[[float], NDArray[np.floating]],
         record_metrics: bool = False,
     ) -> None:
         """Run with χ forced at *every* leapfrog step by an external function.
@@ -1206,15 +1316,14 @@ class Simulation:
             Number of leapfrog steps.
         chi_forcing : callable(t) -> ndarray
             Function of simulation time ``t`` (float) returning either a
-            scalar or a (N,N,N) float32 array.  Use default-argument capture
+            scalar or a (N,N,N) floating-point array. Use default-argument capture
             to close over loop variables correctly in sweeps::
 
                 sim.run_driven(
                     1000,
                     chi_forcing=lambda t, A=3.0, w=omega:
                         np.full((N, N, N),
-                                lfm.CHI0 + A * np.sin(w * t),
-                                dtype=np.float32),
+                                lfm.CHI0 + A * np.sin(w * t)),
                 )
         record_metrics : bool
             If True, append :meth:`metrics` to :attr:`history` every
@@ -1236,10 +1345,10 @@ class Simulation:
         for s in range(steps):
             t = (base_step + s) * dt
             chi_raw = chi_forcing(t)
-            chi_arr = np.asarray(chi_raw, dtype=np.float32)
+            chi_arr = np.asarray(chi_raw, dtype=self._state_dtype)
             if chi_arr.ndim == 0:
                 N = self.config.grid_size
-                chi_arr = np.full((N, N, N), float(chi_arr), dtype=np.float32)
+                chi_arr = np.full((N, N, N), float(chi_arr), dtype=self._state_dtype)
             evolver.set_chi(chi_arr)
             evolver.evolve(1)
             self._psi_r_prev = evolver.get_psi_real().copy()
@@ -1259,7 +1368,7 @@ class Simulation:
         step_callback: Callable[[Simulation, int], None] | None = None,
         record_metrics: bool = True,
         evolve_chi: bool = True,
-    ) -> list[dict[str, NDArray[np.float32]]]:
+    ) -> list[dict[str, NDArray[np.floating]]]:
         """Run and accumulate field snapshots at regular intervals.
 
         Snapshots are stored in memory as copies of the requested fields.
@@ -1474,7 +1583,8 @@ class Simulation:
     def save_checkpoint(self, path: str | Path) -> None:
         """Save simulation state to a .npz file for later resumption.
 
-        Saves fields, step counter, config, and metric history.
+        Saves the complete leapfrog phase space, fixed boundary geometry,
+        step counter, config, metric caches, and metric history.
 
         Parameters
         ----------
@@ -1484,14 +1594,24 @@ class Simulation:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
+        phase = self.phase_space_snapshot()
         data: dict[str, object] = {
+            "checkpoint_version": np.int64(2),
             "step": np.int64(self.step),
-            "chi": self.get_chi(),
-            "psi_real": self.get_psi_real(),
+            "chi": phase["chi"],
+            "chi_leapfrog_prev": phase["chi_prev"],
+            "psi_real": phase["psi_real"],
+            "psi_real_leapfrog_prev": phase["psi_real_prev"],
+            "boundary_mask": self.get_boundary_mask(),
         }
-        pi = self.get_psi_imag()
+        pi = phase["psi_imag"]
         if pi is not None:
             data["psi_imag"] = pi
+            data["psi_imag_leapfrog_prev"] = phase["psi_imag_prev"]
+
+        # These are analysis caches spanning the most recent run() call,
+        # distinct from the physical t-dt leapfrog layers above. Keep the
+        # historical key names for compatibility with existing checkpoints.
         if self._psi_r_prev is not None:
             data["psi_real_prev"] = self._psi_r_prev
         if self._psi_i_prev is not None:
@@ -1536,17 +1656,31 @@ class Simulation:
         cfg_dict = json.loads(str(data["config_json"]))
         cfg_dict["field_level"] = FieldLevel(cfg_dict["field_level"])
         cfg_dict["boundary_type"] = BoundaryType(cfg_dict["boundary_type"])
+        cfg_dict["precision"] = Precision(cfg_dict.get("precision", Precision.FLOAT32.value))
         for key in ("dx", "sigma"):
             cfg_dict.pop(key, None)
         config = SimulationConfig(**cfg_dict)
 
         sim = cls(config, backend=backend)
 
-        # Restore fields
+        # Restore fields. Setters normalize the active state into both A/B
+        # buffer sets; the explicit previous-layer setters then reconstruct
+        # the exact physical leapfrog phase space independent of parity.
         sim._evolver.set_psi_real(data["psi_real"])
+        if "psi_real_leapfrog_prev" in data:
+            sim._evolver.set_psi_real_prev(data["psi_real_leapfrog_prev"])
         if "psi_imag" in data:
             sim._evolver.set_psi_imag(data["psi_imag"])
+            if "psi_imag_leapfrog_prev" in data:
+                sim._evolver.set_psi_imag_prev(data["psi_imag_leapfrog_prev"])
         sim._evolver.set_chi(data["chi"])
+        if "chi_leapfrog_prev" in data:
+            sim._evolver.set_chi_prev(data["chi_leapfrog_prev"])
+
+        # Geometry must be restored while the new Evolver is still at step
+        # zero because live boundary changes are intentionally barred.
+        if "boundary_mask" in data:
+            sim._evolver.set_boundary_mask(data["boundary_mask"])
         sim._evolver.step = int(data["step"])
 
         # Restore prev fields for energy calculation

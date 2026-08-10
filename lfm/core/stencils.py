@@ -71,6 +71,53 @@ def laplacian_19pt(field: NDArray[np.floating]) -> NDArray[np.floating]:
     return STENCIL_FACE_WEIGHT * faces + STENCIL_EDGE_WEIGHT * edges + STENCIL_CENTER_WEIGHT * field
 
 
+def gradient_19pt(
+    field: NDArray[np.floating],
+    dx: float = 1.0,
+) -> tuple[
+    NDArray[np.floating],
+    NDArray[np.floating],
+    NDArray[np.floating],
+]:
+    """Return the isotropic site-centred gradient paired with the 19-point grid.
+
+    Face differences carry weight ``1/3`` and the two edge planes touching
+    each axis carry weight ``1/6``. The final factor of one half converts the
+    symmetric two-cell difference to a derivative. Periodic boundaries match
+    :func:`laplacian_19pt` and the LIMIT-02 FFT solver.
+    """
+    if field.ndim != 3:
+        raise ValueError("field must be a 3-D array")
+    if dx <= 0.0:
+        raise ValueError("dx must be positive")
+
+    gradients = []
+    for axis in range(3):
+        plus = np.roll(field, -1, axis=axis)
+        minus = np.roll(field, 1, axis=axis)
+        directional = STENCIL_FACE_WEIGHT * (plus - minus)
+
+        other_axes = [candidate for candidate in range(3) if candidate != axis]
+        for other_axis in other_axes:
+            edge_difference = np.zeros_like(field)
+            for other_shift in (-1, 1):
+                plus_edge = np.roll(
+                    np.roll(field, -1, axis=axis),
+                    other_shift,
+                    axis=other_axis,
+                )
+                minus_edge = np.roll(
+                    np.roll(field, 1, axis=axis),
+                    other_shift,
+                    axis=other_axis,
+                )
+                edge_difference += plus_edge - minus_edge
+            directional += STENCIL_EDGE_WEIGHT * edge_difference
+
+        gradients.append(directional / (2.0 * dx))
+    return gradients[0], gradients[1], gradients[2]
+
+
 def eigenvalue_19pt(
     kx: NDArray[np.floating],
     ky: NDArray[np.floating],

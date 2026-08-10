@@ -3,12 +3,78 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 from lfm.simulation import Simulation
 
 if TYPE_CHECKING:
     from lfm.config import SimulationConfig
+
+
+def sweep_cases(
+    config: SimulationConfig,
+    cases: list[dict[str, Any]],
+    steps: int,
+    *,
+    initializer: Callable[[Simulation, dict[str, Any]], None],
+    observer: Callable[[Simulation, dict[str, Any], int], dict[str, Any]],
+    sample_every: int,
+    backend: str = "auto",
+) -> list[dict[str, Any]]:
+    """Run a reproducible sweep with caller-defined substrate initial data.
+
+    Unlike :func:`sweep`, this runner does not place a catalog soliton and does
+    not equilibrate chi. It is intended for mechanism-discovery experiments
+    that must begin from the native causal equations without a prepared well.
+
+    The observer is called at step zero and after every sampling block. Each
+    returned row includes all scalar case metadata plus ``sample_step``.
+    Per-case configuration overrides may be supplied in a nested
+    ``config_overrides`` mapping.
+    """
+    if steps <= 0:
+        raise ValueError("steps must be positive")
+    if sample_every <= 0:
+        raise ValueError("sample_every must be positive")
+
+    results: list[dict[str, Any]] = []
+    for case in cases:
+        cfg = deepcopy(config)
+        overrides = case.get("config_overrides", {})
+        if not isinstance(overrides, dict):
+            raise TypeError("config_overrides must be a mapping")
+        for key, value in overrides.items():
+            if not hasattr(cfg, key):
+                raise AttributeError(f"SimulationConfig has no attribute {key!r}")
+            setattr(cfg, key, value)
+
+        sim = Simulation(cfg, backend=backend)
+        initializer(sim, case)
+        scalar_case = {
+            key: value
+            for key, value in case.items()
+            if key != "config_overrides" and isinstance(value, (str, int, float, bool, type(None)))
+        }
+
+        first = dict(scalar_case)
+        first["sample_step"] = 0
+        first.update(observer(sim, case, 0))
+        results.append(first)
+
+        completed = 0
+        while completed < steps:
+            block = min(sample_every, steps - completed)
+            sim.run(
+                steps=block,
+                record_metrics=False,
+                evolve_chi=bool(case.get("evolve_chi", True)),
+            )
+            completed += block
+            row = dict(scalar_case)
+            row["sample_step"] = completed
+            row.update(observer(sim, case, completed))
+            results.append(row)
+    return results
 
 
 def sweep(

@@ -19,7 +19,6 @@ from scipy.linalg import expm
 from lfm.analysis.energy_current import Offset, stencil_links
 from lfm.constants import C_DEFAULT, CHI0, EPSILON_W, KAPPA, LAMBDA_H
 
-
 R3_LIVE_ACTION_ID = "LFM-R3-LINK-FRAME-LIVE-EXPERIMENT-v2"
 R3_LIVE_REGISTER_ID = (
     "R3Live=(Psi_a,Pi_a,chi,p_chi,S_AB,P_AB,"
@@ -171,6 +170,8 @@ class R3LiveParameters:
     phase_inertia: float = 1.0
     color_inertia: float = 1.0
     stencil: str = "19"
+    frame_enabled: bool = True
+    chi_potential: str = "quartic"
 
     @property
     def frame_inertia(self) -> float:
@@ -195,6 +196,10 @@ class R3LiveParameters:
             raise ValueError("live R3 parameters must be positive and finite")
         if not np.isfinite(self.epsilon_w) or abs(self.epsilon_w) >= 1.0:
             raise ValueError("epsilon_w must satisfy abs(epsilon_w)<1")
+        if self.chi_potential not in {"quartic", "flat_octic"}:
+            raise ValueError(
+                "chi_potential must be 'quartic' or 'flat_octic'"
+            )
         _link_table(self.stencil)
         triangle_loops(self.stencil)
 
@@ -457,7 +462,11 @@ def potential_energy_and_rates(
     color_gradient = np.zeros_like(state.color_links)
     frame_gradient = np.zeros_like(state.frame_links)
     phase_gradient = np.zeros_like(state.phase_links)
-    q = np.exp(state.shape[..., 0, 0])
+    q = (
+        np.exp(state.shape[..., 0, 0])
+        if parameters.frame_enabled
+        else np.ones(sites, dtype=np.float64)
+    )
     potential_source_density = np.zeros(sites, dtype=np.float64)
     components = {
         "matter_gradient": 0.0,
@@ -552,55 +561,81 @@ def potential_energy_and_rates(
         chi_rate += chi_force
         chi_rate += _scatter_from_base(-chi_force, offset)
 
-        shape_j = _neighbor(state.shape, offset)
-        frame = state.frame_links[..., index, :, :]
-        transported_shape = frame @ shape_j @ _transpose(frame)
-        shape_difference = transported_shape - state.shape
-        shape_norm_sq = np.sum(shape_difference**2, axis=(-2, -1))
-        shape_scale = parameters.frame_stiffness * weight
-        components["shape_gradient"] += float(
-            np.sum(0.5 * shape_scale * shape_norm_sq)
-        )
-        shape_rate += shape_scale * shape_difference
-        neighbor_shape_force = (
-            -shape_scale * (_transpose(frame) @ shape_difference @ frame)
-        )
-        shape_rate += _scatter_from_base(neighbor_shape_force, offset)
-        for generator_index, generator in enumerate(frame_generators):
-            variation = (
-                generator @ transported_shape
-                - transported_shape @ generator
-            )
-            derivative = shape_scale * np.sum(
-                shape_difference * variation,
+        if parameters.frame_enabled:
+            shape_j = _neighbor(state.shape, offset)
+            frame = state.frame_links[..., index, :, :]
+            transported_shape = frame @ shape_j @ _transpose(frame)
+            shape_difference = transported_shape - state.shape
+            shape_norm_sq = np.sum(
+                shape_difference**2,
                 axis=(-2, -1),
             )
-            frame_rate[..., index, generator_index] -= derivative
+            shape_scale = parameters.frame_stiffness * weight
+            components["shape_gradient"] += float(
+                np.sum(0.5 * shape_scale * shape_norm_sq)
+            )
+            shape_rate += shape_scale * shape_difference
+            neighbor_shape_force = (
+                -shape_scale
+                * (_transpose(frame) @ shape_difference @ frame)
+            )
+            shape_rate += _scatter_from_base(
+                neighbor_shape_force,
+                offset,
+            )
+            for generator_index, generator in enumerate(frame_generators):
+                variation = (
+                    generator @ transported_shape
+                    - transported_shape @ generator
+                )
+                derivative = shape_scale * np.sum(
+                    shape_difference * variation,
+                    axis=(-2, -1),
+                )
+                frame_rate[..., index, generator_index] -= derivative
 
     matter_norm_sq = np.sum(np.abs(state.matter) ** 2, axis=-1)
     interaction = 0.5 * state.chi**2 * matter_norm_sq
-    radial = (
-        parameters.frame_inertia
-        * parameters.lambda_h
-        * (state.chi**2 - parameters.chi0**2) ** 2
-    )
+    chi_delta = state.chi**2 - parameters.chi0**2
+    if parameters.chi_potential == "quartic":
+        radial = (
+            parameters.frame_inertia
+            * parameters.lambda_h
+            * chi_delta**2
+        )
+        radial_force = (
+            4.0
+            * parameters.frame_inertia
+            * parameters.lambda_h
+            * state.chi
+            * chi_delta
+        )
+    else:
+        radial = (
+            parameters.frame_inertia
+            * parameters.lambda_h
+            * chi_delta**4
+            / parameters.chi0**4
+        )
+        radial_force = (
+            8.0
+            * parameters.frame_inertia
+            * parameters.lambda_h
+            * state.chi
+            * chi_delta**3
+            / parameters.chi0**4
+        )
     onsite = interaction + radial
     components["onsite"] = float(np.sum(q * onsite))
     potential_source_density += onsite
     matter_rate -= (
         q * state.chi**2
     )[..., np.newaxis] * state.matter
-    chi_rate -= q * (
-        state.chi * matter_norm_sq
-        + 4.0
-        * parameters.frame_inertia
-        * parameters.lambda_h
-        * state.chi
-        * (state.chi**2 - parameters.chi0**2)
-    )
-    shape_rate -= (
-        q * potential_source_density
-    )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
+    chi_rate -= q * (state.chi * matter_norm_sq + radial_force)
+    if parameters.frame_enabled:
+        shape_rate -= (
+            q * potential_source_density
+        )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
 
     identity3 = np.eye(3, dtype=np.complex128)
     for first, second, third, loop_weight in triangle_loops(
@@ -695,43 +730,48 @@ def potential_energy_and_rates(
                 complex_group=True,
             )
 
-        frame_one, frame_two, frame_three, frame_holonomy = _loop_products(
-            state.frame_links,
-            first,
-            second,
-            third,
-            complex_group=False,
-        )
-        frame_energy, frame_h_gradient = _frame_loop_energy_gradient(
-            frame_holonomy,
-            parameters.frame_stiffness * loop_weight,
-            parameters.epsilon_w,
-        )
-        components["frame_loop"] += float(np.sum(frame_energy))
-        frame_gradients = (
-            frame_h_gradient @ _transpose(frame_two @ frame_three),
-            _transpose(frame_one)
-            @ frame_h_gradient
-            @ _transpose(frame_three),
-            _transpose(frame_one @ frame_two) @ frame_h_gradient,
-        )
-        for offset, base_shift, gradient in zip(
-            (first, second, third),
-            base_shifts,
-            frame_gradients,
-            strict=True,
-        ):
-            gradient_at_base = _scatter_gradient_to_base(
-                gradient,
-                base_shift,
+        if parameters.frame_enabled:
+            frame_one, frame_two, frame_three, frame_holonomy = (
+                _loop_products(
+                    state.frame_links,
+                    first,
+                    second,
+                    third,
+                    complex_group=False,
+                )
             )
-            _accumulate_oriented_gradient(
-                frame_gradient,
-                offset,
-                gradient_at_base,
-                stencil=parameters.stencil,
-                complex_group=False,
+            frame_energy, frame_h_gradient = (
+                _frame_loop_energy_gradient(
+                    frame_holonomy,
+                    parameters.frame_stiffness * loop_weight,
+                    parameters.epsilon_w,
+                )
             )
+            components["frame_loop"] += float(np.sum(frame_energy))
+            frame_gradients = (
+                frame_h_gradient @ _transpose(frame_two @ frame_three),
+                _transpose(frame_one)
+                @ frame_h_gradient
+                @ _transpose(frame_three),
+                _transpose(frame_one @ frame_two) @ frame_h_gradient,
+            )
+            for offset, base_shift, gradient in zip(
+                (first, second, third),
+                base_shifts,
+                frame_gradients,
+                strict=True,
+            ):
+                gradient_at_base = _scatter_gradient_to_base(
+                    gradient,
+                    base_shift,
+                )
+                _accumulate_oriented_gradient(
+                    frame_gradient,
+                    offset,
+                    gradient_at_base,
+                    stencil=parameters.stencil,
+                    complex_group=False,
+                )
 
     for index in range(len(unique)):
         phase = state.phase_links[..., index]
@@ -750,14 +790,15 @@ def potential_energy_and_rates(
                 )
             )
             color_rate[..., index, generator_index] -= derivative
-        frame = state.frame_links[..., index, :, :]
-        for generator_index, generator in enumerate(frame_generators):
-            variation = generator @ frame
-            derivative = np.sum(
-                frame_gradient[..., index, :, :] * variation,
-                axis=(-2, -1),
-            )
-            frame_rate[..., index, generator_index] -= derivative
+        if parameters.frame_enabled:
+            frame = state.frame_links[..., index, :, :]
+            for generator_index, generator in enumerate(frame_generators):
+                variation = generator @ frame
+                derivative = np.sum(
+                    frame_gradient[..., index, :, :] * variation,
+                    axis=(-2, -1),
+                )
+                frame_rate[..., index, generator_index] -= derivative
 
     shape_rate = _tracefree_symmetric(shape_rate)
     potential = float(sum(components.values()))
@@ -779,16 +820,24 @@ def kinetic_energy(
     """Return the exact momentum-dependent Hamiltonian pieces."""
 
     _validate_state(state, parameters)
-    q = np.exp(state.shape[..., 0, 0])
+    q = (
+        np.exp(state.shape[..., 0, 0])
+        if parameters.frame_enabled
+        else np.ones_like(state.chi)
+    )
     bare_density = (
         0.5 * np.sum(np.abs(state.matter_momentum) ** 2, axis=-1)
         + state.chi_momentum**2 / (2.0 * parameters.frame_inertia)
     )
     components = {
         "weighted_bare_kinetic": float(np.sum(q * bare_density)),
-        "shape_kinetic": float(
-            np.sum(state.shape_momentum**2)
-            / (2.0 * parameters.frame_inertia)
+        "shape_kinetic": (
+            float(
+                np.sum(state.shape_momentum**2)
+                / (2.0 * parameters.frame_inertia)
+            )
+            if parameters.frame_enabled
+            else 0.0
         ),
         "phase_electric": float(
             np.sum(state.phase_electric**2)
@@ -798,9 +847,13 @@ def kinetic_energy(
             np.sum(state.color_electric**2)
             / (2.0 * parameters.color_inertia)
         ),
-        "frame_electric": float(
-            np.sum(state.frame_electric**2)
-            / (2.0 * parameters.frame_inertia)
+        "frame_electric": (
+            float(
+                np.sum(state.frame_electric**2)
+                / (2.0 * parameters.frame_inertia)
+            )
+            if parameters.frame_enabled
+            else 0.0
         ),
     }
     return float(sum(components.values())), components
@@ -827,10 +880,12 @@ def _potential_kick(
     _, rates, _ = potential_energy_and_rates(state, parameters)
     state.matter_momentum += duration * rates.matter
     state.chi_momentum += duration * rates.chi
-    state.shape_momentum += duration * rates.shape
+    if parameters.frame_enabled:
+        state.shape_momentum += duration * rates.shape
     state.phase_electric += duration * rates.phase_electric
     state.color_electric += duration * rates.color_electric
-    state.frame_electric += duration * rates.frame_electric
+    if parameters.frame_enabled:
+        state.frame_electric += duration * rates.frame_electric
 
 
 def _link_and_shape_drift(
@@ -838,15 +893,19 @@ def _link_and_shape_drift(
     duration: float,
     parameters: R3LiveParameters,
 ) -> None:
-    state.shape += (
-        duration * state.shape_momentum / parameters.frame_inertia
-    )
-    state.shape = _tracefree_symmetric(state.shape)
+    if parameters.frame_enabled:
+        state.shape += (
+            duration * state.shape_momentum / parameters.frame_inertia
+        )
+        state.shape = _tracefree_symmetric(state.shape)
     color_generators = su3_generators()
     frame_generators = so4_generators()
     link_count = state.phase_links.shape[3]
     color_is_live = bool(np.any(state.color_electric != 0.0))
-    frame_is_live = bool(np.any(state.frame_electric != 0.0))
+    frame_is_live = (
+        parameters.frame_enabled
+        and bool(np.any(state.frame_electric != 0.0))
+    )
     for index in range(link_count):
         state.phase_links[..., index] *= np.exp(
             1.0j
@@ -891,7 +950,11 @@ def _weighted_bare_kinetic_drift(
     duration: float,
     parameters: R3LiveParameters,
 ) -> None:
-    q = np.exp(state.shape[..., 0, 0])
+    q = (
+        np.exp(state.shape[..., 0, 0])
+        if parameters.frame_enabled
+        else np.ones_like(state.chi)
+    )
     kinetic_density = (
         0.5 * np.sum(np.abs(state.matter_momentum) ** 2, axis=-1)
         + state.chi_momentum**2 / (2.0 * parameters.frame_inertia)
@@ -905,9 +968,10 @@ def _weighted_bare_kinetic_drift(
         * state.chi_momentum
         / parameters.frame_inertia
     )
-    state.shape_momentum -= (
-        duration * q * kinetic_density
-    )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
+    if parameters.frame_enabled:
+        state.shape_momentum -= (
+            duration * q * kinetic_density
+        )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
 
 
 def step_r3_live(
@@ -998,6 +1062,8 @@ def r3_live_action_declaration(
         "canonical_status": "EXPERIMENT_ONLY_UNPROMOTED",
         "parameters": asdict(parameters),
         "frame_inertia": parameters.frame_inertia,
+        "frame_enabled": parameters.frame_enabled,
+        "chi_potential": parameters.chi_potential,
         "site_terms": [
             "q_times_bare_GOV01_GOV02_Hamiltonian",
             "traceless_frame_shape_kinetic_and_gradient",

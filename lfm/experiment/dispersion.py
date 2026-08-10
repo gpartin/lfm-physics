@@ -18,9 +18,11 @@ stencil eigenvalue simplifies to::
 
 Substituting and solving for K_z:
 
-    cos(ωΔt) = 1 − Δt²(χ₀² + 2 − 2 cos K_z)
+    cos(omega*dt) = 1 - (dt^2/2)*(chi0^2 + 2 - 2*cos(K_z))
 
-For Δt = 1 (continuum-like, ω in rad/step): cos K_z = 1 − (ω² − χ₀²)/2
+Equivalently, the exact inverse on the principal stable branch is::
+
+    cos(K_z) = 1 - ((2/dt^2)*(1 - cos(omega*dt)) - chi0^2)/2
 
 Group velocity (cells per step):
 
@@ -82,8 +84,8 @@ def dispersion(
     ----------
     omega : float or None
         Drive frequency in rad / time-unit.  Must satisfy the
-        propagation condition: ``omega > chi0`` (otherwise the wave is
-        evanescent).
+        exact discrete propagation condition: ``omega`` must exceed the
+        leapfrog mass-gap phase (otherwise the wave is evanescent).
     wavelength : float or None
         Desired wavelength in grid cells.  Converted to *k_z* first,
         then the matching ``omega`` is computed.
@@ -101,7 +103,7 @@ def dispersion(
     Raises
     ------
     ValueError
-        If the wave is evanescent (omega ≤ chi0) or the requested
+        If the wave is evanescent or the requested
         parameters violate the Nyquist / CFL limits.
 
     Examples
@@ -116,24 +118,35 @@ def dispersion(
         raise ValueError("Provide exactly one of omega= or wavelength=")
 
     if wavelength is not None:
-        # wavelength → k_z → omega
+        # wavelength -> k_z -> exact leapfrog omega
         if wavelength <= 2.0:
             raise ValueError(f"wavelength={wavelength} < 2 cells (Nyquist limit)")
         k_z = 2.0 * math.pi / wavelength
-        # From 19-point stencil: ω² = χ₀² + 2(1 − cos K_z)  (Δx=1 units)
-        omega_sq = chi0**2 + 2.0 * (1.0 - math.cos(k_z))
-        if omega_sq <= 0:
-            raise ValueError("Evanescent: computed ω² ≤ 0")
-        omega = math.sqrt(omega_sq)
+        spatial_omega_sq = chi0**2 + 2.0 * (1.0 - math.cos(k_z))
+        cos_omega_dt = 1.0 - 0.5 * dt * dt * spatial_omega_sq
+        if not -1.0 <= cos_omega_dt <= 1.0:
+            raise ValueError(
+                "Unstable: the requested wavelength violates the exact "
+                "leapfrog phase bound"
+            )
+        omega = math.acos(cos_omega_dt) / dt
     else:
         assert omega is not None
-        # omega → k_z
-        if omega <= abs(chi0):
+        # exact leapfrog omega -> k_z
+        omega_dt = omega * dt
+        if not 0.0 < omega_dt < math.pi:
             raise ValueError(
-                f"Evanescent: omega={omega} ≤ chi0={chi0}. "
+                "omega*dt must lie strictly between zero and pi for the "
+                "principal stable leapfrog branch"
+            )
+        mass_phase = math.acos(1.0 - 0.5 * dt * dt * chi0**2) / dt
+        if omega <= mass_phase:
+            raise ValueError(
+                f"Evanescent: omega={omega} <= discrete mass gap={mass_phase}. "
                 f"Wave cannot propagate; increase omega or decrease chi0."
             )
-        cos_kz = 1.0 - (omega**2 - chi0**2) / 2.0
+        effective_omega_sq = 2.0 * (1.0 - math.cos(omega_dt)) / (dt * dt)
+        cos_kz = 1.0 - 0.5 * (effective_omega_sq - chi0**2)
         if cos_kz < -1.0 or cos_kz > 1.0:
             raise ValueError(
                 f"cos(K_z) = {cos_kz:.4f} out of range [-1, 1]. "
@@ -144,16 +157,16 @@ def dispersion(
     wavelength_out = 2.0 * math.pi / k_z if k_z > 1e-15 else float("inf")
 
     # Phase and group velocities (cells per step)
-    # v_phase = ω/k  in cells/time → multiply by dt for cells/step
+    # v_phase = omega/k in cells/time; multiply by dt for cells/step
     v_phase = (omega / k_z * dt) if k_z > 1e-15 else float("inf")
 
-    # v_group = dω/dk = sin(k_z) / [sin(ω·dt) / dt]  (exact discrete)
+    # v_group = domega/dk = sin(k_z) / [sin(omega*dt) / dt]
     sin_kz = math.sin(k_z)
     omega_dt = omega * dt
     if abs(math.sin(omega_dt)) > 1e-15:
         v_group = sin_kz * dt / math.sin(omega_dt)
     else:
-        # Small-angle limit: sin(ω·dt) ≈ ω·dt
+        # Small-angle limit: sin(omega*dt) is approximately omega*dt
         v_group = sin_kz / omega
 
     return Dispersion(
