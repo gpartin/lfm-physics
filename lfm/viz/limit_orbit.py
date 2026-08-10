@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from lfm.constants import CHI0
-from lfm.fields.macroscopic import Limit02BodyProfile
 from lfm.viz._util import _require_matplotlib
+
+if TYPE_CHECKING:
+    from lfm.fields.macroscopic import Limit02BodyProfile
 
 
 def _trajectory_arrays(
@@ -24,10 +26,7 @@ def _trajectory_arrays(
         "separation",
         "bearing_rad",
     )
-    return {
-        key: np.asarray([float(row[key]) for row in rows], dtype=np.float64)
-        for key in keys
-    }
+    return {key: np.asarray([float(row[key]) for row in rows], dtype=np.float64) for key in keys}
 
 
 def _translated_profile_slice(
@@ -102,10 +101,7 @@ def plot_limit02_orbit_demo(
         final_light,
     )
     angle = float(
-        np.degrees(
-            np.unwrap(arrays["bearing_rad"])[-1]
-            - np.unwrap(arrays["bearing_rad"])[0]
-        )
+        np.degrees(np.unwrap(arrays["bearing_rad"])[-1] - np.unwrap(arrays["bearing_rad"])[0])
     )
 
     figure = plt.figure(figsize=(13, 7), constrained_layout=True)
@@ -199,8 +195,7 @@ def plot_limit02_orbit_demo(
     separation_axis.set_xlabel("LFM time")
     separation_axis.set_ylabel("Centre separation (cells)")
     separation_axis.set_title(
-        f"Mass ratio {heavy.mass / light.mass:.4f}:1 | "
-        f"net angle {angle:.1f} deg"
+        f"Mass ratio {heavy.mass / light.mass:.4f}:1 | net angle {angle:.1f} deg"
     )
     separation_axis.grid(alpha=0.2)
     separation_axis.legend(loc="best")
@@ -235,9 +230,7 @@ def animate_limit02_orbit_demo(
     output.parent.mkdir(parents=True, exist_ok=True)
     arrays = _trajectory_arrays(rows)
     frame_count = min(max_frames, len(rows))
-    frame_indices = np.unique(
-        np.linspace(0, len(rows) - 1, frame_count).astype(int)
-    )
+    frame_indices = np.unique(np.linspace(0, len(rows) - 1, frame_count).astype(int))
 
     initial_heavy = (
         float(rows[0]["heavy_x"]),
@@ -255,12 +248,8 @@ def animate_limit02_orbit_demo(
         initial_heavy,
         initial_light,
     )
-    chi_min = float(
-        CHI0 + np.min(heavy.chi_delta) + np.min(light.chi_delta)
-    )
-    chi_max = float(
-        CHI0 + np.max(heavy.chi_delta) + np.max(light.chi_delta)
-    )
+    chi_min = float(CHI0 + np.min(heavy.chi_delta) + np.min(light.chi_delta))
+    chi_max = float(CHI0 + np.max(heavy.chi_delta) + np.max(light.chi_delta))
 
     figure, (orbit_axis, chi_axis) = plt.subplots(
         1,
@@ -275,8 +264,8 @@ def animate_limit02_orbit_demo(
     orbit_axis.set_ylabel("y (lattice cells)")
     orbit_axis.set_title("Two density spheres")
     orbit_axis.grid(alpha=0.2)
-    heavy_trail, = orbit_axis.plot([], [], color="#2f7ed8", linewidth=2.0)
-    light_trail, = orbit_axis.plot([], [], color="#f2a93b", linewidth=1.2)
+    (heavy_trail,) = orbit_axis.plot([], [], color="#2f7ed8", linewidth=2.0)
+    (light_trail,) = orbit_axis.plot([], [], color="#f2a93b", linewidth=1.2)
     heavy_circle = Circle(
         initial_heavy[:2],
         heavy.radius,
@@ -334,9 +323,7 @@ def animate_limit02_orbit_demo(
     chi_axis.add_patch(chi_heavy_circle)
     chi_axis.add_patch(chi_light_circle)
     figure.colorbar(image, ax=chi_axis, label="chi")
-    figure.suptitle(
-        f"LFM LIMIT-02 orbit | mass ratio {heavy.mass / light.mass:.4f}:1"
-    )
+    figure.suptitle(f"LFM LIMIT-02 orbit | mass ratio {heavy.mass / light.mass:.4f}:1")
 
     unwrapped = np.unwrap(arrays["bearing_rad"])
 
@@ -372,9 +359,7 @@ def animate_limit02_orbit_demo(
                 light_position,
             ).T
         )
-        angle = float(
-            np.degrees(unwrapped[index] - unwrapped[0])
-        )
+        angle = float(np.degrees(unwrapped[index] - unwrapped[0]))
         status.set_text(
             f"time {arrays['time'][index]:.1f}\n"
             f"separation {arrays['separation'][index]:.2f}\n"
@@ -398,18 +383,19 @@ def animate_limit02_orbit_demo(
         interval=1000.0 / fps,
         blit=False,
     )
-    if output.suffix.lower() == ".mp4" and animation.writers.is_available(
-        "ffmpeg"
-    ):
-        writer = animation.FFMpegWriter(
-            fps=fps,
-            bitrate=2200,
-            metadata={"title": "LFM LIMIT-02 two-sphere orbit"},
+    if output.suffix.lower() == ".mp4" and animation.writers.is_available("ffmpeg"):
+        movie.save(
+            output,
+            writer=animation.FFMpegWriter(
+                fps=fps,
+                bitrate=2200,
+                metadata={"title": "LFM LIMIT-02 two-sphere orbit"},
+            ),
+            dpi=120,
         )
     else:
         output = output.with_suffix(".gif")
-        writer = animation.PillowWriter(fps=fps)
-    movie.save(output, writer=writer, dpi=120)
+        movie.save(output, writer=animation.PillowWriter(fps=fps), dpi=120)
     plt.close(figure)
     return output
 
@@ -538,9 +524,7 @@ def _draw_limit02_3d_scene(
     def local_surface_height(position: tuple[float, float, float]) -> float:
         x_index = int(round(position[0])) % chi_slice.shape[0]
         y_index = int(round(position[1])) % chi_slice.shape[1]
-        return float(
-            vertical_scale * (chi_slice[x_index, y_index] - CHI0)
-        )
+        return float(vertical_scale * (chi_slice[x_index, y_index] - CHI0))
 
     heavy_surface = local_surface_height(heavy_position)
     light_surface = local_surface_height(light_position)
@@ -694,16 +678,12 @@ def _draw_limit02_3d_scene(
     pipeline_boxes = (
         (
             0.01,
-            "SOURCE rho\n"
-            f"M_H:M_L = {heavy.mass / light.mass:.4f}:1",
+            f"SOURCE rho\nM_H:M_L = {heavy.mass / light.mass:.4f}:1",
             "#38bdf8",
         ),
         (
             0.255,
-            "GOV-02 -> LIMIT-02\n"
-            "D19 dchi =\n"
-            "k(rho-<rho>)\n"
-            f"depth max = {maximum_depth:.3f}",
+            f"GOV-02 -> LIMIT-02\nD19 dchi =\nk(rho-<rho>)\ndepth max = {maximum_depth:.3f}",
             "#c084fc",
         ),
         (
@@ -717,9 +697,7 @@ def _draw_limit02_3d_scene(
         ),
         (
             0.745,
-            "CENTER UPDATE\n"
-            "velocity-Verlet, dt=0.25\n"
-            "trajectory not prescribed",
+            "CENTER UPDATE\nvelocity-Verlet, dt=0.25\ntrajectory not prescribed",
             "#fbbf24",
         ),
     )
@@ -755,10 +733,7 @@ def _draw_limit02_3d_scene(
     axis.text2D(
         0.02,
         0.885,
-        (
-            "128^3 grid | 19-point stencil | "
-            f"LIMIT-02 residual <= {audit_residual:.2e}"
-        ),
+        (f"128^3 grid | 19-point stencil | LIMIT-02 residual <= {audit_residual:.2e}"),
         transform=axis.transAxes,
         color="#91a9bc",
         fontsize=7.5,
@@ -795,9 +770,7 @@ def plot_limit02_orbit_3d_demo(
     output.parent.mkdir(parents=True, exist_ok=True)
     arrays = _trajectory_arrays(rows)
     index = frame_index % len(rows)
-    depth_max = float(
-        -np.min(heavy.chi_delta) - np.min(light.chi_delta)
-    )
+    depth_max = float(-np.min(heavy.chi_delta) - np.min(light.chi_delta))
     color_norm = PowerNorm(gamma=0.33, vmin=0.0, vmax=depth_max)
     color_map = plt.get_cmap("magma")
 
@@ -870,12 +843,8 @@ def animate_limit02_orbit_3d_demo(
     output.parent.mkdir(parents=True, exist_ok=True)
     arrays = _trajectory_arrays(rows)
     frame_count = min(max_frames, len(rows))
-    frame_indices = np.unique(
-        np.linspace(0, len(rows) - 1, frame_count).astype(int)
-    )
-    depth_max = float(
-        -np.min(heavy.chi_delta) - np.min(light.chi_delta)
-    )
+    frame_indices = np.unique(np.linspace(0, len(rows) - 1, frame_count).astype(int))
+    depth_max = float(-np.min(heavy.chi_delta) - np.min(light.chi_delta))
     color_norm = PowerNorm(gamma=0.33, vmin=0.0, vmax=depth_max)
     color_map = plt.get_cmap("magma")
 
@@ -930,18 +899,19 @@ def animate_limit02_orbit_3d_demo(
         interval=1000.0 / fps,
         blit=False,
     )
-    if output.suffix.lower() == ".mp4" and animation.writers.is_available(
-        "ffmpeg"
-    ):
-        writer = animation.FFMpegWriter(
-            fps=fps,
-            bitrate=3200,
-            metadata={"title": "LFM LIMIT-02 3-D lattice orbit"},
+    if output.suffix.lower() == ".mp4" and animation.writers.is_available("ffmpeg"):
+        movie.save(
+            output,
+            writer=animation.FFMpegWriter(
+                fps=fps,
+                bitrate=3200,
+                metadata={"title": "LFM LIMIT-02 3-D lattice orbit"},
+            ),
+            dpi=120,
         )
     else:
         output = output.with_suffix(".gif")
-        writer = animation.PillowWriter(fps=fps)
-    movie.save(output, writer=writer, dpi=120)
+        movie.save(output, writer=animation.PillowWriter(fps=fps), dpi=120)
     plt.close(figure)
     return output
 

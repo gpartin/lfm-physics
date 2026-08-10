@@ -37,9 +37,7 @@ from lfm.foundations.r6_unified_live import (
 )
 
 P4F_ACTION_ID = "LFM-P4F-FLAT-CHI-LOCAL-GAUGE-EXPERIMENT-v1"
-P4F_REGISTER_ID = (
-    "P4F=(Psi3,Pi3,chi,pchi,U1,E1,SU2L,E2,H,pH,SU3,E3)"
-)
+P4F_REGISTER_ID = "P4F=(Psi3,Pi3,chi,pchi,U1,E1,SU2L,E2,H,pH,SU3,E3)"
 
 
 def _p4f_r3_parameters() -> R3LiveParameters:
@@ -55,9 +53,7 @@ class P4FParameters:
     """Frozen parameters for the parsimonious action candidate."""
 
     r6: R6Parameters = field(
-        default_factory=lambda: R6Parameters(
-            r4=R6R4Parameters(r3=_p4f_r3_parameters())
-        )
+        default_factory=lambda: R6Parameters(r4=R6R4Parameters(r3=_p4f_r3_parameters()))
     )
 
     def __post_init__(self) -> None:
@@ -149,9 +145,7 @@ def p4f_action_declaration(
                 "identity gauge links, zero link electric fields, zero weak "
                 "matter, fixed weak orientation"
             ),
-            "bare_flat_octic": (
-                "all connection sectors at exact identity vacuum"
-            ),
+            "bare_flat_octic": ("all connection sectors at exact identity vacuum"),
         },
         "inactive_compatibility_registers": [
             "SO4 frame shape",
@@ -223,11 +217,6 @@ def flat_octic_minimality_ledger() -> dict[str, object]:
         "rows": rows,
         "minimal_admissible_z_power": minimum,
         "minimal_admissible_field_degree": 2 * minimum,
-        "normalization_identity": (
-            "lambda_h*chi0**4*(z/chi0**2)**4"
-            "=lambda_h*z**4/chi0**4"
-        ),
-        "uniqueness_boundary": (
-            "minimal only within the declared analytic monomial class"
-        ),
+        "normalization_identity": ("lambda_h*chi0**4*(z/chi0**2)**4=lambda_h*z**4/chi0**4"),
+        "uniqueness_boundary": ("minimal only within the declared analytic monomial class"),
     }

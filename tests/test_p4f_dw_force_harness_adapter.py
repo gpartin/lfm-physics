@@ -10,7 +10,6 @@ from lfm.validation.unified_force import (
     UnifiedForceHarness,
 )
 
-
 REPO = Path(__file__).resolve().parents[2]
 HARNESS_DIR = REPO / "paper_experiments" / "lfm_unified_force_harness_2026"
 RUNNER = HARNESS_DIR / "run_p4f_dw_force_harness.py"
@@ -33,12 +32,8 @@ def test_candidate_manifest_replaces_only_frame_specific_provenance() -> None:
     identifiers = {spec.benchmark_id for spec in specs}
     assert "GR-FRAME-PROVENANCE" not in identifiers
     assert "GR-CARRIER-PROVENANCE" in identifiers
-    assert payload["candidate_changes"] == {
-        "GR-FRAME-PROVENANCE": "GR-CARRIER-PROVENANCE"
-    }
-    strong_live = next(
-        spec for spec in specs if spec.benchmark_id == "STRONG-CONFINEMENT-LIVE"
-    )
+    assert payload["candidate_changes"] == {"GR-FRAME-PROVENANCE": "GR-CARRIER-PROVENANCE"}
+    strong_live = next(spec for spec in specs if spec.benchmark_id == "STRONG-CONFINEMENT-LIVE")
     assert strong_live.required_for_sector
     assert "STRONG-ACTION-CLOSURE" in strong_live.dependencies
 
@@ -61,9 +56,7 @@ def test_candidate_ledger_cannot_promote_scoped_four_channel_pass() -> None:
 
 def test_unresolved_parameter_provenance_blocks_action_promotion() -> None:
     runner = _runner_module()
-    results = {
-        result.benchmark_id: result for result in runner._candidate_results(20260725)
-    }
+    results = {result.benchmark_id: result for result in runner._candidate_results(20260725)}
     assert results["WEAK-ACTION-CLOSURE"].status is BenchmarkStatus.BLOCKED
     assert results["WEAK-CHIRAL-LIVE-INTERACTION"].status is BenchmarkStatus.BLOCKED
     assert results["STRONG-ACTION-CLOSURE"].status is BenchmarkStatus.BLOCKED

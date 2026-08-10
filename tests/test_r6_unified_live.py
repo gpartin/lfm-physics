@@ -16,11 +16,7 @@ from lfm.foundations.r6_unified_live import (
 
 @pytest.mark.parametrize("stencil", ["19", "27"])
 def test_r6_has_no_new_register_and_unit_weak_speed(stencil: str) -> None:
-    parameters = R6Parameters(
-        r4=R6R4Parameters(
-            r3=R3LiveParameters(stencil=stencil)
-        )
-    )
+    parameters = R6Parameters(r4=R6R4Parameters(r3=R3LiveParameters(stencil=stencil)))
     declaration = r6_action_declaration(parameters)
     assert parameters.r4.weak_stiffness == pytest.approx(10.0)
     assert parameters.r4.weak_inertia == pytest.approx(10.0)

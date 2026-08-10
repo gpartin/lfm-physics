@@ -89,9 +89,7 @@ def solve_u1_gauss_minimum(
     potential = solution.reshape(shape)
     potential -= np.mean(potential)
     electric = electric_from_potential(potential)
-    residual = (
-        color_gauss_divergence(electric, parameters.r4) - charge_values
-    )
+    residual = color_gauss_divergence(electric, parameters.r4) - charge_values
     scale = max(float(np.max(np.abs(charge_values))), 1.0)
     return R5U1StaticState(
         potential=potential,

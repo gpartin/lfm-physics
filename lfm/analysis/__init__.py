@@ -24,14 +24,26 @@ from lfm.analysis.angular_momentum import (
     precession_rate,
     total_angular_momentum,
 )
-from lfm.analysis.color import (
-    color_variance,
-)
 from lfm.analysis.coarse_graining import (
     block_window_magnitude_sq,
     blocked_static_propagator,
     inverse_response_intercept,
     response_log_slope,
+)
+from lfm.analysis.collective_geometry import (
+    SOURCE_CASES,
+    ContinuumFit,
+    WeightedMoments,
+    analytic_leapfrog_limit,
+    apply_momentum_sponge,
+    block_average,
+    collective_initial_state,
+    continuum_fit,
+    dispersion_shell_metrics,
+    energy_current_vector_and_tensor,
+    minimum_image_mesh,
+    periodic_weighted_moments,
+    traceless,
 )
 from lfm.analysis.collective_spectrum import (
     RotatingBackground,
@@ -46,20 +58,8 @@ from lfm.analysis.collective_spectrum import (
     vacuum_spectrum_audit,
     zero_chi_branch_audit,
 )
-from lfm.analysis.collective_geometry import (
-    SOURCE_CASES,
-    ContinuumFit,
-    WeightedMoments,
-    apply_momentum_sponge,
-    analytic_leapfrog_limit,
-    block_average,
-    collective_initial_state,
-    continuum_fit,
-    dispersion_shell_metrics,
-    energy_current_vector_and_tensor,
-    minimum_image_mesh,
-    periodic_weighted_moments,
-    traceless,
+from lfm.analysis.color import (
+    color_variance,
 )
 from lfm.analysis.confinement import (  # noqa: F401
     classify_potential,
@@ -103,8 +103,8 @@ from lfm.analysis.energy_current import (
     bare_total_energy,
     energy_current_divergence,
     oriented_energy_currents,
-    step_bare_lfm,
     stencil_links,
+    step_bare_lfm,
     wave_component_site_energy,
 )
 from lfm.analysis.frame_candidates import (
@@ -171,6 +171,12 @@ from lfm.analysis.observables import (
     rotation_curve_fit,
     weak_parity_asymmetry,
 )
+from lfm.analysis.particle_kinematics import (
+    component_noether_charges,
+    fit_offset_power_convergence,
+    flat_octic_hamiltonian_19pt,
+    time_centered_momentum_19pt,
+)
 from lfm.analysis.phase import (
     bare_charge_continuity_residual,
     canonical_charge_density,
@@ -183,12 +189,6 @@ from lfm.analysis.phase import (
     phase_current_energy_density,
     phase_field,
     positive_noether_current,
-)
-from lfm.analysis.particle_kinematics import (
-    component_noether_charges,
-    fit_offset_power_convergence,
-    flat_octic_hamiltonian_19pt,
-    time_centered_momentum_19pt,
 )
 from lfm.analysis.ringdown import (
     fit_ringdown_series,

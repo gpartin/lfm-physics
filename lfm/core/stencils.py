@@ -185,12 +185,7 @@ def laplacian_27pt(field: NDArray[np.floating]) -> NDArray[np.floating]:
                     shift=(shift_x, shift_y, shift_z),
                     axis=(0, 1, 2),
                 )
-    return (
-        (4.0 / 9.0) * faces
-        + (1.0 / 9.0) * edges
-        + (1.0 / 36.0) * corners
-        - (38.0 / 9.0) * field
-    )
+    return (4.0 / 9.0) * faces + (1.0 / 9.0) * edges + (1.0 / 36.0) * corners - (38.0 / 9.0) * field
 
 
 def eigenvalue_27pt(
@@ -203,9 +198,7 @@ def eigenvalue_27pt(
     cos_y = np.cos(ky)
     cos_z = np.cos(kz)
     faces = (8.0 / 9.0) * (cos_x + cos_y + cos_z)
-    edges = (4.0 / 9.0) * (
-        cos_x * cos_y + cos_x * cos_z + cos_y * cos_z
-    )
+    edges = (4.0 / 9.0) * (cos_x * cos_y + cos_x * cos_z + cos_y * cos_z)
     corners = (2.0 / 9.0) * cos_x * cos_y * cos_z
     return faces + edges + corners - (38.0 / 9.0)
 
@@ -246,9 +239,7 @@ def noether_current_19pt_raw(
         minus = [0, 0, 0]
         plus[axis] = 1
         minus[axis] = -1
-        result = STENCIL_FACE_WEIGHT * (
-            shifted(field, *plus) - shifted(field, *minus)
-        )
+        result = STENCIL_FACE_WEIGHT * (shifted(field, *plus) - shifted(field, *minus))
 
         other_axes = [candidate for candidate in range(3) if candidate != axis]
         for other_axis in other_axes:

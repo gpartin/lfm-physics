@@ -40,12 +40,8 @@ def test_hedgehog_gradient_and_hessian_match_finite_differences() -> None:
             radius=radius,
             dr=dr,
         )
-        energy_difference = (
-            plus_energy.total - minus_energy.total
-        ) / (2.0 * epsilon)
-        gradient_difference = (
-            plus_gradient - minus_gradient
-        ) / (2.0 * epsilon)
+        energy_difference = (plus_energy.total - minus_energy.total) / (2.0 * epsilon)
+        gradient_difference = (plus_gradient - minus_gradient) / (2.0 * epsilon)
         assert np.isclose(
             gradient[interior_index],
             energy_difference,

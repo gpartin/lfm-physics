@@ -4,6 +4,23 @@ import numpy as np
 import pytest
 
 import lfm
+from lfm.analysis import (
+    chi_statistics,
+    compute_metrics,
+    confinement_proxy,
+    count_clusters,
+    energy_components,
+    energy_conservation_drift,
+    interior_mask,
+    momentum_density,
+    total_energy,
+    void_fraction,
+    weak_parity_asymmetry,
+    well_fraction,
+)
+from lfm.constants import CHI0
+
+N = 16  # small grid for fast tests
 
 
 def test_localized_weighted_centroid_tracks_extended_peak():
@@ -14,22 +31,8 @@ def test_localized_weighted_centroid_tracks_extended_peak():
         np.arange(24),
         indexing="ij",
     )
-    field += 4.0 * np.exp(
-        -(
-            (x - 8.25) ** 2
-            + (y - 11.50) ** 2
-            + (z - 13.75) ** 2
-        )
-        / (2.0 * 1.5**2)
-    )
-    field += 30.0 * np.exp(
-        -(
-            (x - 19.0) ** 2
-            + (y - 12.0) ** 2
-            + (z - 12.0) ** 2
-        )
-        / (2.0 * 2.0**2)
-    )
+    field += 4.0 * np.exp(-((x - 8.25) ** 2 + (y - 11.50) ** 2 + (z - 13.75) ** 2) / (2.0 * 1.5**2))
+    field += 30.0 * np.exp(-((x - 19.0) ** 2 + (y - 12.0) ** 2 + (z - 12.0) ** 2) / (2.0 * 2.0**2))
 
     result = lfm.localized_weighted_centroid(
         field,
@@ -50,25 +53,6 @@ def test_localized_weighted_centroid_rejects_bad_inputs():
         lfm.localized_weighted_centroid(np.ones((4, 4)), (1, 1, 1), 2.0)
     with pytest.raises(ValueError, match="positive"):
         lfm.localized_weighted_centroid(np.ones((4, 4, 4)), (1, 1, 1), 0.0)
-
-
-from lfm.analysis import (
-    chi_statistics,
-    compute_metrics,
-    confinement_proxy,
-    count_clusters,
-    energy_components,
-    energy_conservation_drift,
-    interior_mask,
-    momentum_density,
-    total_energy,
-    void_fraction,
-    weak_parity_asymmetry,
-    well_fraction,
-)
-from lfm.constants import CHI0
-
-N = 16  # small grid for fast tests
 
 
 def _make_fields(n=N, amplitude=1.0, with_imag=False):

@@ -30,17 +30,10 @@ def test_leapfrog_branch_projection_recovers_both_branches() -> None:
     forward = np.asarray([0.7 - 0.2j, -0.1 + 0.4j])
     backward = np.asarray([-0.03 + 0.04j, 0.2 - 0.1j])
     current = forward + backward
-    previous = (
-        forward * np.exp(1j * theta)
-        + backward * np.exp(-1j * theta)
-    )
-    observed_forward, observed_backward = lfm.leapfrog_branch_projection(
-        current, previous, theta
-    )
+    previous = forward * np.exp(1j * theta) + backward * np.exp(-1j * theta)
+    observed_forward, observed_backward = lfm.leapfrog_branch_projection(current, previous, theta)
     assert np.allclose(observed_forward, forward, rtol=0.0, atol=1.0e-15)
-    assert np.allclose(
-        observed_backward, backward, rtol=0.0, atol=1.0e-15
-    )
+    assert np.allclose(observed_backward, backward, rtol=0.0, atol=1.0e-15)
 
 
 def test_leapfrog_branch_projection_rejects_degenerate_frequency() -> None:
@@ -56,12 +49,7 @@ def test_project_leapfrog_mode_locks_spatial_and_buffer_conventions() -> None:
     backward = -0.04 + 0.06j
     spatial = np.exp(2j * np.pi * 7 * z / n)
     current = (forward + backward) * spatial
-    previous = (
-        forward * np.exp(1j * theta)
-        + backward * np.exp(-1j * theta)
-    ) * spatial
-    observed_forward, observed_backward = lfm.project_leapfrog_mode(
-        current, previous, 7, theta
-    )
+    previous = (forward * np.exp(1j * theta) + backward * np.exp(-1j * theta)) * spatial
+    observed_forward, observed_backward = lfm.project_leapfrog_mode(current, previous, 7, theta)
     assert abs(observed_forward - forward) <= 1.0e-15
     assert abs(observed_backward - backward) <= 1.0e-15

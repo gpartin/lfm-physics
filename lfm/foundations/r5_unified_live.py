@@ -55,6 +55,13 @@ from lfm.foundations.r4_unified_live import (
     potential_energy_and_rates as r4_potential_energy_and_rates,
 )
 
+Offset = tuple[int, int, int]
+
+
+def _offset3(values: tuple[int, ...]) -> Offset:
+    return (values[0], values[1], values[2])
+
+
 R5_ACTION_ID = "LFM-R5-GEOMETRY-COMPLETE-CURVATURE-EXPERIMENT-v1"
 R5_REGISTER_ID = "R5=R4(no_new_registers)"
 R5State = R4State
@@ -104,25 +111,15 @@ def _cycle_products(
             offset,
             complex_group=complex_group,
         )
-        factor = (
-            oriented
-            if shift == (0, 0, 0)
-            else _neighbor(oriented, shift)
-        )
+        factor = oriented if shift == (0, 0, 0) else _neighbor(oriented, shift)
         factors.append(factor)
         base_shifts.append(shift)
-        shift = tuple(
-            shift[axis] + offset[axis] for axis in range(3)
-        )
+        shift = _offset3(tuple(shift[axis] + offset[axis] for axis in range(3)))
     if shift != (0, 0, 0):
         raise ValueError("face-square cycle must close")
     holonomy = factors[0]
     for factor in factors[1:]:
-        holonomy = (
-            holonomy @ factor
-            if holonomy.ndim >= 5
-            else holonomy * factor
-        )
+        holonomy = holonomy @ factor if holonomy.ndim >= 5 else holonomy * factor
     return tuple(factors), tuple(base_shifts), holonomy
 
 
@@ -163,9 +160,7 @@ def _phase_cycle_gradients(
         after = np.ones_like(holonomy_gradient)
         for factor in factors[selected + 1 :]:
             after *= factor
-        gradients.append(
-            np.conj(before) * holonomy_gradient * np.conj(after)
-        )
+        gradients.append(np.conj(before) * holonomy_gradient * np.conj(after))
     return tuple(gradients)
 
 
@@ -224,19 +219,13 @@ def _add_single_face_square_curvature(
                 cycle,
                 complex_group=True,
             )
-            bare = (
-                r4.r3.phase_stiffness
-                * coefficient
-                * (1.0 - np.real(holonomy))
-            )
+            bare = r4.r3.phase_stiffness * coefficient * (1.0 - np.real(holonomy))
             components[names[sector]] += float(np.sum(q * bare))
             if frame_enabled:
-                rates.r3.shape -= (
-                    q * bare
-                )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
-            holonomy_gradient = (
-                -q * r4.r3.phase_stiffness * coefficient
-            ).astype(np.complex128)
+                rates.r3.shape -= (q * bare)[
+                    ..., np.newaxis, np.newaxis
+                ] * _temporal_shape_projector()
+            holonomy_gradient = (-q * r4.r3.phase_stiffness * coefficient).astype(np.complex128)
             for offset, shift, gradient in zip(
                 cycle,
                 shifts,
@@ -296,12 +285,10 @@ def _add_single_face_square_curvature(
             complex_group=complex_group,
         )
         if sector == "frame":
-            energy_density, holonomy_gradient = (
-                _frame_loop_energy_gradient(
-                    holonomy,
-                    stiffness * coefficient,
-                    r4.r3.epsilon_w,
-                )
+            energy_density, holonomy_gradient = _frame_loop_energy_gradient(
+                holonomy,
+                stiffness * coefficient,
+                r4.r3.epsilon_w,
             )
             components[names[sector]] += float(np.sum(energy_density))
         else:
@@ -309,24 +296,19 @@ def _add_single_face_square_curvature(
             bare = (
                 stiffness
                 * coefficient
-                * (
-                    float(dimension)
-                    - np.real(np.trace(holonomy, axis1=-2, axis2=-1))
-                )
+                * (float(dimension) - np.real(np.trace(holonomy, axis1=-2, axis2=-1)))
             )
             factor = q if sector == "weak" else q * epsilon
             components[names[sector]] += float(np.sum(factor * bare))
             if frame_enabled:
-                rates.r3.shape -= (
-                    factor * bare
-                )[..., np.newaxis, np.newaxis] * (
+                rates.r3.shape -= (factor * bare)[..., np.newaxis, np.newaxis] * (
                     _temporal_shape_projector()
                 )
             if sector == "color":
                 rates.r3.chi -= q * epsilon_derivative * bare
-            holonomy_gradient = (
-                -factor * stiffness * coefficient
-            )[..., np.newaxis, np.newaxis] * identity
+            holonomy_gradient = (-factor * stiffness * coefficient)[
+                ..., np.newaxis, np.newaxis
+            ] * identity
         for offset, shift, gradient in zip(
             cycle,
             shifts,
@@ -347,11 +329,7 @@ def _add_single_face_square_curvature(
     for index in range(links.shape[3]):
         link = links[..., index, :, :]
         for generator_index, generator in enumerate(generators):
-            variation = (
-                1.0j * generator @ link
-                if complex_group
-                else generator @ link
-            )
+            variation = 1.0j * generator @ link if complex_group else generator @ link
             derivative = np.sum(
                 (
                     np.conj(gradient_total[..., index, :, :])
@@ -363,15 +341,11 @@ def _add_single_face_square_curvature(
             )
             derivative = np.real(derivative)
             if sector == "color":
-                rates.r3.color_electric[
-                    ..., index, generator_index
-                ] -= derivative
+                rates.r3.color_electric[..., index, generator_index] -= derivative
             elif sector == "weak":
                 rates.weak_electric[..., index, generator_index] -= derivative
             else:
-                rates.r3.frame_electric[
-                    ..., index, generator_index
-                ] -= derivative
+                rates.r3.frame_electric[..., index, generator_index] -= derivative
     if frame_enabled:
         rates.r3.shape = _tracefree_symmetric(rates.r3.shape)
     return float(components[names[sector]])
@@ -407,21 +381,13 @@ def _add_face_square_curvature(
             cycle,
             complex_group=True,
         )
-        phase_bare = (
-            r4.r3.phase_stiffness
-            * coefficient
-            * (1.0 - np.real(phase_holonomy))
-        )
-        square_energy["phase_face_square"] += float(
-            np.sum(q * phase_bare)
-        )
+        phase_bare = r4.r3.phase_stiffness * coefficient * (1.0 - np.real(phase_holonomy))
+        square_energy["phase_face_square"] += float(np.sum(q * phase_bare))
         if frame_enabled:
-            rates.r3.shape -= (
-                q * phase_bare
-            )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
-        phase_h_gradient = (
-            -q * r4.r3.phase_stiffness * coefficient
-        ).astype(np.complex128)
+            rates.r3.shape -= (q * phase_bare)[
+                ..., np.newaxis, np.newaxis
+            ] * _temporal_shape_projector()
+        phase_h_gradient = (-q * r4.r3.phase_stiffness * coefficient).astype(np.complex128)
         for offset, base_shift, gradient in zip(
             cycle,
             base_shifts,
@@ -446,26 +412,17 @@ def _add_face_square_curvature(
         color_bare = (
             r4.r3.color_stiffness
             * coefficient
-            * (
-                3.0
-                - np.real(
-                    np.trace(color_holonomy, axis1=-2, axis2=-1)
-                )
-            )
+            * (3.0 - np.real(np.trace(color_holonomy, axis1=-2, axis2=-1)))
         )
-        square_energy["color_face_square"] += float(
-            np.sum(q * epsilon * color_bare)
-        )
+        square_energy["color_face_square"] += float(np.sum(q * epsilon * color_bare))
         if frame_enabled:
-            rates.r3.shape -= (
-                q * epsilon * color_bare
-            )[..., np.newaxis, np.newaxis] * (
+            rates.r3.shape -= (q * epsilon * color_bare)[..., np.newaxis, np.newaxis] * (
                 _temporal_shape_projector()
             )
         rates.r3.chi -= q * epsilon_derivative * color_bare
-        color_h_gradient = (
-            -q * epsilon * r4.r3.color_stiffness * coefficient
-        )[..., np.newaxis, np.newaxis] * identity3
+        color_h_gradient = (-q * epsilon * r4.r3.color_stiffness * coefficient)[
+            ..., np.newaxis, np.newaxis
+        ] * identity3
         for offset, base_shift, gradient in zip(
             cycle,
             base_shifts,
@@ -495,9 +452,7 @@ def _add_face_square_curvature(
                 r4.r3.frame_stiffness * coefficient,
                 r4.r3.epsilon_w,
             )
-            square_energy["frame_face_square"] += float(
-                np.sum(frame_energy)
-            )
+            square_energy["frame_face_square"] += float(np.sum(frame_energy))
             for offset, base_shift, gradient in zip(
                 cycle,
                 base_shifts,
@@ -524,23 +479,16 @@ def _add_face_square_curvature(
         weak_bare = (
             r4.weak_stiffness
             * coefficient
-            * (
-                2.0
-                - np.real(
-                    np.trace(weak_holonomy, axis1=-2, axis2=-1)
-                )
-            )
+            * (2.0 - np.real(np.trace(weak_holonomy, axis1=-2, axis2=-1)))
         )
-        square_energy["weak_face_square"] += float(
-            np.sum(q * weak_bare)
-        )
+        square_energy["weak_face_square"] += float(np.sum(q * weak_bare))
         if frame_enabled:
-            rates.r3.shape -= (
-                q * weak_bare
-            )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
-        weak_h_gradient = (
-            -q * r4.weak_stiffness * coefficient
-        )[..., np.newaxis, np.newaxis] * identity2
+            rates.r3.shape -= (q * weak_bare)[
+                ..., np.newaxis, np.newaxis
+            ] * _temporal_shape_projector()
+        weak_h_gradient = (-q * r4.weak_stiffness * coefficient)[
+            ..., np.newaxis, np.newaxis
+        ] * identity2
         for offset, base_shift, gradient in zip(
             cycle,
             base_shifts,
@@ -569,8 +517,7 @@ def _add_face_square_curvature(
             variation = 1.0j * generator @ color
             rates.r3.color_electric[..., index, generator_index] -= np.real(
                 np.sum(
-                    np.conj(color_gradient[..., index, :, :])
-                    * variation,
+                    np.conj(color_gradient[..., index, :, :]) * variation,
                     axis=(-2, -1),
                 )
             )
@@ -578,9 +525,7 @@ def _add_face_square_curvature(
             frame = base.frame_links[..., index, :, :]
             for generator_index, generator in enumerate(so4_generators()):
                 variation = generator @ frame
-                rates.r3.frame_electric[
-                    ..., index, generator_index
-                ] -= np.sum(
+                rates.r3.frame_electric[..., index, generator_index] -= np.sum(
                     frame_gradient[..., index, :, :] * variation,
                     axis=(-2, -1),
                 )
@@ -589,8 +534,7 @@ def _add_face_square_curvature(
             variation = 1.0j * generator @ weak
             rates.weak_electric[..., index, generator_index] -= np.real(
                 np.sum(
-                    np.conj(weak_gradient[..., index, :, :])
-                    * variation,
+                    np.conj(weak_gradient[..., index, :, :]) * variation,
                     axis=(-2, -1),
                 )
             )

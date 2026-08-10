@@ -68,16 +68,9 @@ def localized_weighted_centroid(
 
     slices = tuple(slice(int(starts[a]), int(stops[a])) for a in range(3))
     local = density[slices]
-    axes = [
-        np.arange(starts[a], stops[a], dtype=np.float64)
-        for a in range(3)
-    ]
+    axes = [np.arange(starts[a], stops[a], dtype=np.float64) for a in range(3)]
     gx, gy, gz = np.meshgrid(*axes, indexing="ij")
-    distance_sq = (
-        (gx - predicted[0]) ** 2
-        + (gy - predicted[1]) ** 2
-        + (gz - predicted[2]) ** 2
-    )
+    distance_sq = (gx - predicted[0]) ** 2 + (gy - predicted[1]) ** 2 + (gz - predicted[2]) ** 2
     weights = np.where(distance_sq <= radius * radius, local, 0.0)
     total = float(np.sum(weights))
     if not np.isfinite(total) or total <= 0.0:
@@ -99,11 +92,7 @@ def localized_weighted_centroid(
         ],
         dtype=np.float64,
     )
-    radius_sq = (
-        (gx - centroid[0]) ** 2
-        + (gy - centroid[1]) ** 2
-        + (gz - centroid[2]) ** 2
-    )
+    radius_sq = (gx - centroid[0]) ** 2 + (gy - centroid[1]) ** 2 + (gz - centroid[2]) ** 2
     rms_radius = float(np.sqrt(np.sum(weights * radius_sq) / total))
     return {
         "valid": True,

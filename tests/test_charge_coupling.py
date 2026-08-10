@@ -69,12 +69,7 @@ def test_global_charge_rate_is_zero() -> None:
         v_rate = rates.wave[component + 1]
         p_u_rate = rates.wave_momentum[component]
         p_v_rate = rates.wave_momentum[component + 1]
-        density_rate += (
-            u_rate * p_v
-            + u * p_v_rate
-            - v_rate * p_u
-            - v * p_u_rate
-        )
+        density_rate += u_rate * p_v + u * p_v_rate - v_rate * p_u - v * p_u_rate
     assert abs(float(np.sum(density_rate))) < 1.0e-12
 
 
@@ -102,10 +97,9 @@ def test_signed_coupling_reverses_interaction_rates() -> None:
             negative.chi,
             negative.chi_momentum,
         ),
+        strict=False,
     ):
-        assert np.max(
-            np.abs((positive_rate - zero_rate) + (negative_rate - zero_rate))
-        ) < 1.0e-14
+        assert np.max(np.abs((positive_rate - zero_rate) + (negative_rate - zero_rate))) < 1.0e-14
 
 
 def test_implicit_midpoint_is_time_reversible() -> None:
@@ -126,6 +120,7 @@ def test_implicit_midpoint_is_time_reversible() -> None:
             state.chi,
             state.chi_momentum,
         ),
+        strict=False,
     ):
         assert np.max(np.abs(recovered - expected)) < 1.0e-11
 

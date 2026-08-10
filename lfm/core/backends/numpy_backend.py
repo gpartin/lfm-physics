@@ -27,21 +27,9 @@ _GRAVITY_RECOVERY_LINKS = (
     ((0, -1, 0), 1.0 / 3.0),
     ((0, 0, 1), 1.0 / 3.0),
     ((0, 0, -1), 1.0 / 3.0),
-    *tuple(
-        ((sx, sy, 0), 1.0 / 6.0)
-        for sx in (-1, 1)
-        for sy in (-1, 1)
-    ),
-    *tuple(
-        ((sx, 0, sz), 1.0 / 6.0)
-        for sx in (-1, 1)
-        for sz in (-1, 1)
-    ),
-    *tuple(
-        ((0, sy, sz), 1.0 / 6.0)
-        for sy in (-1, 1)
-        for sz in (-1, 1)
-    ),
+    *tuple(((sx, sy, 0), 1.0 / 6.0) for sx in (-1, 1) for sy in (-1, 1)),
+    *tuple(((sx, 0, sz), 1.0 / 6.0) for sx in (-1, 1) for sz in (-1, 1)),
+    *tuple(((0, sy, sz), 1.0 / 6.0) for sy in (-1, 1) for sz in (-1, 1)),
 )
 
 
@@ -99,9 +87,7 @@ class NumpyBackend:
         mask = (np.sin(0.5 * np.pi * t) ** 2).astype(self.dtype)
         return mask.ravel()
 
-    def _laplacian_3d(
-        self, flat: NDArray[np.floating], N: int
-    ) -> NDArray[np.floating]:
+    def _laplacian_3d(self, flat: NDArray[np.floating], N: int) -> NDArray[np.floating]:
         """19-point Laplacian on a flat (N³,) or (K*N³,) array.
 
         Reshapes to 3D, computes, and flattens back.
@@ -199,13 +185,7 @@ class NumpyBackend:
         lap_E = inv_dx2 * self._laplacian_3d(E, N)
         lap_chi = inv_dx2 * self._laplacian_3d(chi, N)
         chi_sq = chi * chi
-        E_new = (
-            E.copy()
-            if freeze_psi
-            else 2.0 * E
-            - E_prev
-            + dt**2 * (lap_E - chi_sq * E)
-        )
+        E_new = E.copy() if freeze_psi else 2.0 * E - E_prev + dt**2 * (lap_E - chi_sq * E)
         source_density = E * E - e0_sq
         chi_accel = (
             lap_chi
@@ -234,15 +214,11 @@ class NumpyBackend:
             inertia = variable_inertia(chi, chi0=chi0)
             y = (chi_sq - chi0**2) / chi0**2
             inertia_derivative = 4.0 * chi * y / chi0**2
-            chi_accel = (
-                chi_accel - 0.5 * inertia_derivative * velocity**2
-            ) / inertia
+            chi_accel = (chi_accel - 0.5 * inertia_derivative * velocity**2) / inertia
         damping_half_step = 0.5 * relaxation_damping * dt
-        chi_new = (
-            2.0 * chi
-            - (1.0 - damping_half_step) * chi_prev
-            + dt**2 * chi_accel
-        ) / (1.0 + damping_half_step)
+        chi_new = (2.0 * chi - (1.0 - damping_half_step) * chi_prev + dt**2 * chi_accel) / (
+            1.0 + damping_half_step
+        )
         if enable_chi_floor:
             np.clip(chi_new, -chi0, None, out=chi_new)
         absorb = 1.0 - boundary_mask
@@ -288,9 +264,7 @@ class NumpyBackend:
 
         model = ChiPotentialModel(potential_model)
         if model != ChiPotentialModel.FLAT_OCTIC:
-            raise ValueError(
-                "complex gravity recovery currently supports FLAT_OCTIC"
-            )
+            raise ValueError("complex gravity recovery currently supports FLAT_OCTIC")
         psi_r = psi_r_in
         psi_i = psi_i_in
         chi = chi_in
@@ -303,16 +277,8 @@ class NumpyBackend:
             psi_r_new = psi_r.copy()
             psi_i_new = psi_i.copy()
         else:
-            psi_r_new = (
-                2.0 * psi_r
-                - psi_r_prev_in
-                + dt**2 * (lap_r - chi_sq * psi_r)
-            )
-            psi_i_new = (
-                2.0 * psi_i
-                - psi_i_prev_in
-                + dt**2 * (lap_i - chi_sq * psi_i)
-            )
+            psi_r_new = 2.0 * psi_r - psi_r_prev_in + dt**2 * (lap_r - chi_sq * psi_r)
+            psi_i_new = 2.0 * psi_i - psi_i_prev_in + dt**2 * (lap_i - chi_sq * psi_i)
         source_density = psi_r**2 + psi_i**2 - e0_sq
         chi_accel = (
             lap_chi
@@ -326,11 +292,9 @@ class NumpyBackend:
             )
         )
         damping_half_step = 0.5 * relaxation_damping * dt
-        chi_new = (
-            2.0 * chi
-            - (1.0 - damping_half_step) * chi_prev
-            + dt**2 * chi_accel
-        ) / (1.0 + damping_half_step)
+        chi_new = (2.0 * chi - (1.0 - damping_half_step) * chi_prev + dt**2 * chi_accel) / (
+            1.0 + damping_half_step
+        )
         if enable_chi_floor:
             np.clip(chi_new, -chi0, None, out=chi_new)
         absorb = 1.0 - boundary_mask
@@ -392,9 +356,7 @@ class NumpyBackend:
 
         model = ChiPotentialModel(potential_model)
         if model != ChiPotentialModel.FLAT_OCTIC:
-            raise ValueError(
-                "color gravity recovery currently supports FLAT_OCTIC"
-            )
+            raise ValueError("color gravity recovery currently supports FLAT_OCTIC")
         self.step_color(
             psi_r_in,
             psi_r_prev_in,
@@ -431,16 +393,12 @@ class NumpyBackend:
         )
         absorb = 1.0 - boundary_mask
         safe_absorb = np.where(absorb > 0.0, absorb, 1.0)
-        undamped_chi = (
-            chi_out - boundary_mask * chi0
-        ) / safe_absorb
+        undamped_chi = (chi_out - boundary_mask * chi0) / safe_absorb
         source_density = np.zeros_like(chi_in)
         total = N**3
         for channel in range(3):
             selected = slice(channel * total, (channel + 1) * total)
-            source_density += (
-                psi_r_in[selected] ** 2 + psi_i_in[selected] ** 2
-            )
+            source_density += psi_r_in[selected] ** 2 + psi_i_in[selected] ** 2
         source_density -= e0_sq
         flat_force = potential_force(
             chi_in,
@@ -450,11 +408,9 @@ class NumpyBackend:
             source_density=source_density,
         )
         damping_half_step = 0.5 * relaxation_damping * dt
-        corrected = (
-            undamped_chi
-            + damping_half_step * chi_prev_in
-            + dt**2 * flat_force
-        ) / (1.0 + damping_half_step)
+        corrected = (undamped_chi + damping_half_step * chi_prev_in + dt**2 * flat_force) / (
+            1.0 + damping_half_step
+        )
         if enable_chi_floor:
             np.clip(corrected, -chi0, None, out=corrected)
         np.copyto(
@@ -691,9 +647,7 @@ class NumpyBackend:
                 0.0,
             )
             f_c = ((ratio - 1.0 / n_colors) * safe).astype(self.dtype)
-            color_var_term = ((kappa_c / chi0) * chi * f_c * psi_sq_total).astype(
-                self.dtype
-            )
+            color_var_term = ((kappa_c / chi0) * chi * f_c * psi_sq_total).astype(self.dtype)
 
         # v15 GOV-02: color current variance (CCV)
         # CCV = Σ_d [ Σ_a j²_{a,d} - (1/N_c)(Σ_a j_{a,d})² ]

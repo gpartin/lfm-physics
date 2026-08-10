@@ -9,12 +9,15 @@ from lfm.foundations.r3_link_frame_live import (
     triangle_loops,
 )
 
-
 Offset = tuple[int, int, int]
 
 
+def _offset3(values: tuple[int, ...]) -> Offset:
+    return (values[0], values[1], values[2])
+
+
 def _reverse(offset: Offset) -> Offset:
-    return tuple(-value for value in offset)
+    return _offset3(tuple(-value for value in offset))
 
 
 def oriented_cycle_fourier_coefficients(
@@ -30,21 +33,14 @@ def oriented_cycle_fourier_coefficients(
     for offset in cycle:
         index, reverse = table[offset]
         if reverse:
-            stored_base = tuple(
-                shift[axis] + offset[axis] for axis in range(3)
-            )
+            stored_base = _offset3(tuple(shift[axis] + offset[axis] for axis in range(3)))
             sign = -1.0
         else:
             stored_base = shift
             sign = 1.0
-        phase = sum(
-            wavevector[axis] * stored_base[axis]
-            for axis in range(3)
-        )
+        phase = sum(wavevector[axis] * stored_base[axis] for axis in range(3))
         coefficients[index] += sign * np.exp(1.0j * phase)
-        shift = tuple(
-            shift[axis] + offset[axis] for axis in range(3)
-        )
+        shift = _offset3(tuple(shift[axis] + offset[axis] for axis in range(3)))
     if shift != (0, 0, 0):
         raise ValueError("cycle offsets must close")
     return coefficients
@@ -95,10 +91,7 @@ def directional_link_inertia(stencil: str) -> float:
     """Return the isotropic squared link projection count."""
 
     unique, _ = _link_table(stencil)
-    counts = [
-        float(sum(offset[axis] ** 2 for offset, _ in unique))
-        for axis in range(3)
-    ]
+    counts = [float(sum(offset[axis] ** 2 for offset, _ in unique)) for axis in range(3)]
     if max(counts) - min(counts) > 1.0e-12:
         raise RuntimeError("link inventory is not directionally isotropic")
     return counts[0]

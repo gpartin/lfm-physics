@@ -22,6 +22,10 @@ Offset = tuple[int, int, int]
 LinkCurrentMap = dict[Offset, np.ndarray]
 
 
+def _offset3(values: tuple[int, ...]) -> Offset:
+    return (values[0], values[1], values[2])
+
+
 def stencil_links(
     stencil: str,
     *,
@@ -33,7 +37,7 @@ def stencil_links(
     The oriented list appends its reverse with the same weight.
     """
     if stencil == "19":
-        unique = (
+        unique: tuple[tuple[Offset, float], ...] = (
             ((1, 0, 0), 1.0 / 3.0),
             ((0, 1, 0), 1.0 / 3.0),
             ((0, 0, 1), 1.0 / 3.0),
@@ -67,7 +71,7 @@ def stencil_links(
     links: list[tuple[Offset, float]] = []
     for offset, weight in unique:
         links.append((offset, weight))
-        links.append((tuple(-value for value in offset), weight))
+        links.append((_offset3(tuple(-value for value in offset)), weight))
     return tuple(links)
 
 

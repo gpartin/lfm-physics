@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
-from typing import Callable
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import scipy.sparse as sp
@@ -19,6 +19,9 @@ from scipy.sparse.linalg import MatrixRankWarning, spsolve
 
 from lfm.constants import CHI0, KAPPA, LAMBDA_H
 from lfm.core.stencils import laplacian_19pt
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @dataclass(frozen=True)
@@ -121,6 +124,22 @@ class CartesianNoetherSolution:
     optimizer_iterations: int
     function_evaluations: int
     message: str
+
+
+def _case_float(case: dict[str, object], key: str, default: float | None = None) -> float:
+    value = case[key] if default is None else case.get(key, default)
+    return float(cast("float | int | str", value))
+
+
+def _case_int(case: dict[str, object], key: str, default: int) -> int:
+    return int(cast("float | int | str", case.get(key, default)))
+
+
+def _tuple3_float(values: tuple[float, float, float] | np.ndarray) -> tuple[float, float, float]:
+    items = tuple(float(value) for value in values)
+    if len(items) != 3:
+        raise ValueError("expected a 3-vector")
+    return cast("tuple[float, float, float]", items)
 
 
 def radial_shell_geometry(radius: float, dx: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -232,20 +251,11 @@ def radial_fixed_charge_energy_and_gradient(
     chi_gradient = b_value * chi_gradient_raw
     total = temporal + matter_gradient + matter_mass + chi_gradient + chi_potential
 
-    grad_phi = (
-        grad_phi_edges
-        + volumes * chi * chi * phi
-        - omega * omega * volumes * phi
-    )
+    grad_phi = grad_phi_edges + volumes * chi * chi * phi - omega * omega * volumes * phi
     grad_chi = (
         b_value * grad_chi_edges
         + volumes * chi * phi * phi
-        + 4.0
-        * b_value
-        * lambda_h
-        * volumes
-        * chi
-        * (chi * chi - chi0 * chi0)
+        + 4.0 * b_value * lambda_h * volumes * chi * (chi * chi - chi0 * chi0)
     )
     gradient = np.concatenate((grad_phi, grad_chi))
     ledger = RadialNoetherEnergy(
@@ -299,8 +309,7 @@ def radial_fixed_charge_hessian(
     )
     cross_block = sp.diags(2.0 * volumes * chi * phi, format="csr")
     chi_diagonal = volumes * (
-        phi * phi
-        + 4.0 * b_value * lambda_h * (3.0 * chi * chi - chi0 * chi0)
+        phi * phi + 4.0 * b_value * lambda_h * (3.0 * chi * chi - chi0 * chi0)
     )
     chi_block = b_value * edge_hessian + sp.diags(
         chi_diagonal,
@@ -429,8 +438,7 @@ def _stationary_residuals(
     )
     phi_residual = float(np.sqrt(np.dot(volumes, phi_equation * phi_equation))) / phi_scale
     chi_scale_field = (
-        4.0 * lambda_h * chi * (chi * chi - chi0 * chi0)
-        + (kappa / chi0) * chi * phi * phi
+        4.0 * lambda_h * chi * (chi * chi - chi0 * chi0) + (kappa / chi0) * chi * phi * phi
     )
     chi_scale = max(
         float(np.sqrt(np.dot(volumes, chi_scale_field * chi_scale_field))),
@@ -498,8 +506,7 @@ def sparse_newton_polish_radial(
             system = (
                 hessian
                 if damping == 0.0
-                else hessian
-                + sp.diags(damping * diagonal_scale, format="csr")
+                else hessian + sp.diags(damping * diagonal_scale, format="csr")
             )
             with warnings.catch_warnings():
                 warnings.simplefilter("error", MatrixRankWarning)
@@ -536,10 +543,7 @@ def sparse_newton_polish_radial(
                 except ValueError:
                     step *= 0.5
                     continue
-                energy_ok = (
-                    candidate_ledger.total
-                    <= ledger.total * (1.0 + 1.0e-13)
-                )
+                energy_ok = candidate_ledger.total <= ledger.total * (1.0 + 1.0e-13)
                 if candidate_residual < residual and energy_ok:
                     current = candidate
                     accepted = True
@@ -727,8 +731,7 @@ def solve_radial_noether_soliton(
             )
             use_polished = bool(
                 polished_residual < optimized_residual
-                and polished_ledger.total
-                <= optimized_ledger.total * (1.0 + 1.0e-9)
+                and polished_ledger.total <= optimized_ledger.total * (1.0 + 1.0e-9)
             )
         except ValueError:
             use_polished = False
@@ -851,28 +854,22 @@ def sweep_radial_noether_solitons(
             raise ValueError(f"case is missing keys: {sorted(missing)}")
         initial_value = case.get("initial_variables")
         initial_variables = (
-            None
-            if initial_value is None
-            else np.asarray(initial_value, dtype=np.float64)
+            None if initial_value is None else np.asarray(initial_value, dtype=np.float64)
         )
         solution = solve_radial_noether_soliton(
-            target_charge=float(case["target_charge"]),
-            radius=float(case["radius"]),
-            dx=float(case["dx"]),
-            core_radius=float(case["core_radius"]),
-            omega_guess=float(case["omega_guess"]),
-            chi_depth_fraction=float(case.get("chi_depth_fraction", 0.9)),
+            target_charge=_case_float(case, "target_charge"),
+            radius=_case_float(case, "radius"),
+            dx=_case_float(case, "dx"),
+            core_radius=_case_float(case, "core_radius"),
+            omega_guess=_case_float(case, "omega_guess"),
+            chi_depth_fraction=_case_float(case, "chi_depth_fraction", 0.9),
             initial_variables=initial_variables,
-            max_iterations=int(case.get("max_iterations", 2000)),
-            gradient_tolerance=float(case.get("gradient_tolerance", 1.0e-9)),
-            polish_tolerance=float(case.get("polish_tolerance", 1.0e-11)),
+            max_iterations=_case_int(case, "max_iterations", 2000),
+            gradient_tolerance=_case_float(case, "gradient_tolerance", 1.0e-9),
+            polish_tolerance=_case_float(case, "polish_tolerance", 1.0e-11),
             sparse_polish=bool(case.get("sparse_polish", True)),
-            sparse_polish_tolerance=float(
-                case.get("sparse_polish_tolerance", 1.0e-9)
-            ),
-            sparse_polish_max_iterations=int(
-                case.get("sparse_polish_max_iterations", 80)
-            ),
+            sparse_polish_tolerance=_case_float(case, "sparse_polish_tolerance", 1.0e-9),
+            sparse_polish_max_iterations=_case_int(case, "sparse_polish_max_iterations", 80),
         )
         results.append(
             RadialNoetherSweepResult(
@@ -888,9 +885,7 @@ def _cartesian_axis(grid_size: int, dx: float) -> np.ndarray:
         raise ValueError("grid_size must be at least 8")
     if dx <= 0.0:
         raise ValueError("dx must be positive")
-    return (
-        np.arange(grid_size, dtype=np.float64) - 0.5 * (grid_size - 1)
-    ) * dx
+    return (np.arange(grid_size, dtype=np.float64) - 0.5 * (grid_size - 1)) * dx
 
 
 def _interpolate_radial_profile(
@@ -977,14 +972,10 @@ def lift_radial_noether_state(
         phase_previous = -omega * gamma * (dt + speed * coordinate)
 
     radius_current = np.sqrt(
-        current_components[0] ** 2
-        + current_components[1] ** 2
-        + current_components[2] ** 2
+        current_components[0] ** 2 + current_components[1] ** 2 + current_components[2] ** 2
     )
     radius_previous = np.sqrt(
-        previous_components[0] ** 2
-        + previous_components[1] ** 2
-        + previous_components[2] ** 2
+        previous_components[0] ** 2 + previous_components[1] ** 2 + previous_components[2] ** 2
     )
     phi_current = _interpolate_radial_profile(
         radius_current,
@@ -1017,9 +1008,7 @@ def lift_radial_noether_state(
         rng = np.random.default_rng(perturbation_seed)
         coefficients = rng.normal(size=4)
         coefficients /= np.sum(np.abs(coefficients))
-        half_peak_index = int(
-            np.argmax(np.abs(phi) < 0.5 * np.max(np.abs(phi)))
-        )
+        half_peak_index = int(np.argmax(np.abs(phi) < 0.5 * np.max(np.abs(phi))))
         scale = max(float(source_r[half_peak_index]), dx)
         radius_sq = x * x + y * y + z * z
         mode = (
@@ -1043,8 +1032,8 @@ def lift_radial_noether_state(
         psi_imag_prev=(phi_previous * np.sin(phase_previous)).astype(state_dtype),
         chi=chi_current.astype(state_dtype),
         chi_prev=chi_previous.astype(state_dtype),
-        center=tuple(float(value) for value in center),
-        velocity=tuple(float(value) for value in velocity),
+        center=_tuple3_float(center),
+        velocity=_tuple3_float(velocity),
         omega=float(omega),
         dx=float(dx),
         dt=float(dt),
@@ -1089,44 +1078,16 @@ def cartesian_fixed_charge_energy_and_gradient(
 
     lap_phi = laplacian_19pt(phi)
     lap_chi = laplacian_19pt(chi)
-    matter_gradient = (
-        -0.5 * volume * inv_dx2 * float(np.sum(phi * lap_phi))
-    )
+    matter_gradient = -0.5 * volume * inv_dx2 * float(np.sum(phi * lap_phi))
     matter_mass = 0.5 * volume * float(np.sum(chi * chi * phi * phi))
-    chi_gradient = (
-        -0.5
-        * b_value
-        * volume
-        * inv_dx2
-        * float(np.sum(chi * lap_chi))
-    )
-    chi_potential = (
-        b_value
-        * lambda_h
-        * volume
-        * float(np.sum((chi * chi - chi0 * chi0) ** 2))
-    )
-    total = (
-        temporal
-        + matter_gradient
-        + matter_mass
-        + chi_gradient
-        + chi_potential
-    )
+    chi_gradient = -0.5 * b_value * volume * inv_dx2 * float(np.sum(chi * lap_chi))
+    chi_potential = b_value * lambda_h * volume * float(np.sum((chi * chi - chi0 * chi0) ** 2))
+    total = temporal + matter_gradient + matter_mass + chi_gradient + chi_potential
 
-    grad_phi = volume * (
-        -inv_dx2 * lap_phi + (chi * chi - omega * omega) * phi
-    )
+    grad_phi = volume * (-inv_dx2 * lap_phi + (chi * chi - omega * omega) * phi)
     grad_chi = volume * (
         chi * phi * phi
-        + b_value
-        * (
-            -inv_dx2 * lap_chi
-            + 4.0
-            * lambda_h
-            * chi
-            * (chi * chi - chi0 * chi0)
-        )
+        + b_value * (-inv_dx2 * lap_chi + 4.0 * lambda_h * chi * (chi * chi - chi0 * chi0))
     )
     gradient = np.concatenate((grad_phi.ravel(), grad_chi.ravel()))
     ledger = CartesianFixedChargeEnergy(
@@ -1228,8 +1189,7 @@ def solve_cartesian_noether_soliton(
         nonlocal callback_iterations
         callback_iterations += 1
         if progress_callback is None or (
-            callback_iterations != 1
-            and callback_iterations % progress_interval != 0
+            callback_iterations != 1 and callback_iterations % progress_interval != 0
         ):
             return
         raw = unpack(scaled)
@@ -1326,10 +1286,7 @@ def cartesian_stationary_residual(
     if omega <= 0.0 or dx <= 0.0:
         raise ValueError("omega and dx must be positive")
     inv_dx2 = 1.0 / (dx * dx)
-    phi_equation = (
-        inv_dx2 * laplacian_19pt(phi64)
-        + (omega * omega - chi64 * chi64) * phi64
-    )
+    phi_equation = inv_dx2 * laplacian_19pt(phi64) + (omega * omega - chi64 * chi64) * phi64
     chi_equation = (
         inv_dx2 * laplacian_19pt(chi64)
         - 4.0 * lambda_h * chi64 * (chi64 * chi64 - chi0 * chi0)
@@ -1340,9 +1297,8 @@ def cartesian_stationary_residual(
         np.abs(omega * omega * phi64),
         np.abs(chi64 * chi64 * phi64),
     )
-    chi_scale_field = (
-        np.abs(4.0 * lambda_h * chi64 * (chi64 * chi64 - chi0 * chi0))
-        + np.abs((kappa / chi0) * chi64 * phi64 * phi64)
+    chi_scale_field = np.abs(4.0 * lambda_h * chi64 * (chi64 * chi64 - chi0 * chi0)) + np.abs(
+        (kappa / chi0) * chi64 * phi64 * phi64
     )
     phi_scale = max(
         float(np.sqrt(volume * np.sum(phi_scale_field * phi_scale_field))),
@@ -1352,12 +1308,8 @@ def cartesian_stationary_residual(
         float(np.sqrt(volume * np.sum(chi_scale_field * chi_scale_field))),
         1.0e-300,
     )
-    phi_residual = (
-        float(np.sqrt(volume * np.sum(phi_equation * phi_equation))) / phi_scale
-    )
-    chi_residual = (
-        float(np.sqrt(volume * np.sum(chi_equation * chi_equation))) / chi_scale
-    )
+    phi_residual = float(np.sqrt(volume * np.sum(phi_equation * phi_equation))) / phi_scale
+    chi_residual = float(np.sqrt(volume * np.sum(chi_equation * chi_equation))) / chi_scale
     return max(phi_residual, chi_residual), phi_residual, chi_residual
 
 
@@ -1402,12 +1354,7 @@ def cartesian_noether_hamiltonian(
     chi64 = np.asarray(chi, dtype=np.float64)
     chi_prev64 = np.asarray(chi_prev, dtype=np.float64)
     if not (
-        pr.shape
-        == pr_prev.shape
-        == pi.shape
-        == pi_prev.shape
-        == chi64.shape
-        == chi_prev64.shape
+        pr.shape == pr_prev.shape == pi.shape == pi_prev.shape == chi64.shape == chi_prev64.shape
     ):
         raise ValueError("all phase-space arrays must match")
     if pr.ndim != 3:
@@ -1420,27 +1367,14 @@ def cartesian_noether_hamiltonian(
     dpi = (pi - pi_prev) / dt
     dchi = (chi64 - chi_prev64) / dt
     temporal = 0.5 * volume * float(np.sum(dpr * dpr + dpi * dpi))
-    matter_gradient = -0.5 * volume * inv_dx2 * float(
-        np.sum(pr * laplacian_19pt(pr) + pi * laplacian_19pt(pi))
+    matter_gradient = (
+        -0.5 * volume * inv_dx2 * float(np.sum(pr * laplacian_19pt(pr) + pi * laplacian_19pt(pi)))
     )
-    matter_mass = 0.5 * volume * float(
-        np.sum(chi64 * chi64 * (pr * pr + pi * pi))
-    )
+    matter_mass = 0.5 * volume * float(np.sum(chi64 * chi64 * (pr * pr + pi * pi)))
     chi_temporal = 0.5 * b_value * volume * float(np.sum(dchi * dchi))
-    chi_gradient = -0.5 * b_value * volume * inv_dx2 * float(
-        np.sum(chi64 * laplacian_19pt(chi64))
-    )
-    chi_potential = b_value * lambda_h * volume * float(
-        np.sum((chi64 * chi64 - chi0 * chi0) ** 2)
-    )
-    total = (
-        temporal
-        + matter_gradient
-        + matter_mass
-        + chi_temporal
-        + chi_gradient
-        + chi_potential
-    )
+    chi_gradient = -0.5 * b_value * volume * inv_dx2 * float(np.sum(chi64 * laplacian_19pt(chi64)))
+    chi_potential = b_value * lambda_h * volume * float(np.sum((chi64 * chi64 - chi0 * chi0) ** 2))
+    total = temporal + matter_gradient + matter_mass + chi_temporal + chi_gradient + chi_potential
     return {
         "total": total,
         "matter_temporal": temporal,
@@ -1532,8 +1466,7 @@ def cartesian_localization_metrics(
         if reference_center is None:
             raise ValueError("reference_center is required with reference_density")
         shifts = tuple(
-            int(round((reference_center[index] - center[index]) / dx))
-            for index in range(3)
+            int(round((reference_center[index] - center[index]) / dx)) for index in range(3)
         )
         aligned = np.roll(rho, shift=shifts, axis=(0, 1, 2))
         reference_norm = max(float(np.sum(reference)), 1.0e-300)

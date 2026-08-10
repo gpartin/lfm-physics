@@ -32,6 +32,7 @@ def kernel_source_for_precision(source: str, precision: str) -> str:
     promoted = _FLOAT_TYPE_TOKEN.sub("double", source)
     return _FLOAT_LITERAL_SUFFIX.sub("", promoted)
 
+
 # ---------------------------------------------------------------------------
 # Full 3-color complex evolution kernel (Level 2 — all four forces)
 # ---------------------------------------------------------------------------

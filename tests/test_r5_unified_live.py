@@ -24,11 +24,7 @@ from lfm.foundations.r5_unified_live import (
 
 
 def _parameters(stencil: str) -> R5Parameters:
-    return R5Parameters(
-        r4=R4Parameters(
-            r3=R3LiveParameters(stencil=stencil)
-        )
-    )
+    return R5Parameters(r4=R4Parameters(r3=R3LiveParameters(stencil=stencil)))
 
 
 @pytest.mark.parametrize(
@@ -56,11 +52,7 @@ def test_r5_face_square_force_is_variational(stencil: str) -> None:
     parameters = _parameters(stencil)
     state = vacuum_state(3, parameters)
     rng = np.random.default_rng(719)
-    state.r3.phase_links *= np.exp(
-        1.0j
-        * 0.02
-        * rng.normal(size=state.r3.phase_links.shape)
-    )
+    state.r3.phase_links *= np.exp(1.0j * 0.02 * rng.normal(size=state.r3.phase_links.shape))
     _, rates, _ = potential_energy_and_rates(state, parameters)
     site = (1, 1, 1, 0)
     epsilon = 1.0e-6
@@ -86,8 +78,7 @@ def test_r5_full_hamiltonian_retains_local_su3_invariance(
     state = vacuum_state(2, parameters)
     rng = np.random.default_rng(727)
     state.r3.matter = 0.02 * (
-        rng.normal(size=state.r3.matter.shape)
-        + 1.0j * rng.normal(size=state.r3.matter.shape)
+        rng.normal(size=state.r3.matter.shape) + 1.0j * rng.normal(size=state.r3.matter.shape)
     )
     gauge = np.empty(state.r3.chi.shape + (3, 3), dtype=np.complex128)
     generators = su3_generators()

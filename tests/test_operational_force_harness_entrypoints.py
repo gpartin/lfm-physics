@@ -39,9 +39,7 @@ def test_active_manifest_enforces_internal_operational_readouts() -> None:
     assert payload["schema_version"] == "2.0"
     assert runner.MANIFEST_PATH.name == "operational_emergence_manifest.json"
     operational = [
-        spec
-        for spec in specs
-        if spec.required_for_sector and spec.operational_readout_required
+        spec for spec in specs if spec.required_for_sector and spec.operational_readout_required
     ]
     assert operational
     assert all(
@@ -63,25 +61,21 @@ def test_active_manifest_enforces_internal_operational_readouts() -> None:
         "simulator time",
     )
     assert all(
-        not any(fragment in spec.internal_observable.lower() for fragment in forbidden_readout_fragments)
+        not any(
+            fragment in spec.internal_observable.lower() for fragment in forbidden_readout_fragments
+        )
         for spec in operational
     )
-    em_maxwell = next(
-        spec for spec in specs if spec.benchmark_id == "EM-MAXWELL-CONTINUUM-CLOSURE"
-    )
+    em_maxwell = next(spec for spec in specs if spec.benchmark_id == "EM-MAXWELL-CONTINUUM-CLOSURE")
     assert "E-wave observers" in em_maxwell.internal_observable
     assert "chi-clock compensated" in em_maxwell.internal_observable
-    required_ids = {
-        spec.benchmark_id for spec in specs if spec.required_for_sector
-    }
+    required_ids = {spec.benchmark_id for spec in specs if spec.required_for_sector}
     assert "GR-FRAME-PROVENANCE" not in required_ids
     assert "STRONG-GAUGE-INVARIANT-OBSERVABLE" not in required_ids
 
 
 def test_v1_manifest_is_marked_legacy() -> None:
-    payload = json.loads(
-        (HARNESS_DIR / "benchmark_manifest.json").read_text(encoding="utf-8")
-    )
+    payload = json.loads((HARNESS_DIR / "benchmark_manifest.json").read_text(encoding="utf-8"))
     assert payload["status"].startswith("LEGACY_V1")
     assert payload["superseded_by"] == "operational_emergence_manifest.json"
 
@@ -91,15 +85,10 @@ def test_pure_ab_entrypoint_cannot_promote_force_diagnostics() -> None:
         "pure_gov02_diagnostic_runner",
         HARNESS_DIR / "run_pure_gov02_ab_force_harness.py",
     )
-    force_specs = [
-        spec
-        for spec in runner._specs()
-        if spec.sector is not ForceSector.CORE
-    ]
+    force_specs = [spec for spec in runner._specs() if spec.sector is not ForceSector.CORE]
     assert force_specs
     assert all(not spec.required_for_sector for spec in force_specs)
     assert all(not spec.promotion_eligible for spec in force_specs)
     assert all(
-        spec.accepted_evidence == frozenset({EvidenceClass.DIAGNOSTIC})
-        for spec in force_specs
+        spec.accepted_evidence == frozenset({EvidenceClass.DIAGNOSTIC}) for spec in force_specs
     )

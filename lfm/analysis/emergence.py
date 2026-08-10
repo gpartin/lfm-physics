@@ -247,7 +247,14 @@ def localized_state_observables(
     c19_fraction = float(sum(density[p] for p in c19_indices) / norm)
 
     edge_distance = np.minimum.reduce(
-        [coords[0], coords[1], coords[2], shape[0] - 1 - coords[0], shape[1] - 1 - coords[1], shape[2] - 1 - coords[2]]
+        [
+            coords[0],
+            coords[1],
+            coords[2],
+            shape[0] - 1 - coords[0],
+            shape[1] - 1 - coords[1],
+            shape[2] - 1 - coords[2],
+        ]
     )
     boundary_fraction = float(np.sum(probability[edge_distance < 2.0]))
 
@@ -268,7 +275,11 @@ def localized_state_observables(
 
     chi_arr = np.asarray(chi, dtype=np.float64)
     chi_min_index = tuple(int(v) for v in np.unravel_index(int(np.argmin(chi_arr)), shape))
-    alignment = float(np.linalg.norm(np.asarray(peak, dtype=np.float64) - np.asarray(chi_min_index, dtype=np.float64)))
+    alignment = float(
+        np.linalg.norm(
+            np.asarray(peak, dtype=np.float64) - np.asarray(chi_min_index, dtype=np.float64)
+        )
+    )
     peak_density = float(density[peak])
     return {
         "wave_norm": norm,

@@ -37,9 +37,7 @@ def test_flat_octic_makes_only_the_scalar_chi_mode_gapless() -> None:
 
 
 def test_zero_chi_branch_has_massless_scalars_but_no_linear_gravity_coupling() -> None:
-    critical = zero_chi_branch_audit(0.0, "flat_octic")[
-        "stability_threshold_density"
-    ]
+    critical = zero_chi_branch_audit(0.0, "flat_octic")["stability_threshold_density"]
     below = zero_chi_branch_audit(0.5 * critical, "flat_octic")
     at = zero_chi_branch_audit(critical, "flat_octic")
     above = zero_chi_branch_audit(1.5 * critical, "flat_octic")
@@ -71,17 +69,16 @@ def test_relative_phase_branch_is_quadratic_at_small_k() -> None:
     background = rotating_background(1.0, model="canonical_quartic", spacing=0.05)
     frequencies = []
     for wave_number in (0.02, 0.04, 0.08):
-        values, _ = collective_mode_eigenpairs(
-            background, np.array([wave_number, 0.0, 0.0])
+        values, _ = collective_mode_eigenpairs(background, np.array([wave_number, 0.0, 0.0]))
+        expected = (
+            np.sqrt(
+                background.carrier_frequencies[0] ** 2
+                + discrete_stiffness_19(np.array([wave_number, 0.0, 0.0]), spacing=0.05)
+            )
+            - background.carrier_frequencies[0]
         )
-        expected = np.sqrt(
-            background.carrier_frequencies[0] ** 2
-            + discrete_stiffness_19(np.array([wave_number, 0.0, 0.0]), spacing=0.05)
-        ) - background.carrier_frequencies[0]
         stable_positive = [
-            value.real
-            for value in values
-            if value.real > 1.0e-10 and abs(value.imag) < 1.0e-8
+            value.real for value in values if value.real > 1.0e-10 and abs(value.imag) < 1.0e-8
         ]
         observed = min(stable_positive, key=lambda value: abs(value - expected))
         assert np.isclose(observed, expected, rtol=1.0e-7, atol=1.0e-12)
@@ -106,19 +103,11 @@ def test_bare_action_does_not_contain_composite_maxwell_term() -> None:
 def test_common_condensate_instability_matches_small_k_derivation() -> None:
     background = rotating_background(100.0, model="canonical_quartic", spacing=0.05)
     attraction = (
-        4.0
-        * (KAPPA / CHI0)
-        * background.chi**2
-        * background.total_density
-        / background.chi_mass_sq
+        4.0 * (KAPPA / CHI0) * background.chi**2 * background.total_density / background.chi_mass_sq
     )
-    predicted_growth_per_k = np.sqrt(attraction) / (
-        2.0 * background.carrier_frequencies[0]
-    )
+    predicted_growth_per_k = np.sqrt(attraction) / (2.0 * background.carrier_frequencies[0])
     wave_number = 0.002
-    values, _ = collective_mode_eigenpairs(
-        background, np.array([wave_number, 0.0, 0.0])
-    )
+    values, _ = collective_mode_eigenpairs(background, np.array([wave_number, 0.0, 0.0]))
     observed_growth_per_k = max(abs(value.imag) for value in values) / wave_number
     assert np.isclose(observed_growth_per_k, predicted_growth_per_k, rtol=2.0e-4)
 
@@ -128,8 +117,6 @@ def test_instability_growth_converges_with_spacing() -> None:
     growth_rates = []
     for spacing in (0.1, 0.05, 0.025):
         background = rotating_background(100.0, model="flat_octic", spacing=spacing)
-        values, _ = collective_mode_eigenpairs(
-            background, np.array([wave_number, 0.0, 0.0])
-        )
+        values, _ = collective_mode_eigenpairs(background, np.array([wave_number, 0.0, 0.0]))
         growth_rates.append(max(abs(value.imag) for value in values))
     assert np.ptp(growth_rates) / np.mean(growth_rates) < 1.0e-6

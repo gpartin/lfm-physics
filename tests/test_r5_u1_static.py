@@ -20,11 +20,7 @@ def test_periodic_u1_point_pair_satisfies_gauss(
     stencil: str,
     relative_sign: int,
 ) -> None:
-    parameters = R5Parameters(
-        r4=R4Parameters(
-            r3=R3LiveParameters(stencil=stencil)
-        )
-    )
+    parameters = R5Parameters(r4=R4Parameters(r3=R3LiveParameters(stencil=stencil)))
     charge = periodic_point_pair_charge(9, 2, relative_sign)
     state = solve_u1_gauss_minimum(
         charge,

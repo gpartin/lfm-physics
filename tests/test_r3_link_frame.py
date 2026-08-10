@@ -134,9 +134,7 @@ def test_frame_source_preserves_traceless_shape_sector() -> None:
 
 def test_action_declaration_is_stable_and_retains_radial_chi() -> None:
     declaration = r3_action_declaration()
-    assert declaration["canonical_status"] == (
-        "UNPROMOTED_FOUNDATIONAL_CANDIDATE"
-    )
+    assert declaration["canonical_status"] == ("UNPROMOTED_FOUNDATIONAL_CANDIDATE")
     assert "full_mexican_hat" in declaration["retained_sectors"]
     assert len(r3_action_fingerprint()) == 64
     assert r3_action_fingerprint() == r3_action_fingerprint()

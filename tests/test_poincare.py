@@ -27,7 +27,7 @@ def test_stencil_symbols_have_correct_axis_limit():
     k = np.asarray([0.01, 0.0, 0.0])
     for stencil in (STENCIL_19, STENCIL_27):
         symbol = float(stencil_symbol(k, stencil=stencil))
-        assert math.isclose(symbol, -0.01**2, rel_tol=1.0e-5)
+        assert math.isclose(symbol, -(0.01**2), rel_tol=1.0e-5)
 
 
 def test_exact_cubic_rotation_invariance():

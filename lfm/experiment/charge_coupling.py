@@ -32,10 +32,7 @@ class ChargeCouplingParameters:
     def __post_init__(self) -> None:
         if not np.isfinite(self.coupling):
             raise ValueError("coupling must be finite")
-        if (
-            not np.isfinite(self.midpoint_tolerance)
-            or self.midpoint_tolerance <= 0.0
-        ):
+        if not np.isfinite(self.midpoint_tolerance) or self.midpoint_tolerance <= 0.0:
             raise ValueError("midpoint_tolerance must be positive and finite")
         if self.midpoint_max_iterations < 1:
             raise ValueError("midpoint_max_iterations must be positive")
@@ -85,11 +82,7 @@ def charge_frequency_derivative(
 ) -> np.ndarray:
     """Return df/dchi for the experimental coupling."""
 
-    return (
-        parameters.coupling
-        * np.asarray(chi, dtype=np.float64)
-        / parameters.bare.chi0
-    )
+    return parameters.coupling * np.asarray(chi, dtype=np.float64) / parameters.bare.chi0
 
 
 def canonical_charge_density(state: BareLFMState) -> np.ndarray:
@@ -112,10 +105,7 @@ def total_canonical_charge(
 ) -> float:
     """Return the physical-volume integral of canonical charge density."""
 
-    return (
-        float(np.sum(canonical_charge_density(state)))
-        * parameters.bare.spacing**3
-    )
+    return float(np.sum(canonical_charge_density(state))) * parameters.bare.spacing**3
 
 
 def charge_coupled_rates(
@@ -133,9 +123,7 @@ def charge_coupled_rates(
         parameters.bare,
     )
     wave_rate = np.asarray(bare_rates.wave, dtype=np.float64).copy()
-    momentum_rate = np.asarray(
-        bare_rates.wave_momentum, dtype=np.float64
-    ).copy()
+    momentum_rate = np.asarray(bare_rates.wave_momentum, dtype=np.float64).copy()
     f_value = charge_frequency(chi, parameters)
     for component in range(0, wave.shape[0], 2):
         u = wave[component]
@@ -147,9 +135,10 @@ def charge_coupled_rates(
         momentum_rate[component] += f_value * p_v
         momentum_rate[component + 1] -= f_value * p_u
     charge = canonical_charge_density(state)
-    chi_momentum_rate = np.asarray(
-        bare_rates.chi_momentum, dtype=np.float64
-    ) + charge_frequency_derivative(chi, parameters) * charge
+    chi_momentum_rate = (
+        np.asarray(bare_rates.chi_momentum, dtype=np.float64)
+        + charge_frequency_derivative(chi, parameters) * charge
+    )
     return BareHamiltonRates(
         wave=wave_rate,
         wave_momentum=momentum_rate,
@@ -172,9 +161,7 @@ def charge_coupled_hamiltonian(
         chi_p,
         parameters.bare,
     )
-    density = density - charge_frequency(
-        chi, parameters
-    ) * canonical_charge_density(state)
+    density = density - charge_frequency(chi, parameters) * canonical_charge_density(state)
     return float(np.sum(density)) * parameters.bare.spacing**3
 
 
@@ -207,8 +194,7 @@ def _state_relative_difference(left: BareLFMState, right: BareLFMState) -> float
     left_values = _validated_charge_state(left)
     right_values = _validated_charge_state(right)
     numerator = max(
-        float(np.max(np.abs(a - b)))
-        for a, b in zip(left_values, right_values)
+        float(np.max(np.abs(a - b))) for a, b in zip(left_values, right_values, strict=False)
     )
     denominator = max(
         1.0,

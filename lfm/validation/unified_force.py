@@ -177,9 +177,7 @@ class BenchmarkSpec:
             raise ValueError("accepted_evidence cannot be empty")
         if self.operational_readout_required:
             if self.readout_frame is not ReadoutFrame.INTERNAL_OPERATIONAL:
-                raise ValueError(
-                    "an operational gate must use an INTERNAL_OPERATIONAL readout"
-                )
+                raise ValueError("an operational gate must use an INTERNAL_OPERATIONAL readout")
             missing = [
                 name
                 for name, value in (
@@ -190,9 +188,7 @@ class BenchmarkSpec:
                 if not value.strip()
             ]
             if missing:
-                raise ValueError(
-                    "REPRESENTATION AUDIT INCOMPLETE: missing " + ", ".join(missing)
-                )
+                raise ValueError("REPRESENTATION AUDIT INCOMPLETE: missing " + ", ".join(missing))
             _validate_internal_observable_text(self.internal_observable)
 
 
@@ -284,7 +280,10 @@ class HarnessReport:
         """Return a JSON-serializable evidence ledger."""
         result_rows: list[JsonValue] = []
         for result in self.results:
-            identity = asdict(result.identity) if result.identity is not None else None
+            identity: JsonValue = asdict(result.identity) if result.identity is not None else None
+            mechanisms: list[JsonValue] = [
+                mechanism for mechanism in sorted(result.mechanisms_used)
+            ]
             result_rows.append(
                 {
                     "benchmark_id": result.benchmark_id,
@@ -292,12 +291,10 @@ class HarnessReport:
                     "evidence": result.evidence.value,
                     "reason": result.reason,
                     "metrics": dict(result.metrics),
-                    "mechanisms_used": sorted(result.mechanisms_used),
+                    "mechanisms_used": mechanisms,
                     "identity": identity,
                     "identity_fingerprint": (
-                        result.identity.fingerprint
-                        if result.identity is not None
-                        else None
+                        result.identity.fingerprint if result.identity is not None else None
                     ),
                     "artifacts": list(result.artifacts),
                 }
@@ -307,8 +304,7 @@ class HarnessReport:
             "manifest_fingerprint": self.manifest_fingerprint,
             "unified_status": self.unified_status.value,
             "sector_status": {
-                sector.value: status.value
-                for sector, status in self.sector_status.items()
+                sector.value: status.value for sector, status in self.sector_status.items()
             },
             "shared_identity_fingerprint": self.shared_identity_fingerprint,
             "policy_findings": list(self.policy_findings),
@@ -332,9 +328,7 @@ class UnifiedForceHarness:
         for spec in spec_list:
             missing = set(spec.dependencies) - set(by_id)
             if missing:
-                raise ValueError(
-                    f"{spec.benchmark_id} has unknown dependencies: {sorted(missing)}"
-                )
+                raise ValueError(f"{spec.benchmark_id} has unknown dependencies: {sorted(missing)}")
         self.specs = spec_list
         self.by_id = by_id
         self.version = version
@@ -369,11 +363,7 @@ class UnifiedForceHarness:
 
     @staticmethod
     def _blocked_missing(spec: BenchmarkSpec) -> BenchmarkResult:
-        status = (
-            BenchmarkStatus.BLOCKED
-            if spec.required_for_sector
-            else BenchmarkStatus.NOT_RUN
-        )
+        status = BenchmarkStatus.BLOCKED if spec.required_for_sector else BenchmarkStatus.NOT_RUN
         return BenchmarkResult(
             benchmark_id=spec.benchmark_id,
             status=status,
@@ -393,10 +383,7 @@ class UnifiedForceHarness:
                 GLOBAL_FORBIDDEN_MECHANISMS | spec.forbidden_mechanisms
             ) & result.mechanisms_used
             if forbidden:
-                message = (
-                    f"{spec.benchmark_id}: forbidden mechanisms used: "
-                    f"{sorted(forbidden)}"
-                )
+                message = f"{spec.benchmark_id}: forbidden mechanisms used: {sorted(forbidden)}"
                 findings.append(message)
                 result = replace(
                     result,
@@ -446,8 +433,7 @@ class UnifiedForceHarness:
                 )
 
             dependency_statuses = {
-                dependency: adjudicated[dependency].status
-                for dependency in spec.dependencies
+                dependency: adjudicated[dependency].status for dependency in spec.dependencies
             }
             unsatisfied = {
                 dependency: status
@@ -475,14 +461,10 @@ class UnifiedForceHarness:
             and adjudicated[spec.benchmark_id].status is BenchmarkStatus.PASS
         ]
         identity_fingerprints = {
-            identity.fingerprint
-            for identity in required_identities
-            if identity is not None
+            identity.fingerprint for identity in required_identities if identity is not None
         }
         shared_identity = (
-            next(iter(identity_fingerprints))
-            if len(identity_fingerprints) == 1
-            else None
+            next(iter(identity_fingerprints)) if len(identity_fingerprints) == 1 else None
         )
         identity_mismatch = len(identity_fingerprints) > 1
         if identity_mismatch:
@@ -516,14 +498,10 @@ class UnifiedForceHarness:
             ForceSector.UNIFIED,
         )
         if identity_mismatch or any(
-            sector_status[sector] is BenchmarkStatus.FAIL
-            for sector in required_sectors
+            sector_status[sector] is BenchmarkStatus.FAIL for sector in required_sectors
         ):
             unified_status = BenchmarkStatus.FAIL
-        elif all(
-            sector_status[sector] is BenchmarkStatus.PASS
-            for sector in required_sectors
-        ):
+        elif all(sector_status[sector] is BenchmarkStatus.PASS for sector in required_sectors):
             unified_status = BenchmarkStatus.PASS
         else:
             unified_status = BenchmarkStatus.BLOCKED
@@ -531,9 +509,7 @@ class UnifiedForceHarness:
         return HarnessReport(
             harness_version=self.version,
             manifest_fingerprint=self.manifest_fingerprint,
-            results=tuple(
-                adjudicated[spec.benchmark_id] for spec in self.specs
-            ),
+            results=tuple(adjudicated[spec.benchmark_id] for spec in self.specs),
             sector_status=sector_status,
             unified_status=unified_status,
             policy_findings=tuple(findings),

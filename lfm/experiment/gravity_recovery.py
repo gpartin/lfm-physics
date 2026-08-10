@@ -179,10 +179,7 @@ def positive_frequency_previous_layers(
     inverse_dx_sq = 1.0 / dx**2
 
     def apply_a(values: np.ndarray) -> np.ndarray:
-        return (
-            -inverse_dx_sq * laplacian_19pt(values)
-            + chi_sq * values
-        )
+        return -inverse_dx_sq * laplacian_19pt(values) + chi_sq * values
 
     minimum_eigenvalue = max(float(np.min(chi_sq)), 1.0e-12)
     maximum_eigenvalue = float(np.max(chi_sq)) + 8.0 * inverse_dx_sq
@@ -193,11 +190,9 @@ def positive_frequency_previous_layers(
 
     def sine_frequency(normalized: np.ndarray) -> np.ndarray:
         eigenvalue = midpoint + half_width * normalized
-        return np.sqrt(
-            eigenvalue * (1.0 - 0.25 * dt**2 * eigenvalue)
-        )
+        return np.sqrt(eigenvalue * (1.0 - 0.25 * dt**2 * eigenvalue))
 
-    coefficients = np.polynomial.chebyshev.chebinterpolate(
+    coefficients = np.polynomial.chebyshev.chebinterpolate(  # type: ignore[type-var]
         sine_frequency,
         polynomial_degree,
     )
@@ -209,30 +204,18 @@ def positive_frequency_previous_layers(
         next_term = np.zeros_like(values)
         next_next_term = np.zeros_like(values)
         for index in range(polynomial_degree, 0, -1):
-            current = (
-                2.0 * apply_x(next_term)
-                - next_next_term
-                + coefficients[index] * values
-            )
+            current = 2.0 * apply_x(next_term) - next_next_term + coefficients[index] * values
             next_next_term = next_term
             next_term = current
-        return (
-            apply_x(next_term)
-            - next_next_term
-            + coefficients[0] * values
-        )
+        return apply_x(next_term) - next_next_term + coefficients[0] * values
 
     previous_real = np.zeros_like(real_channels)
     previous_imag = np.zeros_like(imag_channels)
     for channel in range(channel_count):
         current_real = real_channels[channel]
         current_imag = imag_channels[channel]
-        cosine_real = (
-            current_real - 0.5 * dt**2 * apply_a(current_real)
-        )
-        cosine_imag = (
-            current_imag - 0.5 * dt**2 * apply_a(current_imag)
-        )
+        cosine_real = current_real - 0.5 * dt**2 * apply_a(current_real)
+        cosine_imag = current_imag - 0.5 * dt**2 * apply_a(current_imag)
         sine_real = dt * apply_sine_frequency(current_real)
         sine_imag = dt * apply_sine_frequency(current_imag)
         previous_real[channel] = cosine_real - sine_imag
@@ -241,9 +224,7 @@ def positive_frequency_previous_layers(
         "polynomial_degree": polynomial_degree,
         "minimum_operator_eigenvalue_bound": minimum_eigenvalue,
         "maximum_operator_eigenvalue_bound": maximum_eigenvalue,
-        "maximum_chebyshev_coefficient": float(
-            np.max(np.abs(coefficients))
-        ),
+        "maximum_chebyshev_coefficient": float(np.max(np.abs(coefficients))),
         "local_stencil_radius_upper_bound": polynomial_degree,
     }
     return (
@@ -374,11 +355,7 @@ def potential_density(
 
     y = _dimensionless_y(chi, chi0)
     source_ratio = np.asarray(source_density) / chi0**2
-    return (
-        lambda_h
-        * chi0**4
-        * dimensionless_potential(y, model, source_ratio)
-    )
+    return lambda_h * chi0**4 * dimensionless_potential(y, model, source_ratio)
 
 
 def potential_force(
@@ -452,9 +429,7 @@ def chi_hamiltonian(
     source_density = np.asarray(source_density, dtype=np.float64)
     velocity = (chi - chi_prev) / dt
     inertia = (
-        variable_inertia(chi, chi0=chi0)
-        if model == ChiPotentialModel.VARIABLE_INERTIA
-        else 1.0
+        variable_inertia(chi, chi0=chi0) if model == ChiPotentialModel.VARIABLE_INERTIA else 1.0
     )
     kinetic = float(np.sum(0.5 * inertia * velocity**2))
     gradient = 0.0
@@ -468,14 +443,7 @@ def chi_hamiltonian(
         difference = (neighbor - chi) / dx
         gradient += float(np.sum(0.5 * weight * difference**2))
         if model == ChiPotentialModel.NONLINEAR_GRADIENT:
-            nonlinear_gradient += float(
-                np.sum(
-                    0.25
-                    * weight
-                    * difference**4
-                    / chi0**2
-                )
-            )
+            nonlinear_gradient += float(np.sum(0.25 * weight * difference**4 / chi0**2))
     potential = float(
         np.sum(
             potential_density(
@@ -487,14 +455,7 @@ def chi_hamiltonian(
             )
         )
     )
-    source = float(
-        np.sum(
-            0.5
-            * (kappa / chi0)
-            * (source_density - e0_sq)
-            * chi**2
-        )
-    )
+    source = float(np.sum(0.5 * (kappa / chi0) * (source_density - e0_sq) * chi**2))
     total = kinetic + gradient + nonlinear_gradient + potential + source
     return {
         "kinetic": kinetic,
@@ -520,12 +481,7 @@ def radial_shell_profile(
     if center is None:
         center = tuple((size - 1.0) / 2.0 for size in shape)
     coordinates = np.indices(shape, dtype=np.float64)
-    radius = np.sqrt(
-        sum(
-            (coordinates[axis] - center[axis]) ** 2
-            for axis in range(3)
-        )
-    )
+    radius = np.sqrt(sum((coordinates[axis] - center[axis]) ** 2 for axis in range(3)))
     shell = np.floor(radius + 0.5).astype(np.int32)
     max_shell = int(shell.max())
     flat_shell = shell.ravel()
@@ -547,12 +503,15 @@ def radial_shell_profile(
         out=np.full_like(sums, np.nan, dtype=np.float64),
         where=counts > 0,
     )
-    variances = np.divide(
-        sums_sq,
-        counts,
-        out=np.full_like(sums_sq, np.nan, dtype=np.float64),
-        where=counts > 0,
-    ) - means**2
+    variances = (
+        np.divide(
+            sums_sq,
+            counts,
+            out=np.full_like(sums_sq, np.nan, dtype=np.float64),
+            where=counts > 0,
+        )
+        - means**2
+    )
     return {
         "radius": np.arange(max_shell + 1, dtype=np.float64),
         "mean": means,
@@ -584,12 +543,7 @@ def fit_inverse_r(
 
     radius = np.asarray(radius, dtype=np.float64)
     profile = np.asarray(profile, dtype=np.float64)
-    keep = (
-        (radius >= r_min)
-        & (radius <= r_max)
-        & np.isfinite(profile)
-        & (radius > 0.0)
-    )
+    keep = (radius >= r_min) & (radius <= r_max) & np.isfinite(profile) & (radius > 0.0)
     if np.count_nonzero(keep) < 4:
         raise ValueError("inverse-r fit requires at least four shells")
     r = radius[keep]
@@ -617,12 +571,7 @@ def fit_power_law(
 
     radius = np.asarray(radius, dtype=np.float64)
     magnitude = np.asarray(magnitude, dtype=np.float64)
-    keep = (
-        (radius >= r_min)
-        & (radius <= r_max)
-        & np.isfinite(magnitude)
-        & (magnitude > 0.0)
-    )
+    keep = (radius >= r_min) & (radius <= r_max) & np.isfinite(magnitude) & (magnitude > 0.0)
     if np.count_nonzero(keep) < 4:
         raise ValueError("power-law fit requires at least four positive shells")
     log_r = np.log(radius[keep])
@@ -650,12 +599,7 @@ def fit_yukawa(
 
     radius = np.asarray(radius, dtype=np.float64)
     profile = np.asarray(profile, dtype=np.float64)
-    keep = (
-        (radius >= r_min)
-        & (radius <= r_max)
-        & np.isfinite(profile)
-        & (radius > 0.0)
-    )
+    keep = (radius >= r_min) & (radius <= r_max) & np.isfinite(profile) & (radius > 0.0)
     if np.count_nonzero(keep) < 5:
         raise ValueError("Yukawa fit requires at least five shells")
     r = radius[keep]
@@ -740,9 +684,7 @@ def profile_observables(
         & np.isfinite(acceleration["mean"])
     )
     flux = acceleration["radius"][keep] ** 2 * acceleration["mean"][keep]
-    flux_relative_spread = float(
-        np.std(flux) / max(abs(float(np.mean(flux))), 1.0e-30)
-    )
+    flux_relative_spread = float(np.std(flux) / max(abs(float(np.mean(flux))), 1.0e-30))
     profile_anisotropy = float(
         np.nanmax(
             np.divide(
@@ -757,12 +699,8 @@ def profile_observables(
         "yukawa_fit": yukawa,
         "shell_flux_relative_spread": flux_relative_spread,
         "profile_anisotropy_max": profile_anisotropy,
-        "radial_profile": {
-            key: np.asarray(value).tolist()
-            for key, value in profile.items()
-        },
+        "radial_profile": {key: np.asarray(value).tolist() for key, value in profile.items()},
         "acceleration_profile": {
-            key: np.asarray(value).tolist()
-            for key, value in acceleration.items()
+            key: np.asarray(value).tolist() for key, value in acceleration.items()
         },
     }

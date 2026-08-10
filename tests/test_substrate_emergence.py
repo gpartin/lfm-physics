@@ -19,9 +19,7 @@ def _texture(size: int, epsilon: float = 0.1) -> np.ndarray:
     singlet = np.ones(3, dtype=np.complex128) / np.sqrt(3.0)
     relative = np.asarray((1.0, -1.0, 0.0), dtype=np.complex128) / np.sqrt(2.0)
     eta = np.sin(x) + 1j * np.sin(y)
-    raw = singlet[:, None, None, None] + (
-        epsilon * relative[:, None, None, None] * eta[None, ...]
-    )
+    raw = singlet[:, None, None, None] + (epsilon * relative[:, None, None, None] * eta[None, ...])
     return normalize_internal_field(raw)
 
 
@@ -59,7 +57,6 @@ def test_composite_curvature_changes_sign_under_conjugation() -> None:
     positive = composite_curvature_19pt(z, dx=dx)
     negative = composite_curvature_19pt(np.conj(z), dx=dx)
     residual = max(
-        float(np.max(np.abs(left + right)))
-        for left, right in zip(positive, negative, strict=True)
+        float(np.max(np.abs(left + right))) for left, right in zip(positive, negative, strict=True)
     )
     assert residual < 1.0e-12

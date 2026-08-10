@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass
+from typing import cast
 
 import numpy as np
 
@@ -63,16 +64,8 @@ def local_su3_gauge_transform(
     if gauge.shape != expected:
         raise ValueError("transformations must provide one 3x3 matrix per site")
     identity = np.eye(3, dtype=np.complex128)
-    unitary_error = float(
-        np.max(
-            np.abs(
-                np.swapaxes(gauge.conj(), -1, -2) @ gauge - identity
-            )
-        )
-    )
-    determinant_error = float(
-        np.max(np.abs(np.linalg.det(gauge) - 1.0))
-    )
+    unitary_error = float(np.max(np.abs(np.swapaxes(gauge.conj(), -1, -2) @ gauge - identity)))
+    determinant_error = float(np.max(np.abs(np.linalg.det(gauge) - 1.0)))
     if unitary_error > 1.0e-10 or determinant_error > 1.0e-10:
         raise ValueError("transformations must be site-local SU(3) matrices")
     transformed = state.copy()
@@ -104,11 +97,7 @@ def local_su3_gauge_transform(
             state.r3.color_electric[..., index, :],
             generators,
         )
-        rotated_electric = (
-            gauge
-            @ electric_matrix
-            @ np.swapaxes(gauge.conj(), -1, -2)
-        )
+        rotated_electric = gauge @ electric_matrix @ np.swapaxes(gauge.conj(), -1, -2)
         transformed.r3.color_electric[..., index, :] = (
             2.0
             * np.einsum(
@@ -135,9 +124,7 @@ def su3_fundamental_algebra_audit() -> dict[str, object]:
         generators,
     )
     eigenvalues = np.linalg.eigvalsh(casimir_matrix).real
-    normalization_error = float(
-        np.max(np.abs(gram - 0.5 * np.eye(generators.shape[0])))
-    )
+    normalization_error = float(np.max(np.abs(gram - 0.5 * np.eye(generators.shape[0]))))
     casimir_spread = float(np.max(eigenvalues) - np.min(eigenvalues))
     return {
         "generator_count": int(generators.shape[0]),
@@ -158,15 +145,11 @@ def r4_quantum_color_coefficients(
         parameters,
     )
     epsilon_vacuum = float(epsilon)
-    electric_coefficient = 1.0 / (
-        2.0 * parameters.r3.color_inertia * epsilon_vacuum
-    )
-    magnetic_coefficient = (
-        parameters.r3.color_stiffness * epsilon_vacuum
-    )
+    electric_coefficient = 1.0 / (2.0 * parameters.r3.color_inertia * epsilon_vacuum)
+    magnetic_coefficient = parameters.r3.color_stiffness * epsilon_vacuum
     g_squared = 2.0 * electric_coefficient
     inverse_g_squared = magnetic_coefficient
-    casimir = float(su3_fundamental_algebra_audit()["casimir"])
+    casimir = float(cast("float", su3_fundamental_algebra_audit()["casimir"]))
     return R4QuantumColorCoefficients(
         epsilon_vacuum=epsilon_vacuum,
         electric_coefficient=electric_coefficient,
@@ -179,7 +162,7 @@ def r4_quantum_color_coefficients(
 
 
 def _reverse(offset: tuple[int, int, int]) -> tuple[int, int, int]:
-    return tuple(-value for value in offset)
+    return (-offset[0], -offset[1], -offset[2])
 
 
 def weighted_loop_incidence(
@@ -193,10 +176,7 @@ def weighted_loop_incidence(
         reverse = _reverse(offset)
         incidence = 0.0
         for first, second, third, weight in triangle_loops(stencil):
-            incidence += weight * sum(
-                edge == offset or edge == reverse
-                for edge in (first, second, third)
-            )
+            incidence += weight * sum(edge in (offset, reverse) for edge in (first, second, third))
         result[offset] = float(incidence)
     return result
 
@@ -216,20 +196,14 @@ def r4_magnetic_competition_bound(
     incidence = weighted_loop_incidence(parameters.stencil)
     max_incidence = max(incidence.values())
     su3_loop_range = 4.5
-    magnetic_bound = (
-        coefficients.magnetic_coefficient
-        * su3_loop_range
-        * max_incidence
-    )
+    magnetic_bound = coefficients.magnetic_coefficient * su3_loop_range * max_incidence
     return R4MagneticCompetitionBound(
         stencil=parameters.stencil,
         max_weighted_loop_incidence=max_incidence,
         su3_loop_range=su3_loop_range,
         magnetic_bound_per_link=magnetic_bound,
         electric_flux_slope=coefficients.fundamental_flux_slope,
-        residual_positive_slope=(
-            coefficients.fundamental_flux_slope - magnetic_bound
-        ),
+        residual_positive_slope=(coefficients.fundamental_flux_slope - magnetic_bound),
     )
 
 
@@ -245,30 +219,25 @@ def minimum_link_distance(
     if any(abs(value) > 64 for value in target):
         raise ValueError("displacement is too large for the exact audit")
     unique, _ = _link_table(stencil)
-    moves = tuple(
-        offset
-        for base, _ in unique
-        for offset in (base, _reverse(base))
-    )
+    moves = tuple(offset for base, _ in unique for offset in (base, _reverse(base)))
     margin = max(abs(value) for value in target) + 2
     lower = tuple(min(0, value) - margin for value in target)
     upper = tuple(max(0, value) + margin for value in target)
-    queue: deque[tuple[tuple[int, int, int], int]] = deque(
-        [((0, 0, 0), 0)]
-    )
+    queue: deque[tuple[tuple[int, int, int], int]] = deque([((0, 0, 0), 0)])
     visited = {(0, 0, 0)}
     while queue:
         site, distance = queue.popleft()
         for move in moves:
-            neighbor = tuple(site[axis] + move[axis] for axis in range(3))
+            neighbor = (
+                site[0] + move[0],
+                site[1] + move[1],
+                site[2] + move[2],
+            )
             if neighbor == target:
                 return distance + 1
             if neighbor in visited:
                 continue
-            if not all(
-                lower[axis] <= neighbor[axis] <= upper[axis]
-                for axis in range(3)
-            ):
+            if not all(lower[axis] <= neighbor[axis] <= upper[axis] for axis in range(3)):
                 continue
             visited.add(neighbor)
             queue.append((neighbor, distance + 1))
@@ -282,9 +251,7 @@ def fundamental_flux_energy(
     """Return the leading compact-link energy required by Gauss law."""
 
     distance = minimum_link_distance(displacement, parameters.stencil)
-    slope = r4_quantum_color_coefficients(
-        parameters
-    ).fundamental_flux_slope
+    slope = r4_quantum_color_coefficients(parameters).fundamental_flux_slope
     return float(slope * distance)
 
 

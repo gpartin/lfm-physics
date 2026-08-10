@@ -55,10 +55,15 @@ from lfm.foundations.r3_link_frame_live import (
     state_distance as r3_state_distance,
 )
 
+Offset = tuple[int, int, int]
+
+
+def _offset3(values: tuple[int, ...]) -> Offset:
+    return (values[0], values[1], values[2])
+
+
 R4_ACTION_ID = "LFM-R4-UNIFIED-LIVE-EXPERIMENT-v1"
-R4_REGISTER_ID = (
-    "R4=(R3Live,PsiL_s,PiL_s,W_ij,EW_ij,H_i,EH_i)"
-)
+R4_REGISTER_ID = "R4=(R3Live,PsiL_s,PiL_s,W_ij,EW_ij,H_i,EH_i)"
 
 
 @lru_cache(maxsize=1)
@@ -204,12 +209,8 @@ def _validate_frame_scalar(
     amplitude = np.asarray(state.shape_amplitude)
     momentum = np.asarray(state.shape_momentum)
     if amplitude.ndim != 3 or momentum.shape != amplitude.shape:
-        raise ValueError(
-            "frame scalar amplitude and momentum must share a 3D shape"
-        )
-    if not np.all(np.isfinite(amplitude)) or not np.all(
-        np.isfinite(momentum)
-    ):
+        raise ValueError("frame scalar amplitude and momentum must share a 3D shape")
+    if not np.all(np.isfinite(amplitude)) or not np.all(np.isfinite(momentum)):
         raise ValueError("frame scalar state contains non-finite values")
     if source_density is None:
         return np.zeros_like(amplitude)
@@ -217,9 +218,7 @@ def _validate_frame_scalar(
     if source.shape != amplitude.shape:
         raise ValueError("source_density must match the scalar frame shape")
     if not np.all(np.isfinite(source)) or np.any(source < 0.0):
-        raise ValueError(
-            "source_density must be finite and nonnegative"
-        )
+        raise ValueError("source_density must be finite and nonnegative")
     return source
 
 
@@ -240,19 +239,12 @@ def r4_frame_scalar_energy(
         parameters.stencil,
     )
     kinetic = float(
-        polarization_norm_sq
-        * np.sum(momentum**2)
-        / (2.0 * parameters.r3.frame_inertia)
+        polarization_norm_sq * np.sum(momentum**2) / (2.0 * parameters.r3.frame_inertia)
     )
     gradient = float(
-        -0.5
-        * polarization_norm_sq
-        * parameters.r3.frame_stiffness
-        * np.sum(amplitude * laplacian)
+        -0.5 * polarization_norm_sq * parameters.r3.frame_stiffness * np.sum(amplitude * laplacian)
     )
-    source_energy = float(
-        np.sum(source * np.exp(0.75 * amplitude))
-    )
+    source_energy = float(np.sum(source * np.exp(0.75 * amplitude)))
     parts = {
         "frame_scalar_kinetic": kinetic,
         "frame_scalar_gradient": gradient,
@@ -290,11 +282,7 @@ def step_r4_frame_scalar(
         )
 
     kick(half)
-    state.shape_amplitude += (
-        dt
-        * state.shape_momentum
-        / parameters.r3.frame_inertia
-    )
+    state.shape_amplitude += dt * state.shape_momentum / parameters.r3.frame_inertia
     kick(half)
 
 
@@ -365,9 +353,7 @@ def _add_phase_color_weight_corrections(
     color_generators = su3_generators()
     identity3 = np.eye(3, dtype=np.complex128)
 
-    for first, second, third, loop_weight in triangle_loops(
-        parameters.stencil
-    ):
+    for first, second, third, loop_weight in triangle_loops(parameters.stencil):
         phase_one, phase_two, phase_three, phase_holonomy = _loop_products(
             base.phase_links,
             first,
@@ -375,33 +361,25 @@ def _add_phase_color_weight_corrections(
             third,
             complex_group=True,
         )
-        phase_bare = (
-            parameters.r3.phase_stiffness
-            * loop_weight
-            * (1.0 - np.real(phase_holonomy))
-        )
+        phase_bare = parameters.r3.phase_stiffness * loop_weight * (1.0 - np.real(phase_holonomy))
         phase_factor = q
         phase_correction += float(np.sum((phase_factor - 1.0) * phase_bare))
         if parameters.r3.frame_enabled:
-            base_rates.shape -= (
-                q * phase_bare
-            )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
+            base_rates.shape -= (q * phase_bare)[
+                ..., np.newaxis, np.newaxis
+            ] * _temporal_shape_projector()
         phase_h_gradient = (
-            -(phase_factor - 1.0)
-            * parameters.r3.phase_stiffness
-            * loop_weight
+            -(phase_factor - 1.0) * parameters.r3.phase_stiffness * loop_weight
         ).astype(np.complex128)
         phase_gradients = (
             phase_h_gradient * np.conj(phase_two * phase_three),
-            np.conj(phase_one)
-            * phase_h_gradient
-            * np.conj(phase_three),
+            np.conj(phase_one) * phase_h_gradient * np.conj(phase_three),
             np.conj(phase_one * phase_two) * phase_h_gradient,
         )
-        base_shifts = (
+        base_shifts: tuple[Offset, Offset, Offset] = (
             (0, 0, 0),
             first,
-            tuple(first[axis] + second[axis] for axis in range(3)),
+            _offset3(tuple(first[axis] + second[axis] for axis in range(3))),
         )
         for offset, base_shift, gradient in zip(
             (first, second, third),
@@ -426,30 +404,21 @@ def _add_phase_color_weight_corrections(
         color_bare = (
             parameters.r3.color_stiffness
             * loop_weight
-            * (
-                3.0
-                - np.real(
-                    np.trace(color_holonomy, axis1=-2, axis2=-1)
-                )
-            )
+            * (3.0 - np.real(np.trace(color_holonomy, axis1=-2, axis2=-1)))
         )
         color_factor = q * epsilon
         color_correction += float(np.sum((color_factor - 1.0) * color_bare))
         if parameters.r3.frame_enabled:
-            base_rates.shape -= (
-                q * epsilon * color_bare
-            )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
+            base_rates.shape -= (q * epsilon * color_bare)[
+                ..., np.newaxis, np.newaxis
+            ] * _temporal_shape_projector()
         base_rates.chi -= q * epsilon_derivative * color_bare
-        color_h_gradient = (
-            -(color_factor - 1.0)
-            * parameters.r3.color_stiffness
-            * loop_weight
-        )[..., np.newaxis, np.newaxis] * identity3
+        color_h_gradient = (-(color_factor - 1.0) * parameters.r3.color_stiffness * loop_weight)[
+            ..., np.newaxis, np.newaxis
+        ] * identity3
         color_gradients = (
             color_h_gradient @ _dagger(color_two @ color_three),
-            _dagger(color_one)
-            @ color_h_gradient
-            @ _dagger(color_three),
+            _dagger(color_one) @ color_h_gradient @ _dagger(color_three),
             _dagger(color_one @ color_two) @ color_h_gradient,
         )
         for offset, base_shift, gradient in zip(
@@ -468,23 +437,18 @@ def _add_phase_color_weight_corrections(
 
     for index in range(base.phase_links.shape[3]):
         phase = base.phase_links[..., index]
-        derivative = np.real(
-            np.conj(phase_gradient[..., index]) * (1.0j * phase)
-        )
+        derivative = np.real(np.conj(phase_gradient[..., index]) * (1.0j * phase))
         base_rates.phase_electric[..., index] -= derivative
         color = base.color_links[..., index, :, :]
         for generator_index, generator in enumerate(color_generators):
             variation = 1.0j * generator @ color
             derivative = np.real(
                 np.sum(
-                    np.conj(color_gradient[..., index, :, :])
-                    * variation,
+                    np.conj(color_gradient[..., index, :, :]) * variation,
                     axis=(-2, -1),
                 )
             )
-            base_rates.color_electric[..., index, generator_index] -= (
-                derivative
-            )
+            base_rates.color_electric[..., index, generator_index] -= derivative
     components["phase_loop_weight_correction"] = phase_correction
     components["color_loop_dielectric_correction"] = color_correction
     return phase_correction + color_correction
@@ -532,18 +496,11 @@ def potential_energy_and_rates(
         )
         difference = transported - state.weak_matter
         norm_sq = np.sum(np.abs(difference) ** 2, axis=-1)
-        source_half = (
-            0.25 * parameters.r3.wave_speed**2 * weight * norm_sq
-        )
+        source_half = 0.25 * parameters.r3.wave_speed**2 * weight * norm_sq
         weak_gradient_energy += float(np.sum((q + q_j) * source_half))
         weak_source_density += source_half
         weak_source_density += _scatter_from_base(source_half, offset)
-        force_scale = (
-            0.5
-            * parameters.r3.wave_speed**2
-            * weight
-            * (q + q_j)
-        )
+        force_scale = 0.5 * parameters.r3.wave_speed**2 * weight * (q + q_j)
         weak_rate += force_scale[..., np.newaxis] * difference
         neighbor_force = (
             -force_scale[..., np.newaxis]
@@ -568,9 +525,7 @@ def potential_energy_and_rates(
                 generator,
                 transported,
             )
-            derivative = force_scale * np.real(
-                np.sum(np.conj(difference) * variation, axis=-1)
-            )
+            derivative = force_scale * np.real(np.sum(np.conj(difference) * variation, axis=-1))
             weak_electric_rate[..., index, generator_index] -= derivative
 
         higgs_j = _neighbor(state.higgs_orientation, offset)
@@ -583,14 +538,10 @@ def potential_energy_and_rates(
         )
         chi_sq_sum = state.r3.chi**2 + chi_j**2
         q_sum = q + q_j
-        alignment_coefficient = (
-            0.125 * parameters.higgs_alignment * q_sum * chi_sq_sum
-        )
+        alignment_coefficient = 0.125 * parameters.higgs_alignment * q_sum * chi_sq_sum
         alignment_density = alignment_coefficient * higgs_norm_sq
         higgs_alignment_energy += float(np.sum(alignment_density))
-        alignment_force_scale = (
-            0.25 * parameters.higgs_alignment * q_sum * chi_sq_sum
-        )
+        alignment_force_scale = 0.25 * parameters.higgs_alignment * q_sum * chi_sq_sum
         for generator_index, generator in enumerate(weak_generators):
             left_variation = -1.0j * generator @ state.higgs_orientation
             left_derivative = alignment_force_scale * np.real(
@@ -600,9 +551,7 @@ def potential_energy_and_rates(
                 )
             )
             higgs_electric_rate[..., generator_index] -= left_derivative
-            right_variation = (
-                weak_link @ (1.0j * generator @ higgs_j)
-            )
+            right_variation = weak_link @ (1.0j * generator @ higgs_j)
             right_derivative = alignment_force_scale * np.real(
                 np.sum(
                     np.conj(higgs_difference) * right_variation,
@@ -613,43 +562,22 @@ def potential_energy_and_rates(
                 -right_derivative,
                 offset,
             )
-            link_variation = (
-                1.0j * generator @ transported_higgs
-            )
+            link_variation = 1.0j * generator @ transported_higgs
             link_derivative = alignment_force_scale * np.real(
                 np.sum(
                     np.conj(higgs_difference) * link_variation,
                     axis=(-2, -1),
                 )
             )
-            weak_electric_rate[..., index, generator_index] -= (
-                link_derivative
-            )
-        chi_derivative = (
-            0.25
-            * parameters.higgs_alignment
-            * q_sum
-            * state.r3.chi
-            * higgs_norm_sq
-        )
+            weak_electric_rate[..., index, generator_index] -= link_derivative
+        chi_derivative = 0.25 * parameters.higgs_alignment * q_sum * state.r3.chi * higgs_norm_sq
         base_rates.chi -= chi_derivative
-        neighbor_chi_derivative = (
-            0.25
-            * parameters.higgs_alignment
-            * q_sum
-            * chi_j
-            * higgs_norm_sq
-        )
+        neighbor_chi_derivative = 0.25 * parameters.higgs_alignment * q_sum * chi_j * higgs_norm_sq
         base_rates.chi += _scatter_from_base(
             -neighbor_chi_derivative,
             offset,
         )
-        endpoint_source = (
-            0.125
-            * parameters.higgs_alignment
-            * chi_sq_sum
-            * higgs_norm_sq
-        )
+        endpoint_source = 0.125 * parameters.higgs_alignment * chi_sq_sum * higgs_norm_sq
         weak_source_density += endpoint_source
         weak_source_density += _scatter_from_base(endpoint_source, offset)
 
@@ -657,16 +585,12 @@ def potential_energy_and_rates(
     weak_onsite = 0.5 * state.r3.chi**2 * weak_norm_sq
     weak_onsite_energy = float(np.sum(q * weak_onsite))
     weak_source_density += weak_onsite
-    weak_rate -= (
-        q * state.r3.chi**2
-    )[..., np.newaxis] * state.weak_matter
+    weak_rate -= (q * state.r3.chi**2)[..., np.newaxis] * state.weak_matter
     base_rates.chi -= q * state.r3.chi * weak_norm_sq
 
     weak_gradient = np.zeros_like(state.weak_links)
     identity2 = np.eye(2, dtype=np.complex128)
-    for first, second, third, loop_weight in triangle_loops(
-        parameters.stencil
-    ):
+    for first, second, third, loop_weight in triangle_loops(parameters.stencil):
         first_link, second_link, third_link, holonomy = _loop_products(
             state.weak_links,
             first,
@@ -677,30 +601,25 @@ def potential_energy_and_rates(
         bare_density = (
             parameters.weak_stiffness
             * loop_weight
-            * (
-                2.0
-                - np.real(np.trace(holonomy, axis1=-2, axis2=-1))
-            )
+            * (2.0 - np.real(np.trace(holonomy, axis1=-2, axis2=-1)))
         )
         weak_loop_energy += float(np.sum(q * bare_density))
         if parameters.r3.frame_enabled:
-            base_rates.shape -= (
-                q * bare_density
-            )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
-        holonomy_gradient = (
-            -q * parameters.weak_stiffness * loop_weight
-        )[..., np.newaxis, np.newaxis] * identity2
+            base_rates.shape -= (q * bare_density)[
+                ..., np.newaxis, np.newaxis
+            ] * _temporal_shape_projector()
+        holonomy_gradient = (-q * parameters.weak_stiffness * loop_weight)[
+            ..., np.newaxis, np.newaxis
+        ] * identity2
         gradients = (
             holonomy_gradient @ _dagger(second_link @ third_link),
-            _dagger(first_link)
-            @ holonomy_gradient
-            @ _dagger(third_link),
+            _dagger(first_link) @ holonomy_gradient @ _dagger(third_link),
             _dagger(first_link @ second_link) @ holonomy_gradient,
         )
-        base_shifts = (
+        base_shifts: tuple[Offset, Offset, Offset] = (
             (0, 0, 0),
             first,
-            tuple(first[axis] + second[axis] for axis in range(3)),
+            _offset3(tuple(first[axis] + second[axis] for axis in range(3))),
         )
         for offset, base_shift, gradient in zip(
             (first, second, third),
@@ -721,17 +640,16 @@ def potential_energy_and_rates(
             variation = 1.0j * generator @ link
             derivative = np.real(
                 np.sum(
-                    np.conj(weak_gradient[..., index, :, :])
-                    * variation,
+                    np.conj(weak_gradient[..., index, :, :]) * variation,
                     axis=(-2, -1),
                 )
             )
             weak_electric_rate[..., index, generator_index] -= derivative
 
     if parameters.r3.frame_enabled:
-        base_rates.shape -= (
-            q * weak_source_density
-        )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
+        base_rates.shape -= (q * weak_source_density)[
+            ..., np.newaxis, np.newaxis
+        ] * _temporal_shape_projector()
         base_rates.shape = _tracefree_symmetric(base_rates.shape)
     components.update(
         {
@@ -778,20 +696,14 @@ def _gauge_kinetic_replacements(
         epsilon_link = _link_average(epsilon, offset)
         phase += float(
             np.sum(
-                q_link
-                * base.phase_electric[..., index] ** 2
-                / (2.0 * parameters.r3.phase_inertia)
+                q_link * base.phase_electric[..., index] ** 2 / (2.0 * parameters.r3.phase_inertia)
             )
         )
         color += float(
             np.sum(
                 q_link[..., np.newaxis]
                 * base.color_electric[..., index, :] ** 2
-                / (
-                    2.0
-                    * parameters.r3.color_inertia
-                    * epsilon_link[..., np.newaxis]
-                )
+                / (2.0 * parameters.r3.color_inertia * epsilon_link[..., np.newaxis])
             )
         )
         if parameters.r3.frame_enabled:
@@ -799,10 +711,7 @@ def _gauge_kinetic_replacements(
                 np.sum(
                     q_link[..., np.newaxis]
                     * base.frame_electric[..., index, :] ** 2
-                    / (
-                        2.0
-                        * parameters.r3.frame_inertia
-                    )
+                    / (2.0 * parameters.r3.frame_inertia)
                 )
             )
         weak += float(
@@ -813,10 +722,7 @@ def _gauge_kinetic_replacements(
             )
         )
     higgs = float(
-        np.sum(
-            q[..., np.newaxis] * state.higgs_electric**2
-        )
-        / (2.0 * parameters.higgs_inertia)
+        np.sum(q[..., np.newaxis] * state.higgs_electric**2) / (2.0 * parameters.higgs_inertia)
     )
     return phase + color + frame + weak + higgs, {
         "phase_electric_weighted": phase,
@@ -836,21 +742,13 @@ def kinetic_energy(
     _validate_r4(state, parameters)
     base_energy, base_parts = r3_kinetic_energy(state.r3, parameters.r3)
     q = _frame_weight(state.r3, parameters)
-    weak_matter = float(
-        np.sum(
-            q
-            * 0.5
-            * np.sum(np.abs(state.weak_momentum) ** 2, axis=-1)
-        )
-    )
+    weak_matter = float(np.sum(q * 0.5 * np.sum(np.abs(state.weak_momentum) ** 2, axis=-1)))
     replacement, replacement_parts = _gauge_kinetic_replacements(
         state,
         parameters,
     )
     old_gauge = (
-        base_parts["phase_electric"]
-        + base_parts["color_electric"]
-        + base_parts["frame_electric"]
+        base_parts["phase_electric"] + base_parts["color_electric"] + base_parts["frame_electric"]
     )
     parts = dict(base_parts)
     parts.update(replacement_parts)
@@ -906,10 +804,7 @@ def _extra_gauge_kinetic_drift(
     frame_generators = so4_generators()
     source_density = np.zeros_like(q)
     color_is_live = bool(np.any(base.color_electric != 0.0))
-    frame_is_live = (
-        parameters.r3.frame_enabled
-        and bool(np.any(base.frame_electric != 0.0))
-    )
+    frame_is_live = parameters.r3.frame_enabled and bool(np.any(base.frame_electric != 0.0))
     weak_is_live = bool(np.any(state.weak_electric != 0.0))
 
     for index, (offset, _) in enumerate(unique):
@@ -924,10 +819,7 @@ def _extra_gauge_kinetic_drift(
             * base.phase_electric[..., index]
             / parameters.r3.phase_inertia
         )
-        phase_density = (
-            base.phase_electric[..., index] ** 2
-            / (4.0 * parameters.r3.phase_inertia)
-        )
+        phase_density = base.phase_electric[..., index] ** 2 / (4.0 * parameters.r3.phase_inertia)
         source_density += phase_density
         source_density += _scatter_from_base(phase_density, offset)
 
@@ -946,21 +838,13 @@ def _extra_gauge_kinetic_drift(
             q_link
             * color_energy_sq
             * epsilon_derivative
-            / (
-                4.0
-                * parameters.r3.color_inertia
-                * epsilon_link**2
-            )
+            / (4.0 * parameters.r3.color_inertia * epsilon_link**2)
         )
         chi_rate_j = (
             q_link
             * color_energy_sq
             * epsilon_derivative_j
-            / (
-                4.0
-                * parameters.r3.color_inertia
-                * epsilon_link**2
-            )
+            / (4.0 * parameters.r3.color_inertia * epsilon_link**2)
         )
         base.chi_momentum += duration * chi_rate_i
         base.chi_momentum += _scatter_from_base(
@@ -1045,13 +929,7 @@ def _extra_gauge_kinetic_drift(
                     weak_generators,
                 )
                 state.weak_links[site + (index,)] = (
-                    expm(
-                        1.0j
-                        * duration
-                        * q_link[site]
-                        * weak_algebra
-                        / parameters.weak_inertia
-                    )
+                    expm(1.0j * duration * q_link[site] * weak_algebra / parameters.weak_inertia)
                     @ state.weak_links[site + (index,)]
                 )
 
@@ -1063,23 +941,15 @@ def _extra_gauge_kinetic_drift(
                 weak_generators,
             )
             state.higgs_orientation[site] = (
-                expm(
-                    1.0j
-                    * duration
-                    * q[site]
-                    * higgs_algebra
-                    / parameters.higgs_inertia
-                )
+                expm(1.0j * duration * q[site] * higgs_algebra / parameters.higgs_inertia)
                 @ state.higgs_orientation[site]
             )
-    higgs_density = np.sum(state.higgs_electric**2, axis=-1) / (
-        2.0 * parameters.higgs_inertia
-    )
+    higgs_density = np.sum(state.higgs_electric**2, axis=-1) / (2.0 * parameters.higgs_inertia)
     source_density += higgs_density
     if parameters.r3.frame_enabled:
-        base.shape_momentum -= (
-            duration * q * source_density
-        )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
+        base.shape_momentum -= (duration * q * source_density)[
+            ..., np.newaxis, np.newaxis
+        ] * _temporal_shape_projector()
 
 
 def _weak_matter_kinetic_drift(
@@ -1092,13 +962,11 @@ def _weak_matter_kinetic_drift(
         np.abs(state.weak_momentum) ** 2,
         axis=-1,
     )
-    state.weak_matter += (
-        duration * q[..., np.newaxis] * state.weak_momentum
-    )
+    state.weak_matter += duration * q[..., np.newaxis] * state.weak_momentum
     if parameters.r3.frame_enabled:
-        state.r3.shape_momentum -= (
-            duration * q * density
-        )[..., np.newaxis, np.newaxis] * _temporal_shape_projector()
+        state.r3.shape_momentum -= (duration * q * density)[
+            ..., np.newaxis, np.newaxis
+        ] * _temporal_shape_projector()
 
 
 def step_r4(
@@ -1140,25 +1008,13 @@ def group_constraint_errors(state: R4State) -> dict[str, float]:
     """Return compact-group errors for the complete R3 plus R4 register."""
 
     weak_identity = state.weak_links @ _dagger(state.weak_links)
-    higgs_identity = state.higgs_orientation @ _dagger(
-        state.higgs_orientation
-    )
+    higgs_identity = state.higgs_orientation @ _dagger(state.higgs_orientation)
     return {
         **r3_group_constraint_errors(state.r3),
-        "weak_unitarity": float(
-            np.max(np.abs(weak_identity - np.eye(2)))
-        ),
-        "weak_determinant": float(
-            np.max(np.abs(np.linalg.det(state.weak_links) - 1.0))
-        ),
-        "higgs_unitarity": float(
-            np.max(np.abs(higgs_identity - np.eye(2)))
-        ),
-        "higgs_determinant": float(
-            np.max(
-                np.abs(np.linalg.det(state.higgs_orientation) - 1.0)
-            )
-        ),
+        "weak_unitarity": float(np.max(np.abs(weak_identity - np.eye(2)))),
+        "weak_determinant": float(np.max(np.abs(np.linalg.det(state.weak_links) - 1.0))),
+        "higgs_unitarity": float(np.max(np.abs(higgs_identity - np.eye(2)))),
+        "higgs_determinant": float(np.max(np.abs(np.linalg.det(state.higgs_orientation) - 1.0))),
     }
 
 

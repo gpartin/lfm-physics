@@ -13,14 +13,14 @@ from lfm.foundations.r3_link_frame_live import (
     su3_generators,
 )
 from lfm.foundations.r4_unified_live import (
-    R4Parameters,
     R4FrameScalarState,
+    R4Parameters,
     R4State,
     color_dielectric,
     group_constraint_errors,
     potential_energy_and_rates,
-    reverse_momenta,
     r4_frame_scalar_energy,
+    reverse_momenta,
     state_distance,
     step_r4,
     step_r4_frame_scalar,
@@ -38,47 +38,28 @@ def _seeded_state(
     state = R4State.vacuum(2, parameters)
     base = state.r3
     base.matter = 0.005 * (
-        rng.normal(size=base.matter.shape)
-        + 1.0j * rng.normal(size=base.matter.shape)
+        rng.normal(size=base.matter.shape) + 1.0j * rng.normal(size=base.matter.shape)
     )
     base.matter_momentum = 0.005 * (
-        rng.normal(size=base.matter.shape)
-        + 1.0j * rng.normal(size=base.matter.shape)
+        rng.normal(size=base.matter.shape) + 1.0j * rng.normal(size=base.matter.shape)
     )
     base.chi += 1.0e-4 * rng.normal(size=base.chi.shape)
     base.chi_momentum = 0.005 * rng.normal(size=base.chi.shape)
-    base.shape = _tracefree_symmetric(
-        1.0e-4 * rng.normal(size=base.shape.shape)
-    )
-    base.shape_momentum = _tracefree_symmetric(
-        0.005 * rng.normal(size=base.shape.shape)
-    )
-    base.phase_links *= np.exp(
-        1.0j * 1.0e-3 * rng.normal(size=base.phase_links.shape)
-    )
-    base.phase_electric = 0.005 * rng.normal(
-        size=base.phase_electric.shape
-    )
-    base.color_electric = 0.005 * rng.normal(
-        size=base.color_electric.shape
-    )
-    base.frame_electric = 0.005 * rng.normal(
-        size=base.frame_electric.shape
-    )
+    base.shape = _tracefree_symmetric(1.0e-4 * rng.normal(size=base.shape.shape))
+    base.shape_momentum = _tracefree_symmetric(0.005 * rng.normal(size=base.shape.shape))
+    base.phase_links *= np.exp(1.0j * 1.0e-3 * rng.normal(size=base.phase_links.shape))
+    base.phase_electric = 0.005 * rng.normal(size=base.phase_electric.shape)
+    base.color_electric = 0.005 * rng.normal(size=base.color_electric.shape)
+    base.frame_electric = 0.005 * rng.normal(size=base.frame_electric.shape)
     state.weak_matter = 0.005 * (
-        rng.normal(size=state.weak_matter.shape)
-        + 1.0j * rng.normal(size=state.weak_matter.shape)
+        rng.normal(size=state.weak_matter.shape) + 1.0j * rng.normal(size=state.weak_matter.shape)
     )
     state.weak_momentum = 0.005 * (
         rng.normal(size=state.weak_momentum.shape)
         + 1.0j * rng.normal(size=state.weak_momentum.shape)
     )
-    state.weak_electric = 0.005 * rng.normal(
-        size=state.weak_electric.shape
-    )
-    state.higgs_electric = 0.005 * rng.normal(
-        size=state.higgs_electric.shape
-    )
+    state.weak_electric = 0.005 * rng.normal(size=state.weak_electric.shape)
+    state.higgs_electric = 0.005 * rng.normal(size=state.higgs_electric.shape)
     color_generators = su3_generators()
     frame_generators = so4_generators()
     weak_generators = su2_generators()
@@ -141,9 +122,7 @@ def test_r4_vacuum_dielectric_and_generated_weak_gap(
             fromlist=["stencil_links"],
         ).stencil_links(parameters.stencil, oriented=False)
     ):
-        state.weak_links[..., index, :, :] = expm(
-            1.0j * amplitude * offset[0] * generator
-        )
+        state.weak_links[..., index, :, :] = expm(1.0j * amplitude * offset[0] * generator)
     energy = total_hamiltonian(state, parameters)[0]
     assert energy > 0.0
 
@@ -163,9 +142,7 @@ def test_r4_added_rates_are_hamiltonian_gradients(
         minus = state.copy()
         plus_update(plus)
         minus_update(minus)
-        return (
-            _potential(plus, parameters) - _potential(minus, parameters)
-        ) / (2.0 * epsilon)
+        return (_potential(plus, parameters) - _potential(minus, parameters)) / (2.0 * epsilon)
 
     weak_matter_derivative = derivative(
         lambda value: value.weak_matter.__setitem__(
@@ -188,13 +165,11 @@ def test_r4_added_rates_are_hamiltonian_gradients(
     weak_link_derivative = derivative(
         lambda value: value.weak_links.__setitem__(
             site + (link,),
-            expm(1.0j * epsilon * weak_generator)
-            @ value.weak_links[site + (link,)],
+            expm(1.0j * epsilon * weak_generator) @ value.weak_links[site + (link,)],
         ),
         lambda value: value.weak_links.__setitem__(
             site + (link,),
-            expm(-1.0j * epsilon * weak_generator)
-            @ value.weak_links[site + (link,)],
+            expm(-1.0j * epsilon * weak_generator) @ value.weak_links[site + (link,)],
         ),
     )
     assert np.isclose(
@@ -207,13 +182,11 @@ def test_r4_added_rates_are_hamiltonian_gradients(
     higgs_derivative = derivative(
         lambda value: value.higgs_orientation.__setitem__(
             site,
-            expm(1.0j * epsilon * weak_generator)
-            @ value.higgs_orientation[site],
+            expm(1.0j * epsilon * weak_generator) @ value.higgs_orientation[site],
         ),
         lambda value: value.higgs_orientation.__setitem__(
             site,
-            expm(-1.0j * epsilon * weak_generator)
-            @ value.higgs_orientation[site],
+            expm(-1.0j * epsilon * weak_generator) @ value.higgs_orientation[site],
         ),
     )
     assert np.isclose(
@@ -271,9 +244,7 @@ def test_r4_weak_local_covariance_of_potential(
         transformations,
         state.weak_matter,
     )
-    state.higgs_orientation = (
-        transformations @ state.higgs_orientation
-    )
+    state.higgs_orientation = transformations @ state.higgs_orientation
     unique = __import__(
         "lfm.analysis.energy_current",
         fromlist=["stencil_links"],
@@ -316,13 +287,10 @@ def test_r4_u1_su3_local_covariance_of_potential(
                 generators,
             )
         )
-    state.r3.matter = (
-        phase_transform[..., np.newaxis]
-        * np.einsum(
-            "...ab,...b->...a",
-            color_transform,
-            state.r3.matter,
-        )
+    state.r3.matter = phase_transform[..., np.newaxis] * np.einsum(
+        "...ab,...b->...a",
+        color_transform,
+        state.r3.matter,
     )
     state.weak_matter *= phase_transform[..., np.newaxis]
     unique = __import__(
@@ -332,9 +300,7 @@ def test_r4_u1_su3_local_covariance_of_potential(
     for index, (offset, _) in enumerate(unique):
         neighbor_phase = _neighbor(phase_transform, offset)
         neighbor_color = _neighbor(color_transform, offset)
-        state.r3.phase_links[..., index] *= (
-            phase_transform * np.conj(neighbor_phase)
-        )
+        state.r3.phase_links[..., index] *= phase_transform * np.conj(neighbor_phase)
         state.r3.color_links[..., index, :, :] = (
             color_transform
             @ state.r3.color_links[..., index, :, :]
@@ -383,27 +349,15 @@ def test_r4_live_reversal_groups_and_energy_order(
 
 @pytest.mark.parametrize("stencil", ["19", "27"])
 def test_r4_scalar_frame_sector_matches_full_r4(stencil: str) -> None:
-    parameters = R4Parameters(
-        r3=R3LiveParameters(stencil=stencil)
-    )
+    parameters = R4Parameters(r3=R3LiveParameters(stencil=stencil))
     rng = np.random.default_rng(71)
     scalar = R4FrameScalarState.vacuum(3)
-    scalar.shape_amplitude = 1.0e-4 * rng.normal(
-        size=scalar.shape_amplitude.shape
-    )
-    scalar.shape_momentum = 1.0e-4 * rng.normal(
-        size=scalar.shape_momentum.shape
-    )
+    scalar.shape_amplitude = 1.0e-4 * rng.normal(size=scalar.shape_amplitude.shape)
+    scalar.shape_momentum = 1.0e-4 * rng.normal(size=scalar.shape_momentum.shape)
     full = R4State.vacuum(3, parameters)
     projector = _temporal_shape_projector()
-    full.r3.shape = (
-        scalar.shape_amplitude[..., np.newaxis, np.newaxis]
-        * projector
-    )
-    full.r3.shape_momentum = (
-        scalar.shape_momentum[..., np.newaxis, np.newaxis]
-        * projector
-    )
+    full.r3.shape = scalar.shape_amplitude[..., np.newaxis, np.newaxis] * projector
+    full.r3.shape_momentum = scalar.shape_momentum[..., np.newaxis, np.newaxis] * projector
     full_energy = total_hamiltonian(full, parameters)[0]
     scalar_energy = r4_frame_scalar_energy(
         scalar,
@@ -413,31 +367,19 @@ def test_r4_scalar_frame_sector_matches_full_r4(stencil: str) -> None:
     step = 1.0e-4
     step_r4(full, step, parameters)
     step_r4_frame_scalar(scalar, step, parameters)
-    recovered_amplitude = (
-        np.sum(full.r3.shape * projector, axis=(-2, -1))
-        / np.sum(projector**2)
-    )
-    recovered_momentum = (
-        np.sum(
-            full.r3.shape_momentum * projector,
-            axis=(-2, -1),
-        )
-        / np.sum(projector**2)
-    )
-    assert np.max(
-        np.abs(recovered_amplitude - scalar.shape_amplitude)
-    ) < 2.0e-15
-    assert np.max(
-        np.abs(recovered_momentum - scalar.shape_momentum)
-    ) < 2.0e-14
+    recovered_amplitude = np.sum(full.r3.shape * projector, axis=(-2, -1)) / np.sum(projector**2)
+    recovered_momentum = np.sum(
+        full.r3.shape_momentum * projector,
+        axis=(-2, -1),
+    ) / np.sum(projector**2)
+    assert np.max(np.abs(recovered_amplitude - scalar.shape_amplitude)) < 2.0e-15
+    assert np.max(np.abs(recovered_momentum - scalar.shape_momentum)) < 2.0e-14
     assert np.max(np.abs(full.r3.frame_electric)) < 2.0e-18
 
 
 @pytest.mark.parametrize("stencil", ["19", "27"])
 def test_r4_scalar_frame_fixed_source_reverses(stencil: str) -> None:
-    parameters = R4Parameters(
-        r3=R3LiveParameters(stencil=stencil)
-    )
+    parameters = R4Parameters(r3=R3LiveParameters(stencil=stencil))
     initial = R4FrameScalarState.vacuum(5)
     source = np.zeros(initial.shape_amplitude.shape)
     source[2, 2, 2] = 1.0

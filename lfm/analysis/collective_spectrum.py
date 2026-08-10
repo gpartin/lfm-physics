@@ -105,10 +105,7 @@ def rotating_background(
 
     chi = float(np.sqrt(chi_sq))
     frequencies = np.array(
-        [
-            np.sqrt(chi_sq + wave_speed**2 * discrete_stiffness_19(row, spacing))
-            for row in q
-        ],
+        [np.sqrt(chi_sq + wave_speed**2 * discrete_stiffness_19(row, spacing)) for row in q],
         dtype=float,
     )
     return RotatingBackground(
@@ -231,9 +228,7 @@ def zero_chi_branch_audit(
         "longitudinal_modes_removed": 0,
         "linear_matter_to_chi_source_coefficient": 0.0,
         "linear_chi_to_matter_response_coefficient": 0.0,
-        "coupling_reason": (
-            "Both coefficients are proportional to d(chi^2)/dchi = 2 chi."
-        ),
+        "coupling_reason": ("Both coefficients are proportional to d(chi^2)/dchi = 2 chi."),
         "simultaneous_newtonian_and_maxwell_carrier": False,
     }
 
@@ -268,8 +263,8 @@ def collective_qep_matrices(
         symbol_q = _symbol_19(q, spacing)
         symbol_plus = _symbol_19(q + k, spacing)
         symbol_minus = _symbol_19(q - k, spacing)
-        even_stiffness = -c**2 * (0.5 * (symbol_plus + symbol_minus) - symbol_q)
-        odd_stiffness = -c**2 * 0.5 * (symbol_plus - symbol_minus)
+        even_stiffness = -(c**2) * (0.5 * (symbol_plus + symbol_minus) - symbol_q)
+        odd_stiffness = -(c**2) * 0.5 * (symbol_plus - symbol_minus)
         u_index = component
         v_index = 3 + component
         mu = background.carrier_frequencies[component]
@@ -334,9 +329,7 @@ def mode_polarization(
     longitudinal_fraction = float(abs(longitudinal) ** 2 / phase_norm_sq)
     transverse_fraction = float(max(0.0, 1.0 - longitudinal_fraction))
 
-    strain = 1.0j * (
-        np.outer(k, phase) + np.outer(phase, k)
-    )
+    strain = 1.0j * (np.outer(k, phase) + np.outer(phase, k))
     projector = np.eye(3) - np.outer(direction, direction)
     projected = projector @ strain @ projector
     tt = projected - 0.5 * projector * np.trace(projected)
@@ -363,9 +356,7 @@ def berry_action_derivative_audit() -> dict[str, object]:
 
     return {
         "composite_connection": "A_mu = Im(z_dagger partial_mu z)",
-        "composite_curvature": (
-            "F_mu_nu = 2 Im(partial_mu z_dagger partial_nu z)"
-        ),
+        "composite_curvature": ("F_mu_nu = 2 Im(partial_mu z_dagger partial_nu z)"),
         "bare_action_highest_derivative_order": 2,
         "composite_f_squared_derivative_order": 4,
         "bare_action_contains_independent_f_squared": False,

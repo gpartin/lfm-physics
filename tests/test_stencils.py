@@ -116,9 +116,7 @@ class TestLaplacian27pt:
         kz = 2.0 * np.pi * kz_i / size
         field = np.cos(kx * x + ky * y + kz * z)
         lap = laplacian_27pt(field)
-        eigenvalue = float(
-            eigenvalue_27pt(np.array(kx), np.array(ky), np.array(kz))
-        )
+        eigenvalue = float(eigenvalue_27pt(np.array(kx), np.array(ky), np.array(kz)))
         np.testing.assert_allclose(lap, eigenvalue * field, atol=1e-12)
 
 

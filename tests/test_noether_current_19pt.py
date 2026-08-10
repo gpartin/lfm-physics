@@ -51,15 +51,9 @@ class TestNoetherCurrent19ptSymbol:
 
         kx, ky, kz = (2.0 * np.pi * mode / n for mode in modes)
         expected = (
-            (2.0 * amplitude**2 / 3.0)
-            * np.sin(kx)
-            * (1.0 + np.cos(ky) + np.cos(kz)),
-            (2.0 * amplitude**2 / 3.0)
-            * np.sin(ky)
-            * (1.0 + np.cos(kx) + np.cos(kz)),
-            (2.0 * amplitude**2 / 3.0)
-            * np.sin(kz)
-            * (1.0 + np.cos(kx) + np.cos(ky)),
+            (2.0 * amplitude**2 / 3.0) * np.sin(kx) * (1.0 + np.cos(ky) + np.cos(kz)),
+            (2.0 * amplitude**2 / 3.0) * np.sin(ky) * (1.0 + np.cos(kx) + np.cos(kz)),
+            (2.0 * amplitude**2 / 3.0) * np.sin(kz) * (1.0 + np.cos(kx) + np.cos(ky)),
         )
         for actual, target in zip((jx_raw, jy_raw, jz_raw), expected, strict=True):
             np.testing.assert_allclose(actual, target, rtol=0.0, atol=2e-14)
@@ -74,9 +68,7 @@ class TestNoetherCurrent19ptSymbol:
         current_a = noether_current_19pt_raw(real_a, imag_a)
         current_b = noether_current_19pt_raw(real_b, imag_b)
         current_r = noether_current_19pt_raw(real_r, imag_r)
-        for base, shifted, reversed_wave in zip(
-            current_a, current_b, current_r, strict=True
-        ):
+        for base, shifted, reversed_wave in zip(current_a, current_b, current_r, strict=True):
             np.testing.assert_allclose(shifted, base, rtol=0.0, atol=1e-14)
             np.testing.assert_allclose(reversed_wave, -base, rtol=0.0, atol=1e-14)
 
@@ -95,12 +87,8 @@ class TestNoetherCurrent19ptSymbol:
         d_imag_y = np.roll(imag, -1, axis=1) - np.roll(imag, 1, axis=1)
         legacy_raw = real * d_imag_y - imag * d_real_y
         expected_top = 1.4**2 * np.sin(0.37)
-        np.testing.assert_allclose(
-            legacy_raw[x0, y0, z0], expected_top, rtol=0.0, atol=1e-14
-        )
-        np.testing.assert_allclose(
-            legacy_raw[x0, y0 + 2, z0], -expected_top, rtol=0.0, atol=1e-14
-        )
+        np.testing.assert_allclose(legacy_raw[x0, y0, z0], expected_top, rtol=0.0, atol=1e-14)
+        np.testing.assert_allclose(legacy_raw[x0, y0 + 2, z0], -expected_top, rtol=0.0, atol=1e-14)
 
 
 def test_cpu_complex_one_step_source_sign_and_normalization():

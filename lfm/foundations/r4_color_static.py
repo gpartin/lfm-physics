@@ -9,6 +9,7 @@ Gauss constraint for the current local dielectric.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 
 import numpy as np
 from scipy.sparse.linalg import LinearOperator, cg
@@ -110,9 +111,7 @@ def _electric_from_potential(
             shift=tuple(-value for value in offset),
             axis=(0, 1, 2),
         )
-        electric[..., index] = (
-            link_epsilon[..., index] * (potential - neighbor)
-        )
+        electric[..., index] = link_epsilon[..., index] * (potential - neighbor)
     return electric
 
 
@@ -225,10 +224,13 @@ def solve_color_gauss_minimum(
         link_epsilon,
         parameters,
     )
-    residual = color_gauss_divergence(
-        electric,
-        parameters,
-    ) - charge_values
+    residual = (
+        color_gauss_divergence(
+            electric,
+            parameters,
+        )
+        - charge_values
+    )
     scale = max(float(np.max(np.abs(charge_values))), 1.0)
     residual_norm = float(np.max(np.abs(residual)) / scale)
     return potential, electric, residual_norm
@@ -257,12 +259,7 @@ def r4_color_static_energy(
     )
     radial_energy = float(np.sum(radial_density))
     laplacian = _laplacian(chi_values, parameters.stencil)
-    gradient_density = (
-        -0.5
-        * parameters.r3.frame_stiffness
-        * chi_values
-        * laplacian
-    )
+    gradient_density = -0.5 * parameters.r3.frame_stiffness * chi_values * laplacian
     gradient_energy = float(np.sum(gradient_density))
     site_electric = r4_color_electric_site_density(
         chi_values,
@@ -318,9 +315,7 @@ def r4_color_flux_observables(
     if axes.size != 1:
         raise ValueError("point charges must differ along one lattice axis")
     longitudinal_axis = int(axes[0])
-    transverse_axes = [
-        axis for axis in range(3) if axis != longitudinal_axis
-    ]
+    transverse_axes = [axis for axis in range(3) if axis != longitudinal_axis]
     density = r4_color_electric_site_density(
         state.chi,
         state.electric,
@@ -337,18 +332,14 @@ def r4_color_flux_observables(
         )
         transverse_sq += displacement**2
     total = max(float(np.sum(density)), 1.0e-30)
-    transverse_rms = float(
-        np.sqrt(np.sum(density * transverse_sq) / total)
-    )
+    transverse_rms = float(np.sqrt(np.sum(density * transverse_sq) / total))
     epsilon, _ = color_dielectric(state.chi, parameters)
     density_flat = density.reshape(-1)
     epsilon_flat = epsilon.reshape(-1)
     if np.std(density_flat) == 0.0 or np.std(epsilon_flat) == 0.0:
         correlation = 0.0
     else:
-        correlation = float(
-            np.corrcoef(density_flat, epsilon_flat)[0, 1]
-        )
+        correlation = float(np.corrcoef(density_flat, epsilon_flat)[0, 1])
     return {
         "transverse_flux_rms": transverse_rms,
         "flux_dielectric_correlation": correlation,
@@ -369,22 +360,13 @@ def _chi_energy_gradient(
         parameters,
     )
     del epsilon
-    gradient = (
-        4.0
-        * parameters.r3.frame_inertia
-        * parameters.r3.lambda_h
-        * chi
-        * (chi**2 - parameters.r3.chi0**2)
-        - parameters.r3.frame_stiffness
-        * _laplacian(chi, parameters.stencil)
-    )
+    gradient = 4.0 * parameters.r3.frame_inertia * parameters.r3.lambda_h * chi * (
+        chi**2 - parameters.r3.chi0**2
+    ) - parameters.r3.frame_stiffness * _laplacian(chi, parameters.stencil)
     unique, _ = _link_table(parameters.stencil)
     for index, (offset, _) in enumerate(unique):
         endpoint = (
-            -0.25
-            * electric[..., index] ** 2
-            * epsilon_derivative
-            / link_epsilon[..., index] ** 2
+            -0.25 * electric[..., index] ** 2 * epsilon_derivative / link_epsilon[..., index] ** 2
         )
         gradient += endpoint
         neighbor_endpoint = (
@@ -426,14 +408,13 @@ def relax_r4_color_static(
     if initial_chi_noise < 0.0 or chi_step <= 0.0:
         raise ValueError("noise must be nonnegative and step positive")
     rng = np.random.default_rng(seed)
-    chi = (
-        parameters.r3.chi0
-        + initial_chi_noise * rng.normal(size=charge_values.shape)
+    chi = cast(
+        "np.ndarray",
+        parameters.r3.chi0 + initial_chi_noise * rng.normal(size=charge_values.shape),
     )
-    potential = np.zeros_like(charge_values)
-    electric = np.zeros(
-        charge_values.shape
-        + (len(_link_table(parameters.stencil)[0]),),
+    potential: np.ndarray = np.zeros_like(charge_values)
+    electric: np.ndarray = np.zeros(
+        charge_values.shape + (len(_link_table(parameters.stencil)[0]),),
         dtype=np.float64,
     )
     residual = float("inf")
@@ -497,10 +478,7 @@ def relax_r4_chi_at_fixed_color_electric(
     if initial_chi_noise < 0.0:
         raise ValueError("initial_chi_noise must be nonnegative")
     rng = np.random.default_rng(seed)
-    chi = (
-        parameters.r3.chi0
-        + initial_chi_noise * rng.normal(size=electric_values.shape[:-1])
-    )
+    chi = parameters.r3.chi0 + initial_chi_noise * rng.normal(size=electric_values.shape[:-1])
     for _ in range(chi_iterations):
         chi -= chi_step * _chi_energy_gradient(
             chi,
@@ -517,8 +495,7 @@ def relax_r4_chi_at_fixed_color_electric(
     _, _, link_epsilon = _link_dielectric(chi, parameters)
     electric_norm = float(np.sum(electric_values**2))
     effective_g_squared = float(
-        np.sum(electric_values**2 / link_epsilon)
-        / max(electric_norm, 1.0e-30)
+        np.sum(electric_values**2 / link_epsilon) / max(electric_norm, 1.0e-30)
     )
     gauss = color_gauss_divergence(electric_values, parameters)
     return R4FixedColorElectricState(

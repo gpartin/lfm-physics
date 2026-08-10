@@ -59,4 +59,3 @@ def test_periodic_static_solver_closes_for_both_stencils() -> None:
         )
         assert float(np.max(np.abs(residual))) < 1.0e-12
         assert abs(float(np.mean(field))) < 1.0e-15
-

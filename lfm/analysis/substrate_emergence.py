@@ -73,12 +73,7 @@ def relational_wave_scaling_scan(
     q_modes = np.asarray(tuple(q_values), dtype=np.float64)
     h_values = np.asarray(tuple(spacings), dtype=np.float64)
     factors = np.asarray(tuple(mass_factors), dtype=np.float64)
-    if (
-        chis.size == 0
-        or q_modes.size == 0
-        or h_values.size < 3
-        or factors.size == 0
-    ):
+    if chis.size == 0 or q_modes.size == 0 or h_values.size < 3 or factors.size == 0:
         raise ValueError("nonempty scans and at least three spacings are required")
     if (
         np.any(chis <= 0.0)
@@ -149,9 +144,7 @@ def relational_wave_scaling_scan(
                         )[0]
                     )
                     omega_target = float(np.sqrt(1.0 + q_value * q_value))
-                    velocity_target = float(
-                        c * q_value / np.sqrt(1.0 + q_value * q_value)
-                    )
+                    velocity_target = float(c * q_value / np.sqrt(1.0 + q_value * q_value))
                     dimensionless_omega = omega / mass
                     dispersion_error = abs(dimensionless_omega - omega_target)
                     velocity_error = abs(velocity - velocity_target) / c
@@ -176,14 +169,10 @@ def relational_wave_scaling_scan(
                             "group_velocity_error_over_c": velocity_error,
                             "clock_ruler_product": clock_ruler,
                             "clock_ruler_error": clock_ruler_error,
-                            "rest_acceleration_log_chi_coefficient": (
-                                acceleration_coefficient
-                            ),
+                            "rest_acceleration_log_chi_coefficient": (acceleration_coefficient),
                         }
                     )
-        local_spread = max(
-            max(values) - min(values) for values in grouped.values()
-        )
+        local_spread = max(max(values) - min(values) for values in grouped.values())
         summaries.append(
             {
                 "spacing": float(spacing),
@@ -192,8 +181,7 @@ def relational_wave_scaling_scan(
                 "max_clock_ruler_error": float(max(clock_ruler_errors)),
                 "max_local_chi_dispersion_spread": float(local_spread),
                 "rest_acceleration_branch_spread": float(
-                    max(acceleration_universality)
-                    - min(acceleration_universality)
+                    max(acceleration_universality) - min(acceleration_universality)
                 ),
             }
         )
@@ -208,26 +196,18 @@ def relational_wave_scaling_scan(
         )
     }
     convergence = {
-        f"{key}_slope": _log_log_slope(h_values, values)
-        for key, values in summary_arrays.items()
+        f"{key}_slope": _log_log_slope(h_values, values) for key, values in summary_arrays.items()
     }
     finest = summaries[int(np.argmin(h_values))]
     gates = {
-        "second_order_dispersion": convergence[
-            "max_dispersion_error_slope"
-        ] > 1.8,
-        "second_order_group_velocity": convergence[
-            "max_group_velocity_error_over_c_slope"
-        ] > 1.8,
-        "second_order_clock_ruler": convergence[
-            "max_clock_ruler_error_slope"
-        ] > 1.8,
-        "local_relational_collapse": float(
-            finest["max_local_chi_dispersion_spread"]
-        ) < 1.0e-3,
+        "second_order_dispersion": convergence["max_dispersion_error_slope"] > 1.8,
+        "second_order_group_velocity": convergence["max_group_velocity_error_over_c_slope"] > 1.8,
+        "second_order_clock_ruler": convergence["max_clock_ruler_error_slope"] > 1.8,
+        "local_relational_collapse": float(finest["max_local_chi_dispersion_spread"]) < 1.0e-3,
         "linear_branch_rest_acceleration_universal": float(
             finest["rest_acceleration_branch_spread"]
-        ) < 1.0e-14,
+        )
+        < 1.0e-14,
     }
     return {
         "definition": {
@@ -273,8 +253,7 @@ def composite_connection_19pt(
         gradient_imag = gradient_19pt(component.imag, dx=dx)
         for axis in range(3):
             connection[axis] += (
-                component.real * gradient_imag[axis]
-                - component.imag * gradient_real[axis]
+                component.real * gradient_imag[axis] - component.imag * gradient_real[axis]
             )
     return connection[0], connection[1], connection[2]
 

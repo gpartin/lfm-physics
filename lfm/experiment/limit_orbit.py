@@ -56,12 +56,8 @@ def _orbit_row(
     separation = float(np.linalg.norm(relative))
     unit = relative / max(separation, 1.0e-30)
     total_mass = heavy.mass + light.mass
-    center = (
-        heavy.mass * heavy_position + light.mass * light_position
-    ) / total_mass
-    momentum = (
-        heavy.mass * heavy_velocity + light.mass * light_velocity
-    )
+    center = (heavy.mass * heavy_position + light.mass * light_position) / total_mass
+    momentum = heavy.mass * heavy_velocity + light.mass * light_velocity
     return {
         "step": int(step),
         "time": float(step * dt),
@@ -83,12 +79,8 @@ def _orbit_row(
         "light_ax": float(light_acceleration[0]),
         "light_ay": float(light_acceleration[1]),
         "light_az": float(light_acceleration[2]),
-        "heavy_inward_acceleration": float(
-            np.dot(heavy_acceleration, unit)
-        ),
-        "light_inward_acceleration": float(
-            np.dot(light_acceleration, -unit)
-        ),
+        "heavy_inward_acceleration": float(np.dot(heavy_acceleration, unit)),
+        "light_inward_acceleration": float(np.dot(light_acceleration, -unit)),
         "separation": separation,
         "bearing_rad": float(math.atan2(relative[1], relative[0])),
         "center_x": float(center[0]),
@@ -136,12 +128,8 @@ def integrate_limit02_two_body(
         [initial_separation, 0.0, 0.0],
         dtype=np.float64,
     )
-    heavy_position = (
-        center - (light.mass / total_mass) * separation_vector
-    )
-    light_position = (
-        center + (heavy.mass / total_mass) * separation_vector
-    )
+    heavy_position = center - (light.mass / total_mass) * separation_vector
+    light_position = center + (heavy.mass / total_mass) * separation_vector
     heavy_velocity = np.asarray(
         [
             0.0,
@@ -180,32 +168,18 @@ def integrate_limit02_two_body(
 
     dt_sq_half = 0.5 * dt * dt
     for step in range(1, steps + 1):
-        heavy_position = (
-            heavy_position
-            + dt * heavy_velocity
-            + dt_sq_half * heavy_acceleration
+        heavy_position = heavy_position + dt * heavy_velocity + dt_sq_half * heavy_acceleration
+        light_position = light_position + dt * light_velocity + dt_sq_half * light_acceleration
+        new_heavy_acceleration, new_light_acceleration = _two_body_accelerations(
+            heavy,
+            light,
+            heavy_position,
+            light_position,
+            chi0=chi0,
+            c=c,
         )
-        light_position = (
-            light_position
-            + dt * light_velocity
-            + dt_sq_half * light_acceleration
-        )
-        new_heavy_acceleration, new_light_acceleration = (
-            _two_body_accelerations(
-                heavy,
-                light,
-                heavy_position,
-                light_position,
-                chi0=chi0,
-                c=c,
-            )
-        )
-        heavy_velocity = heavy_velocity + 0.5 * dt * (
-            heavy_acceleration + new_heavy_acceleration
-        )
-        light_velocity = light_velocity + 0.5 * dt * (
-            light_acceleration + new_light_acceleration
-        )
+        heavy_velocity = heavy_velocity + 0.5 * dt * (heavy_acceleration + new_heavy_acceleration)
+        light_velocity = light_velocity + 0.5 * dt * (light_acceleration + new_light_acceleration)
         heavy_acceleration = new_heavy_acceleration
         light_acceleration = new_light_acceleration
 
@@ -250,22 +224,14 @@ def summarize_limit02_orbit(
         direction_fraction = 0.0
     else:
         net_sign = 1.0 if sweep_deg > 0.0 else -1.0
-        direction_fraction = float(
-            np.mean(np.sign(nonzero) == net_sign)
-        )
+        direction_fraction = float(np.mean(np.sign(nonzero) == net_sign))
 
     centers = np.asarray(
-        [
-            [row["center_x"], row["center_y"], row["center_z"]]
-            for row in rows
-        ],
+        [[row["center_x"], row["center_y"], row["center_z"]] for row in rows],
         dtype=np.float64,
     )
     momenta = np.asarray(
-        [
-            [row["momentum_x"], row["momentum_y"], row["momentum_z"]]
-            for row in rows
-        ],
+        [[row["momentum_x"], row["momentum_y"], row["momentum_z"]] for row in rows],
         dtype=np.float64,
     )
     center_drift = np.linalg.norm(centers - centers[0], axis=1)
@@ -279,19 +245,13 @@ def summarize_limit02_orbit(
         "final_separation_ratio": float(separations[-1] / initial),
         "minimum_separation": float(np.min(separations)),
         "maximum_separation": float(np.max(separations)),
-        "separation_spread_ratio": float(
-            (np.max(separations) - np.min(separations)) / initial
-        ),
+        "separation_spread_ratio": float((np.max(separations) - np.min(separations)) / initial),
         "angular_sweep_deg": sweep_deg,
         "orbit_direction_fraction": direction_fraction,
         "max_center_drift": float(np.max(center_drift)),
         "max_momentum_drift": float(np.max(momentum_drift)),
-        "initial_heavy_inward_acceleration": float(
-            rows[0]["heavy_inward_acceleration"]
-        ),
-        "initial_light_inward_acceleration": float(
-            rows[0]["light_inward_acceleration"]
-        ),
+        "initial_heavy_inward_acceleration": float(rows[0]["heavy_inward_acceleration"]),
+        "initial_light_inward_acceleration": float(rows[0]["light_inward_acceleration"]),
     }
 
 

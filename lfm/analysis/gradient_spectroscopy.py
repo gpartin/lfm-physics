@@ -273,10 +273,7 @@ def cross_validated_mode(
     """Select on one sample half and evaluate on the held-out half both ways."""
 
     family_slice = operator_family_slices()[family]
-    selected = {
-        key: np.asarray(value)[..., family_slice]
-        for key, value in sample_modes.items()
-    }
+    selected = {key: np.asarray(value)[..., family_slice] for key, value in sample_modes.items()}
     sample_count = selected["transverse_k1"].shape[0]
     halves = (np.arange(sample_count) % 2 == 0, np.arange(sample_count) % 2 == 1)
     expected = expected_massless_ir_ratio(size)

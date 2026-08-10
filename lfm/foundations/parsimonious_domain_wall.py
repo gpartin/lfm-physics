@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -47,6 +47,12 @@ if TYPE_CHECKING:
 P4F_DW_ACTION_ID = "LFM-P4F-DOMAIN-WALL-WEAK-EXPERIMENT-v1"
 P4F_DW_REGISTER_ID = "P4F-DW=(P4F,DomainWallPhi_s,DomainWallPi_s)"
 
+Offset = tuple[int, int, int]
+
+
+def _offset3(values: tuple[int, ...]) -> Offset:
+    return (values[0], values[1], values[2])
+
 
 def _euclidean_spin_matrices() -> tuple[
     tuple[np.ndarray, np.ndarray, np.ndarray],
@@ -71,7 +77,7 @@ def _euclidean_spin_matrices() -> tuple[
     gamma5 = np.block([[identity2, zero2], [zero2, -identity2]])
     identity4 = np.eye(4, dtype=np.complex128)
     return (
-        tuple(spatial),
+        cast("tuple[np.ndarray, np.ndarray, np.ndarray]", tuple(spatial)),
         0.5 * (identity4 - gamma5),
         0.5 * (identity4 + gamma5),
     )
@@ -216,7 +222,7 @@ def _spatial_parts(
         forward_link = weak_links[..., index, :, :]
         backward_link = _oriented_link(
             weak_links,
-            tuple(-item for item in offset),
+            _offset3(tuple(-item for item in offset)),
             complex_group=True,
         )
         forward = _apply_weak(
@@ -225,7 +231,7 @@ def _spatial_parts(
         )
         backward = _apply_weak(
             backward_link,
-            _neighbor(values, tuple(-item for item in offset)),
+            _neighbor(values, _offset3(tuple(-item for item in offset))),
         )
         guard += weight * (2.0 * values - forward - backward)
         if index < 3:

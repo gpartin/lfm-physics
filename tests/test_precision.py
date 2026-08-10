@@ -238,9 +238,7 @@ class TestGpuPrecision:
         (lfm.FieldLevel.REAL, lfm.FieldLevel.COMPLEX, lfm.FieldLevel.COLOR),
     )
     def test_float64_gpu_state_and_evolution(self, field_level):
-        sim = lfm.Simulation(
-            _config(lfm.Precision.FLOAT64, field_level), backend="gpu"
-        )
+        sim = lfm.Simulation(_config(lfm.Precision.FLOAT64, field_level), backend="gpu")
         _seed_phase_space(sim, np.dtype(np.float64))
         sim.run(2, record_metrics=False)
         snapshot = sim.phase_space_snapshot()
@@ -250,12 +248,8 @@ class TestGpuPrecision:
                 assert np.isfinite(value).all()
 
     def test_float64_color_gpu_matches_cpu(self):
-        cpu = lfm.Simulation(
-            _config(lfm.Precision.FLOAT64, lfm.FieldLevel.COLOR), backend="cpu"
-        )
-        gpu = lfm.Simulation(
-            _config(lfm.Precision.FLOAT64, lfm.FieldLevel.COLOR), backend="gpu"
-        )
+        cpu = lfm.Simulation(_config(lfm.Precision.FLOAT64, lfm.FieldLevel.COLOR), backend="cpu")
+        gpu = lfm.Simulation(_config(lfm.Precision.FLOAT64, lfm.FieldLevel.COLOR), backend="gpu")
         _seed_phase_space(cpu, np.dtype(np.float64))
         _seed_phase_space(gpu, np.dtype(np.float64))
         cpu.run(3, record_metrics=False)
@@ -270,9 +264,7 @@ class TestGpuPrecision:
             "chi",
             "chi_prev",
         ):
-            np.testing.assert_allclose(
-                gpu_state[key], cpu_state[key], rtol=5e-12, atol=5e-12
-            )
+            np.testing.assert_allclose(gpu_state[key], cpu_state[key], rtol=5e-12, atol=5e-12)
 
     def test_float64_color_sa_gpu_path_preserves_dtype(self):
         cfg = _config(lfm.Precision.FLOAT64, lfm.FieldLevel.COLOR)

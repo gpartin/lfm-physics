@@ -47,7 +47,7 @@ Direct usage::
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -207,7 +207,8 @@ def r1_vacuum_subtracted_potential(
     """Return chi^2 - chi0^2 for the massless R1 light perturbation."""
     out_dtype = _runtime_float_dtype(chi)
     chi_f = chi.astype(out_dtype, copy=False)
-    return (chi_f * chi_f - out_dtype(chi0 * chi0)).astype(out_dtype)
+    potential = chi_f * chi_f - out_dtype(chi0 * chi0)  # type: ignore[operator]
+    return cast("NDArray[np.floating]", potential.astype(out_dtype))
 
 
 def r1_light_acceleration(
@@ -229,16 +230,19 @@ def r1_light_acceleration(
     acc_r = (c_speed * c_speed * laplacian_19pt(psi_r)).astype(out_dtype)
     acc_i = (c_speed * c_speed * laplacian_19pt(psi_i)).astype(out_dtype)
     if chi is None:
-        return acc_r, acc_i
+        return cast("tuple[NDArray[np.floating], NDArray[np.floating]]", (acc_r, acc_i))
 
     chi_f = chi.astype(out_dtype, copy=False)
     if vacuum_subtracted:
-        potential = r1_vacuum_subtracted_potential(chi_f, chi0)
+        potential = r1_vacuum_subtracted_potential(cast("NDArray[np.floating]", chi_f), chi0)
     else:
-        potential = (chi_f * chi_f).astype(out_dtype)
-    return (
-        (acc_r - potential * psi_r).astype(out_dtype),
-        (acc_i - potential * psi_i).astype(out_dtype),
+        potential = (chi_f * chi_f).astype(out_dtype)  # type: ignore[operator]
+    return cast(
+        "tuple[NDArray[np.floating], NDArray[np.floating]]",
+        (
+            (acc_r - potential * psi_r).astype(out_dtype),  # type: ignore[operator]
+            (acc_i - potential * psi_i).astype(out_dtype),  # type: ignore[operator]
+        ),
     )
 
 
@@ -272,9 +276,13 @@ def r1_light_step(
 
     if sponge is not None:
         sponge_f = sponge.astype(out_dtype, copy=False)
-        psi_r_next *= sponge_f
-        psi_i_next *= sponge_f
-        psi_r_prev_next *= sponge_f
-        psi_i_prev_next *= sponge_f
+        psi_r_next = (psi_r_next * sponge_f).astype(out_dtype)  # type: ignore[operator]
+        psi_i_next = (psi_i_next * sponge_f).astype(out_dtype)  # type: ignore[operator]
+        psi_r_prev_next = (psi_r_prev_next * sponge_f).astype(out_dtype)  # type: ignore[operator]
+        psi_i_prev_next = (psi_i_prev_next * sponge_f).astype(out_dtype)  # type: ignore[operator]
 
-    return psi_r_next, psi_i_next, psi_r_prev_next, psi_i_prev_next
+    return cast(
+        "tuple[NDArray[np.floating], NDArray[np.floating], "
+        "NDArray[np.floating], NDArray[np.floating]]",
+        (psi_r_next, psi_i_next, psi_r_prev_next, psi_i_prev_next),
+    )

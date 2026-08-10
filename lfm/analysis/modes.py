@@ -26,9 +26,7 @@ def periodic_mode_coefficient(
         raise ValueError("field must have at least one dimension")
     normalized_axis = int(axis)
     if not -arr.ndim <= normalized_axis < arr.ndim:
-        raise ValueError(
-            f"axis {normalized_axis} is out of bounds for dimension {arr.ndim}"
-        )
+        raise ValueError(f"axis {normalized_axis} is out of bounds for dimension {arr.ndim}")
     normalized_axis %= arr.ndim
     n = int(arr.shape[normalized_axis])
     if n <= 0:
@@ -70,13 +68,9 @@ def leapfrog_branch_projection(
     current_arr = np.asarray(current, dtype=np.complex128)
     previous_arr = np.asarray(previous, dtype=np.complex128)
     try:
-        current_arr, previous_arr = np.broadcast_arrays(
-            current_arr, previous_arr
-        )
+        current_arr, previous_arr = np.broadcast_arrays(current_arr, previous_arr)
     except ValueError as exc:
-        raise ValueError(
-            "current and previous must be broadcast-compatible"
-        ) from exc
+        raise ValueError("current and previous must be broadcast-compatible") from exc
 
     positive = np.exp(1j * float(theta))
     negative = np.exp(-1j * float(theta))
@@ -98,10 +92,6 @@ def project_leapfrog_mode(
     background: float | complex = 0.0,
 ) -> tuple[np.ndarray | complex, np.ndarray | complex]:
     """Project one spatial mode and split its two temporal branches."""
-    current = periodic_mode_coefficient(
-        current_field, mode, axis=axis, background=background
-    )
-    previous = periodic_mode_coefficient(
-        previous_field, mode, axis=axis, background=background
-    )
+    current = periodic_mode_coefficient(current_field, mode, axis=axis, background=background)
+    previous = periodic_mode_coefficient(previous_field, mode, axis=axis, background=background)
     return leapfrog_branch_projection(current, previous, theta)

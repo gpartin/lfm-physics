@@ -114,14 +114,8 @@ def _time_centered_momentum19(
         local_y = 0.0
         local_z = 0.0
         for component in range(psi_real.shape[0]):
-            rate_r = (
-                psi_real[component, i, j, k]
-                - psi_real_prev[component, i, j, k]
-            ) * inv_dt
-            rate_i = (
-                psi_imag[component, i, j, k]
-                - psi_imag_prev[component, i, j, k]
-            ) * inv_dt
+            rate_r = (psi_real[component, i, j, k] - psi_real_prev[component, i, j, k]) * inv_dt
+            rate_i = (psi_imag[component, i, j, k] - psi_imag_prev[component, i, j, k]) * inv_dt
             local_x += rate_r * _average_gradient19_at(
                 psi_real[component],
                 psi_real_prev[component],
@@ -177,15 +171,9 @@ def _time_centered_momentum19(
                 inv_two_dx,
             )
         rate_chi = (chi[i, j, k] - chi_prev[i, j, k]) * inv_dt
-        local_x += b_chi * rate_chi * _average_gradient19_at(
-            chi, chi_prev, i, j, k, 0, inv_two_dx
-        )
-        local_y += b_chi * rate_chi * _average_gradient19_at(
-            chi, chi_prev, i, j, k, 1, inv_two_dx
-        )
-        local_z += b_chi * rate_chi * _average_gradient19_at(
-            chi, chi_prev, i, j, k, 2, inv_two_dx
-        )
+        local_x += b_chi * rate_chi * _average_gradient19_at(chi, chi_prev, i, j, k, 0, inv_two_dx)
+        local_y += b_chi * rate_chi * _average_gradient19_at(chi, chi_prev, i, j, k, 1, inv_two_dx)
+        local_z += b_chi * rate_chi * _average_gradient19_at(chi, chi_prev, i, j, k, 2, inv_two_dx)
         px += -local_x
         py += -local_y
         pz += -local_z
@@ -252,8 +240,7 @@ def component_noether_charges(
     if dt <= 0.0 or dx <= 0.0:
         raise ValueError("dt and dx must be positive")
     arrays = tuple(
-        np.asarray(value)
-        for value in (psi_real, psi_real_prev, psi_imag, psi_imag_prev)
+        np.asarray(value) for value in (psi_real, psi_real_prev, psi_imag, psi_imag_prev)
     )
     if arrays[0].ndim != 4 or any(value.shape != arrays[0].shape for value in arrays[1:]):
         raise ValueError("all matter arrays must share shape (components,N,N,N)")
@@ -306,37 +293,33 @@ def flat_octic_hamiltonian_19pt(
     for component in range(pr.shape[0]):
         rate_r = (pr[component] - pp[component]) / dt
         rate_i = (pi[component] - pip[component]) / dt
-        matter_temporal += 0.5 * volume * float(
-            np.sum(rate_r * rate_r + rate_i * rate_i, dtype=np.float64)
+        matter_temporal += (
+            0.5 * volume * float(np.sum(rate_r * rate_r + rate_i * rate_i, dtype=np.float64))
         )
         lap_r = laplacian_19pt(pr[component])
         lap_i = laplacian_19pt(pi[component])
-        matter_gradient += -0.5 * volume * inv_dx2 * float(
-            np.sum(pr[component] * lap_r + pi[component] * lap_i, dtype=np.float64)
+        matter_gradient += (
+            -0.5
+            * volume
+            * inv_dx2
+            * float(np.sum(pr[component] * lap_r + pi[component] * lap_i, dtype=np.float64))
         )
-        matter_mass += 0.5 * volume * float(
-            np.sum(
-                chi_sq
-                * (pr[component] * pr[component] + pi[component] * pi[component]),
-                dtype=np.float64,
+        matter_mass += (
+            0.5
+            * volume
+            * float(
+                np.sum(
+                    chi_sq * (pr[component] * pr[component] + pi[component] * pi[component]),
+                    dtype=np.float64,
+                )
             )
         )
     chi_rate = (ch - ch_prev) / dt
-    chi_temporal = 0.5 * b_chi * volume * float(
-        np.sum(chi_rate * chi_rate, dtype=np.float64)
-    )
+    chi_temporal = 0.5 * b_chi * volume * float(np.sum(chi_rate * chi_rate, dtype=np.float64))
     lap_chi = laplacian_19pt(ch)
-    chi_gradient = -0.5 * b_chi * volume * inv_dx2 * float(
-        np.sum(ch * lap_chi, dtype=np.float64)
-    )
+    chi_gradient = -0.5 * b_chi * volume * inv_dx2 * float(np.sum(ch * lap_chi, dtype=np.float64))
     delta = chi_sq - chi0**2
-    chi_potential = (
-        b_chi
-        * lambda_h
-        / chi0**4
-        * volume
-        * float(np.sum(delta**4, dtype=np.float64))
-    )
+    chi_potential = b_chi * lambda_h / chi0**4 * volume * float(np.sum(delta**4, dtype=np.float64))
     total = (
         matter_temporal
         + matter_gradient
@@ -397,7 +380,11 @@ def fit_offset_power_convergence(
     predicted = offset + coefficient * h**order
     residual_sum = float(np.sum((y - predicted) ** 2))
     total_sum = float(np.sum((y - np.mean(y)) ** 2))
-    r_squared = 1.0 if total_sum <= 1.0e-30 and residual_sum <= 1.0e-30 else 1.0 - residual_sum / max(total_sum, 1.0e-30)
+    r_squared = (
+        1.0
+        if total_sum <= 1.0e-30 and residual_sum <= 1.0e-30
+        else 1.0 - residual_sum / max(total_sum, 1.0e-30)
+    )
     return {
         "offset": offset,
         "coefficient": coefficient,
@@ -407,4 +394,3 @@ def fit_offset_power_convergence(
         "converged": bool(solution.success),
         "message": str(solution.message),
     }
-

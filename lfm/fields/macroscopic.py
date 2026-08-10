@@ -8,7 +8,7 @@ They represent rigid extended bodies by real density fields, solve the
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -18,6 +18,13 @@ from lfm.fields.equilibrium import equilibrate_chi_19pt
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
+
+
+def _tuple3_float(values: tuple[float, float, float]) -> tuple[float, float, float]:
+    items = tuple(float(value) for value in values)
+    if len(items) != 3:
+        raise ValueError("expected a 3-vector")
+    return cast("tuple[float, float, float]", items)
 
 
 @dataclass(frozen=True)
@@ -101,7 +108,7 @@ def build_limit02_body_profile(
     )
     return Limit02BodyProfile(
         grid_size=grid_size,
-        center=tuple(float(value) for value in center),
+        center=_tuple3_float(center),
         radius=float(radius),
         mass=float(mass),
         density=density,
@@ -118,9 +125,7 @@ def periodic_trilinear_sample(
 ) -> float:
     """Trilinearly sample a periodic 3-D scalar field."""
     values = np.asarray(field)
-    if values.ndim != 3 or not (
-        values.shape[0] == values.shape[1] == values.shape[2]
-    ):
+    if values.ndim != 3 or not (values.shape[0] == values.shape[1] == values.shape[2]):
         raise ValueError("field must be a cubic 3-D array")
     coordinates = np.asarray(point, dtype=np.float64)
     if coordinates.shape != (3,):

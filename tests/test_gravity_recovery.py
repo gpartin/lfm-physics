@@ -94,9 +94,7 @@ def test_candidate_catalog_covers_required_families() -> None:
 
 
 def test_only_canonical_potential_has_vacuum_curvature() -> None:
-    canonical = potential_second_derivative_at_vacuum(
-        ChiPotentialModel.CANONICAL_QUARTIC
-    )
+    canonical = potential_second_derivative_at_vacuum(ChiPotentialModel.CANONICAL_QUARTIC)
     assert np.isclose(canonical, 8.0 * LAMBDA_H * CHI0**2, rtol=2.0e-8)
     for candidate in gravity_recovery_candidates():
         if candidate.model == ChiPotentialModel.CANONICAL_QUARTIC:
@@ -245,14 +243,12 @@ def test_positive_frequency_previous_layer_matches_uniform_mode() -> None:
     real[0] = 0.25
     chi = np.full(shape[-3:], CHI0)
     dt = 0.005
-    previous_real, previous_imag, metadata = (
-        positive_frequency_previous_layers(
-            real,
-            imag,
-            chi,
-            dt=dt,
-            polynomial_degree=12,
-        )
+    previous_real, previous_imag, metadata = positive_frequency_previous_layers(
+        real,
+        imag,
+        chi,
+        dt=dt,
+        polynomial_degree=12,
     )
     cosine = 1.0 - 0.5 * dt**2 * CHI0**2
     sine = np.sqrt(1.0 - cosine**2)
@@ -309,12 +305,8 @@ def test_color_flat_octic_cpu_gpu_parity() -> None:
     rng = np.random.default_rng(15485863)
     color_real = 0.02 * rng.standard_normal((3,) + state[0].shape)
     color_imag = 0.02 * rng.standard_normal((3,) + state[0].shape)
-    color_real_prev = color_real + 1.0e-4 * rng.standard_normal(
-        color_real.shape
-    )
-    color_imag_prev = color_imag + 1.0e-4 * rng.standard_normal(
-        color_imag.shape
-    )
+    color_real_prev = color_real + 1.0e-4 * rng.standard_normal(color_real.shape)
+    color_imag_prev = color_imag + 1.0e-4 * rng.standard_normal(color_imag.shape)
     for simulation in (cpu, gpu):
         simulation.psi_real = color_real
         simulation.set_psi_real_prev(color_real_prev)
@@ -397,13 +389,7 @@ def test_flat_octic_force_matches_declared_equation() -> None:
         chi,
         ChiPotentialModel.FLAT_OCTIC,
     )
-    expected = (
-        -8.0
-        * LAMBDA_H
-        * chi
-        * (chi**2 - CHI0**2) ** 3
-        / CHI0**4
-    )
+    expected = -8.0 * LAMBDA_H * chi * (chi**2 - CHI0**2) ** 3 / CHI0**4
     assert np.allclose(measured, expected, atol=1.0e-10, rtol=1.0e-13)
 
 
@@ -423,12 +409,8 @@ def test_bare_color_candidate_is_charge_conjugation_blind(
 ) -> None:
     rng = np.random.default_rng(260725)
     shape = (3, 8, 8, 8)
-    psi = 0.002 * (
-        rng.standard_normal(shape) + 1j * rng.standard_normal(shape)
-    )
-    psi_prev = psi + 0.0001 * (
-        rng.standard_normal(shape) + 1j * rng.standard_normal(shape)
-    )
+    psi = 0.002 * (rng.standard_normal(shape) + 1j * rng.standard_normal(shape))
+    psi_prev = psi + 0.0001 * (rng.standard_normal(shape) + 1j * rng.standard_normal(shape))
     chi = CHI0 + 0.002 * rng.standard_normal(shape[-3:])
     chi_prev = chi + 0.0001 * rng.standard_normal(chi.shape)
     simulations = []
@@ -461,12 +443,8 @@ def test_bare_color_candidate_remains_parity_equivariant(
 ) -> None:
     rng = np.random.default_rng(32452843)
     shape = (3, 8, 8, 8)
-    psi = 0.002 * (
-        rng.standard_normal(shape) + 1j * rng.standard_normal(shape)
-    )
-    psi_prev = psi + 0.0001 * (
-        rng.standard_normal(shape) + 1j * rng.standard_normal(shape)
-    )
+    psi = 0.002 * (rng.standard_normal(shape) + 1j * rng.standard_normal(shape))
+    psi_prev = psi + 0.0001 * (rng.standard_normal(shape) + 1j * rng.standard_normal(shape))
     chi = CHI0 + 0.002 * rng.standard_normal(shape[-3:])
     chi_prev = chi + 0.0001 * rng.standard_normal(chi.shape)
     simulations = []
@@ -515,15 +493,9 @@ def test_bare_color_candidate_is_globally_su3_covariant(
 ) -> None:
     rng = np.random.default_rng(49979687)
     shape = (3, 8, 8, 8)
-    psi = 0.001 * (
-        rng.standard_normal(shape) + 1j * rng.standard_normal(shape)
-    )
-    psi_prev = psi + 0.00005 * (
-        rng.standard_normal(shape) + 1j * rng.standard_normal(shape)
-    )
-    random_matrix = (
-        rng.standard_normal((3, 3)) + 1j * rng.standard_normal((3, 3))
-    )
+    psi = 0.001 * (rng.standard_normal(shape) + 1j * rng.standard_normal(shape))
+    psi_prev = psi + 0.00005 * (rng.standard_normal(shape) + 1j * rng.standard_normal(shape))
+    random_matrix = rng.standard_normal((3, 3)) + 1j * rng.standard_normal((3, 3))
     unitary, _ = np.linalg.qr(random_matrix)
     unitary = unitary / np.linalg.det(unitary) ** (1.0 / 3.0)
     rotated = np.einsum("ab,bijk->aijk", unitary, psi)
@@ -574,12 +546,8 @@ def _load_full_color_state(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     rng = np.random.default_rng(seed)
     shape = (3, 8, 8, 8)
-    psi = 0.003 * (
-        rng.standard_normal(shape) + 1j * rng.standard_normal(shape)
-    )
-    psi_prev = psi + 0.0001 * (
-        rng.standard_normal(shape) + 1j * rng.standard_normal(shape)
-    )
+    psi = 0.003 * (rng.standard_normal(shape) + 1j * rng.standard_normal(shape))
+    psi_prev = psi + 0.0001 * (rng.standard_normal(shape) + 1j * rng.standard_normal(shape))
     chi = CHI0 + 0.003 * rng.standard_normal(shape[-3:])
     chi_prev = chi + 0.0001 * rng.standard_normal(chi.shape)
     simulation.psi_real = psi.real

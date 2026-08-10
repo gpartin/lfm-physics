@@ -50,9 +50,7 @@ def _complex_noise(
     shape: tuple[int, ...],
     variance: float,
 ) -> np.ndarray:
-    return np.sqrt(0.5 * variance) * (
-        rng.normal(size=shape) + 1j * rng.normal(size=shape)
-    )
+    return np.sqrt(0.5 * variance) * (rng.normal(size=shape) + 1j * rng.normal(size=shape))
 
 
 def test_cross_validated_spectroscopy_recovers_synthetic_massless_channel() -> None:
@@ -73,18 +71,10 @@ def test_cross_validated_spectroscopy_recovers_synthetic_massless_channel() -> N
     }
     modes["transverse_k1"][..., 0] = _complex_noise(rng, (samples, 6), expected)
     modes["transverse_k2"][..., 0] = _complex_noise(rng, (samples, 6), 1.0)
-    modes["longitudinal_k1"][..., 0] = _complex_noise(
-        rng, (samples, 3), 0.01 * expected
-    )
-    modes["polarization_0_k1"][..., 0] = _complex_noise(
-        rng, (samples, 3), expected
-    )
-    modes["polarization_1_k1"][..., 0] = _complex_noise(
-        rng, (samples, 3), expected
-    )
-    modes["cone_p1_k1"][..., 0] = _complex_noise(
-        rng, (samples, 6), 0.5 * expected
-    )
+    modes["longitudinal_k1"][..., 0] = _complex_noise(rng, (samples, 3), 0.01 * expected)
+    modes["polarization_0_k1"][..., 0] = _complex_noise(rng, (samples, 3), expected)
+    modes["polarization_1_k1"][..., 0] = _complex_noise(rng, (samples, 3), expected)
+    modes["cone_p1_k1"][..., 0] = _complex_noise(rng, (samples, 6), 0.5 * expected)
     result = cross_validated_mode(modes, "raw_u3", size)
     assert max(abs(value / expected - 1.0) for value in result.heldout_ir_ratios) < 0.12
     assert max(abs(value / 0.5 - 1.0) for value in result.heldout_cone_ratios) < 0.12

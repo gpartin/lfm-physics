@@ -76,9 +76,7 @@ def _normalized_gaussian(grid_size: int, norm_target: float, sigma: float) -> np
 def _lowest_mode(chi: np.ndarray, initial: np.ndarray) -> tuple[np.ndarray, float]:
     grid_size = chi.shape[0]
     laplacian, _ = _canonical_interior_laplacian(grid_size)
-    operator = -laplacian + sp.diags(
-        _interior_vector(chi * chi), format="csr"
-    )
+    operator = -laplacian + sp.diags(_interior_vector(chi * chi), format="csr")
     values, vectors = eigsh(
         operator,
         k=1,
@@ -170,9 +168,12 @@ def _canonical_interior_laplacian(
     ]
     index = {point: i for i, point in enumerate(points)}
     face_offsets = (
-        (1, 0, 0), (-1, 0, 0),
-        (0, 1, 0), (0, -1, 0),
-        (0, 0, 1), (0, 0, -1),
+        (1, 0, 0),
+        (-1, 0, 0),
+        (0, 1, 0),
+        (0, -1, 0),
+        (0, 0, 1),
+        (0, 0, -1),
     )
     edge_offsets = tuple(
         (dx, dy, dz)
@@ -243,13 +244,20 @@ def _solve_positive_chi_sparse(
         step = 1.0
         while step > 1.0e-10:
             candidate = u + step * delta
-            if float(np.min(candidate)) > 0.0 and float(np.linalg.norm(residual(candidate))) < old_norm:
+            if (
+                float(np.min(candidate)) > 0.0
+                and float(np.linalg.norm(residual(candidate))) < old_norm
+            ):
                 u = candidate
                 break
             step *= 0.5
         else:
             return _embed_interior(u, grid_size, chi0), False, "positive-chi line search failed"
-    return _embed_interior(u, grid_size, chi0), False, "positive-chi Newton solve reached iteration limit"
+    return (
+        _embed_interior(u, grid_size, chi0),
+        False,
+        "positive-chi Newton solve reached iteration limit",
+    )
 
 
 def solve_stationary_branch_point(
@@ -297,8 +305,9 @@ def solve_stationary_branch_point(
     phi_residual = float("inf")
     chi_residual_rms = float("inf")
     converged = False
-    cycle = 0
-    for cycle in range(1, max_cycles + 1):
+    last_cycle = 0
+    for _cycle in range(1, max_cycles + 1):
+        last_cycle = _cycle
         mode, omega_sq = _lowest_mode(chi, phi)
         mode *= np.sqrt(norm_target / max(float(np.sum(mode * mode)), 1.0e-300))
         phi = mixing * mode + (1.0 - mixing) * phi
@@ -327,9 +336,7 @@ def solve_stationary_branch_point(
             - (kappa / chi0) * chi * phi * phi
             - 4.0 * lambda_h * chi * (chi * chi - chi0 * chi0)
         )
-        chi_residual_rms = float(
-            np.sqrt(np.mean(_interior_vector(chi_equation) ** 2))
-        )
+        chi_residual_rms = float(np.sqrt(np.mean(_interior_vector(chi_equation) ** 2)))
         if chi_ok and phi_residual < tolerance and chi_residual_rms < tolerance:
             converged = True
             message = "stationary equations converged"
@@ -345,7 +352,7 @@ def solve_stationary_branch_point(
         omega=float(np.sqrt(max(omega_sq, 0.0))),
         norm_target=float(norm_target),
         converged=converged,
-        cycles=cycle,
+        cycles=last_cycle,
         phi_residual=phi_residual,
         chi_residual_rms=chi_residual_rms,
         chi_min=float(np.min(chi)),
@@ -430,17 +437,15 @@ def solve_support_removal_point(
     chi_residual_rms = float("inf")
     converged = False
     source_density = fixed_source.copy()
-    cycle = 0
-    for cycle in range(1, max_cycles + 1):
+    last_cycle = 0
+    for _cycle in range(1, max_cycles + 1):
+        last_cycle = _cycle
         mode, omega_sq = _lowest_mode(chi, phi)
         mode *= np.sqrt(norm_target / max(float(np.sum(mode * mode)), 1.0e-300))
         phi = mixing * mode + (1.0 - mixing) * phi
         phi *= np.sqrt(norm_target / max(float(np.sum(phi * phi)), 1.0e-300))
 
-        source_density = (
-            (1.0 - dynamic_fraction) * fixed_source
-            + dynamic_fraction * phi * phi
-        )
+        source_density = (1.0 - dynamic_fraction) * fixed_source + dynamic_fraction * phi * phi
         solved_chi, chi_ok, chi_message = _solve_positive_chi_sparse(
             source_density,
             chi,
@@ -464,9 +469,7 @@ def solve_support_removal_point(
             - (kappa / chi0) * chi * source_density
             - 4.0 * lambda_h * chi * (chi * chi - chi0 * chi0)
         )
-        chi_residual_rms = float(
-            np.sqrt(np.mean(_interior_vector(chi_equation) ** 2))
-        )
+        chi_residual_rms = float(np.sqrt(np.mean(_interior_vector(chi_equation) ** 2)))
         if chi_ok and phi_residual < tolerance and chi_residual_rms < tolerance:
             converged = True
             message = "support-removal stationary equations converged"
@@ -484,7 +487,7 @@ def solve_support_removal_point(
         norm_target=norm_target,
         dynamic_fraction=float(dynamic_fraction),
         converged=converged,
-        cycles=cycle,
+        cycles=last_cycle,
         phi_residual=phi_residual,
         chi_residual_rms=chi_residual_rms,
         chi_min=float(np.min(chi)),

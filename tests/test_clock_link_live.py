@@ -59,8 +59,7 @@ def test_live_forces_are_hamiltonian_derivatives() -> None:
         getattr(plus, name)[index] += epsilon
         getattr(minus, name)[index] -= epsilon
         derivative = (
-            total_hamiltonian(plus, parameters)
-            - total_hamiltonian(minus, parameters)
+            total_hamiltonian(plus, parameters) - total_hamiltonian(minus, parameters)
         ) / (2.0 * epsilon)
         np.testing.assert_allclose(-derivative, expected, rtol=2.0e-6, atol=2.0e-6)
 

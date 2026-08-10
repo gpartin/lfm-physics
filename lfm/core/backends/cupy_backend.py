@@ -61,12 +61,8 @@ class CupyBackend:
             )
         self.precision = Precision(precision)
         self.dtype = np.dtype(self.precision.value)
-        self._array_dtype = (
-            cp.float32 if self.precision == Precision.FLOAT32 else cp.float64
-        )
-        self._scalar_type = (
-            np.float32 if self.precision == Precision.FLOAT32 else np.float64
-        )
+        self._array_dtype = cp.float32 if self.precision == Precision.FLOAT32 else cp.float64
+        self._scalar_type = np.float32 if self.precision == Precision.FLOAT32 else np.float64
 
         def _source(source: str) -> str:
             return kernel_source_for_precision(source, self.precision.value)
@@ -282,9 +278,7 @@ class CupyBackend:
 
         model = ChiPotentialModel(potential_model)
         if model != ChiPotentialModel.FLAT_OCTIC:
-            raise ValueError(
-                "complex gravity recovery currently supports FLAT_OCTIC"
-            )
+            raise ValueError("complex gravity recovery currently supports FLAT_OCTIC")
         self.step_complex(
             psi_r_in,
             psi_r_prev_in,
@@ -312,28 +306,16 @@ class CupyBackend:
         )
         absorb = 1.0 - boundary_mask
         safe_absorb = cp.where(absorb > 0.0, absorb, 1.0)
-        undamped_chi = (
-            chi_out - boundary_mask * chi0
-        ) / safe_absorb
+        undamped_chi = (chi_out - boundary_mask * chi0) / safe_absorb
         y = (chi_in * chi_in - chi0 * chi0) / (chi0 * chi0)
-        flat_force = (
-            -8.0
-            * lambda_self
-            * chi0**2
-            * chi_in
-            * y**3
-        )
+        flat_force = -8.0 * lambda_self * chi0**2 * chi_in * y**3
         damping_half_step = 0.5 * relaxation_damping * dt
-        corrected = (
-            undamped_chi
-            + damping_half_step * chi_prev_in
-            + dt**2 * flat_force
-        ) / (1.0 + damping_half_step)
+        corrected = (undamped_chi + damping_half_step * chi_prev_in + dt**2 * flat_force) / (
+            1.0 + damping_half_step
+        )
         if enable_chi_floor:
             cp.maximum(corrected, -chi0, out=corrected)
-        chi_out[...] = (
-            boundary_mask * chi0 + absorb * corrected
-        )
+        chi_out[...] = boundary_mask * chi0 + absorb * corrected
         if freeze_psi:
             psi_r_out[...] = absorb * psi_r_in
             psi_r_prev_out[...] = psi_r_in
@@ -384,9 +366,7 @@ class CupyBackend:
 
         model = ChiPotentialModel(potential_model)
         if model != ChiPotentialModel.FLAT_OCTIC:
-            raise ValueError(
-                "color gravity recovery currently supports FLAT_OCTIC"
-            )
+            raise ValueError("color gravity recovery currently supports FLAT_OCTIC")
         self.step_color(
             psi_r_in,
             psi_r_prev_in,
@@ -423,28 +403,16 @@ class CupyBackend:
         )
         absorb = 1.0 - boundary_mask
         safe_absorb = cp.where(absorb > 0.0, absorb, 1.0)
-        undamped_chi = (
-            chi_out - boundary_mask * chi0
-        ) / safe_absorb
+        undamped_chi = (chi_out - boundary_mask * chi0) / safe_absorb
         y = (chi_in * chi_in - chi0 * chi0) / (chi0 * chi0)
-        flat_force = (
-            -8.0
-            * lambda_self
-            * chi0**2
-            * chi_in
-            * y**3
-        )
+        flat_force = -8.0 * lambda_self * chi0**2 * chi_in * y**3
         damping_half_step = 0.5 * relaxation_damping * dt
-        corrected = (
-            undamped_chi
-            + damping_half_step * chi_prev_in
-            + dt**2 * flat_force
-        ) / (1.0 + damping_half_step)
+        corrected = (undamped_chi + damping_half_step * chi_prev_in + dt**2 * flat_force) / (
+            1.0 + damping_half_step
+        )
         if enable_chi_floor:
             cp.maximum(corrected, -chi0, out=corrected)
-        chi_out[...] = (
-            boundary_mask * chi0 + absorb * corrected
-        )
+        chi_out[...] = boundary_mask * chi0 + absorb * corrected
         if freeze_psi:
             absorb3 = cp.tile(absorb, 3)
             psi_r_out[...] = absorb3 * psi_r_in

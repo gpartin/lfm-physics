@@ -343,9 +343,7 @@ class SimulationConfig:
         try:
             self.precision = Precision(self.precision)
         except (TypeError, ValueError) as exc:
-            raise ValueError(
-                "precision must be Precision.FLOAT32 or Precision.FLOAT64"
-            ) from exc
+            raise ValueError("precision must be Precision.FLOAT32 or Precision.FLOAT64") from exc
         # Apply regime defaults BEFORE validation so derived fields see them.
         if self.physical_scale is not None:
             fl, cm, ls, kc = _SCALE_DEFAULTS[self.physical_scale]
@@ -375,9 +373,7 @@ class SimulationConfig:
         # dt < 1/sqrt(c^2*(16/3)/dx^2 + chi0^2).
         import math
 
-        cfl_limit = 1.0 / math.sqrt(
-            self.c**2 * (16.0 / 3.0) / self.dx**2 + self.chi0**2
-        )
+        cfl_limit = 1.0 / math.sqrt(self.c**2 * (16.0 / 3.0) / self.dx**2 + self.chi0**2)
         if self.dt > cfl_limit:
             raise ValueError(
                 f"dt={self.dt} exceeds CFL limit {cfl_limit:.4f} "

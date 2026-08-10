@@ -36,25 +36,6 @@ from lfm.foundations.r3_link_frame_live import (
     total_hamiltonian,
     triangle_loops,
 )
-from lfm.foundations.r4_unified_live import (
-    R4_ACTION_ID,
-    R4_REGISTER_ID,
-    R4FrameScalarState,
-    R4Parameters,
-    R4State,
-    color_dielectric,
-    group_constraint_errors as r4_group_constraint_errors,
-    potential_energy_and_rates as r4_potential_energy_and_rates,
-    r4_action_declaration,
-    r4_action_fingerprint,
-    r4_frame_scalar_energy,
-    reverse_momenta as reverse_r4_momenta,
-    state_distance as r4_state_distance,
-    step_r4,
-    step_r4_frame_scalar,
-    su2_generators,
-    total_hamiltonian as r4_total_hamiltonian,
-)
 from lfm.foundations.r4_color_static import (
     R4ColorStaticState,
     R4FixedColorElectricState,
@@ -64,22 +45,9 @@ from lfm.foundations.r4_color_static import (
     r4_color_incident_flux_sq,
     r4_color_static_energy,
     r4_color_vacuum_instability_flux_sq,
-    relax_r4_color_static,
     relax_r4_chi_at_fixed_color_electric,
+    relax_r4_color_static,
     solve_color_gauss_minimum,
-)
-from lfm.foundations.r4_quantum_color import (
-    R4MagneticCompetitionBound,
-    R4QuantumColorCoefficients,
-    creutz_ratio_from_log_transfer,
-    fundamental_flux_energy,
-    log_wilson_transfer,
-    local_su3_gauge_transform,
-    minimum_link_distance,
-    r4_magnetic_competition_bound,
-    r4_quantum_color_coefficients,
-    su3_fundamental_algebra_audit,
-    weighted_loop_incidence,
 )
 from lfm.foundations.r4_gauge_spectrum import (
     directional_link_inertia,
@@ -90,27 +58,83 @@ from lfm.foundations.r4_gauge_spectrum import (
     transverse_mode_speeds,
     triangle_fourier_hessian,
 )
+from lfm.foundations.r4_quantum_color import (
+    R4MagneticCompetitionBound,
+    R4QuantumColorCoefficients,
+    creutz_ratio_from_log_transfer,
+    fundamental_flux_energy,
+    local_su3_gauge_transform,
+    log_wilson_transfer,
+    minimum_link_distance,
+    r4_magnetic_competition_bound,
+    r4_quantum_color_coefficients,
+    su3_fundamental_algebra_audit,
+    weighted_loop_incidence,
+)
+from lfm.foundations.r4_unified_live import (
+    R4_ACTION_ID,
+    R4_REGISTER_ID,
+    R4FrameScalarState,
+    R4Parameters,
+    R4State,
+    color_dielectric,
+    r4_action_declaration,
+    r4_action_fingerprint,
+    r4_frame_scalar_energy,
+    step_r4,
+    step_r4_frame_scalar,
+    su2_generators,
+)
+from lfm.foundations.r4_unified_live import (
+    group_constraint_errors as r4_group_constraint_errors,
+)
+from lfm.foundations.r4_unified_live import (
+    potential_energy_and_rates as r4_potential_energy_and_rates,
+)
+from lfm.foundations.r4_unified_live import (
+    reverse_momenta as reverse_r4_momenta,
+)
+from lfm.foundations.r4_unified_live import (
+    state_distance as r4_state_distance,
+)
+from lfm.foundations.r4_unified_live import (
+    total_hamiltonian as r4_total_hamiltonian,
+)
+from lfm.foundations.r5_u1_static import (
+    R5U1StaticState,
+    periodic_point_pair_charge,
+    solve_u1_gauss_minimum,
+)
 from lfm.foundations.r5_unified_live import (
     R5_ACTION_ID,
     R5_REGISTER_ID,
     R5Parameters,
     R5Rates,
     R5State,
-    group_constraint_errors as r5_group_constraint_errors,
-    kinetic_energy as r5_kinetic_energy,
-    potential_energy_and_rates as r5_potential_energy_and_rates,
     r5_action_declaration,
     r5_action_fingerprint,
-    reverse_momenta as reverse_r5_momenta,
-    state_distance as r5_state_distance,
     step_r5,
-    total_hamiltonian as r5_total_hamiltonian,
-    vacuum_state as r5_vacuum_state,
 )
-from lfm.foundations.r5_u1_static import (
-    R5U1StaticState,
-    periodic_point_pair_charge,
-    solve_u1_gauss_minimum,
+from lfm.foundations.r5_unified_live import (
+    group_constraint_errors as r5_group_constraint_errors,
+)
+from lfm.foundations.r5_unified_live import (
+    kinetic_energy as r5_kinetic_energy,
+)
+from lfm.foundations.r5_unified_live import (
+    potential_energy_and_rates as r5_potential_energy_and_rates,
+)
+from lfm.foundations.r5_unified_live import (
+    reverse_momenta as reverse_r5_momenta,
+)
+from lfm.foundations.r5_unified_live import (
+    state_distance as r5_state_distance,
+)
+from lfm.foundations.r5_unified_live import (
+    total_hamiltonian as r5_total_hamiltonian,
+)
+from lfm.foundations.r5_unified_live import (
+    vacuum_state as r5_vacuum_state,
 )
 from lfm.foundations.r6_unified_live import (
     R6_ACTION_ID,
@@ -119,15 +143,29 @@ from lfm.foundations.r6_unified_live import (
     R6R4Parameters,
     R6Rates,
     R6State,
-    group_constraint_errors as r6_group_constraint_errors,
-    kinetic_energy as r6_kinetic_energy,
-    potential_energy_and_rates as r6_potential_energy_and_rates,
     r6_action_declaration,
     r6_action_fingerprint,
-    reverse_momenta as reverse_r6_momenta,
-    state_distance as r6_state_distance,
     step_r6,
+)
+from lfm.foundations.r6_unified_live import (
+    group_constraint_errors as r6_group_constraint_errors,
+)
+from lfm.foundations.r6_unified_live import (
+    kinetic_energy as r6_kinetic_energy,
+)
+from lfm.foundations.r6_unified_live import (
+    potential_energy_and_rates as r6_potential_energy_and_rates,
+)
+from lfm.foundations.r6_unified_live import (
+    reverse_momenta as reverse_r6_momenta,
+)
+from lfm.foundations.r6_unified_live import (
+    state_distance as r6_state_distance,
+)
+from lfm.foundations.r6_unified_live import (
     total_hamiltonian as r6_total_hamiltonian,
+)
+from lfm.foundations.r6_unified_live import (
     vacuum_state as r6_vacuum_state,
 )
 

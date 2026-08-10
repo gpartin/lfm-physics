@@ -24,33 +24,19 @@ def _seeded_state(seed: int = 7) -> tuple[R3LiveState, R3LiveParameters]:
     parameters = R3LiveParameters(stencil="19")
     state = R3LiveState.vacuum(2, parameters)
     state.matter = 0.01 * (
-        rng.normal(size=state.matter.shape)
-        + 1.0j * rng.normal(size=state.matter.shape)
+        rng.normal(size=state.matter.shape) + 1.0j * rng.normal(size=state.matter.shape)
     )
     state.matter_momentum = 0.01 * (
-        rng.normal(size=state.matter.shape)
-        + 1.0j * rng.normal(size=state.matter.shape)
+        rng.normal(size=state.matter.shape) + 1.0j * rng.normal(size=state.matter.shape)
     )
     state.chi += 1.0e-4 * rng.normal(size=state.chi.shape)
     state.chi_momentum = 0.01 * rng.normal(size=state.chi.shape)
-    state.shape = _tracefree_symmetric(
-        1.0e-4 * rng.normal(size=state.shape.shape)
-    )
-    state.shape_momentum = _tracefree_symmetric(
-        0.01 * rng.normal(size=state.shape_momentum.shape)
-    )
-    state.phase_electric = 0.01 * rng.normal(
-        size=state.phase_electric.shape
-    )
-    state.color_electric = 0.01 * rng.normal(
-        size=state.color_electric.shape
-    )
-    state.frame_electric = 0.01 * rng.normal(
-        size=state.frame_electric.shape
-    )
-    state.phase_links *= np.exp(
-        1.0j * 1.0e-3 * rng.normal(size=state.phase_links.shape)
-    )
+    state.shape = _tracefree_symmetric(1.0e-4 * rng.normal(size=state.shape.shape))
+    state.shape_momentum = _tracefree_symmetric(0.01 * rng.normal(size=state.shape_momentum.shape))
+    state.phase_electric = 0.01 * rng.normal(size=state.phase_electric.shape)
+    state.color_electric = 0.01 * rng.normal(size=state.color_electric.shape)
+    state.frame_electric = 0.01 * rng.normal(size=state.frame_electric.shape)
+    state.phase_links *= np.exp(1.0j * 1.0e-3 * rng.normal(size=state.phase_links.shape))
     color_generators = su3_generators()
     frame_generators = so4_generators()
     for site in np.ndindex(state.chi.shape):
@@ -106,9 +92,7 @@ def test_live_rates_are_hamiltonian_gradients() -> None:
         minus = state.copy()
         plus_update(plus)
         minus_update(minus)
-        return (
-            _potential(plus, parameters) - _potential(minus, parameters)
-        ) / (2.0 * epsilon)
+        return (_potential(plus, parameters) - _potential(minus, parameters)) / (2.0 * epsilon)
 
     matter_derivative = directional(
         lambda value: value.matter.__setitem__(
@@ -165,13 +149,11 @@ def test_live_rates_are_hamiltonian_gradients() -> None:
     color_derivative = directional(
         lambda value: value.color_links.__setitem__(
             site + (link,),
-            expm(1.0j * epsilon * color_generator)
-            @ value.color_links[site + (link,)],
+            expm(1.0j * epsilon * color_generator) @ value.color_links[site + (link,)],
         ),
         lambda value: value.color_links.__setitem__(
             site + (link,),
-            expm(-1.0j * epsilon * color_generator)
-            @ value.color_links[site + (link,)],
+            expm(-1.0j * epsilon * color_generator) @ value.color_links[site + (link,)],
         ),
     )
     assert np.isclose(
@@ -185,13 +167,11 @@ def test_live_rates_are_hamiltonian_gradients() -> None:
     frame_derivative = directional(
         lambda value: value.frame_links.__setitem__(
             site + (link,),
-            expm(epsilon * frame_generator)
-            @ value.frame_links[site + (link,)],
+            expm(epsilon * frame_generator) @ value.frame_links[site + (link,)],
         ),
         lambda value: value.frame_links.__setitem__(
             site + (link,),
-            expm(-epsilon * frame_generator)
-            @ value.frame_links[site + (link,)],
+            expm(-epsilon * frame_generator) @ value.frame_links[site + (link,)],
         ),
     )
     assert np.isclose(

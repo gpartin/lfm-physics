@@ -11,7 +11,7 @@ Same-phase → repel (constructive), opposite-phase → attract (destructive).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -126,9 +126,7 @@ def oriented_charge_currents(
     for offset, weight in stencil_links(stencil):
         shifted_real = np.roll(real, shift=offset, axis=(0, 1, 2))
         shifted_imag = np.roll(imag, shift=offset, axis=(0, 1, 2))
-        currents[offset] = -c2 * weight * (
-            real * shifted_imag - imag * shifted_real
-        )
+        currents[offset] = -c2 * weight * (real * shifted_imag - imag * shifted_real)
     return currents
 
 
@@ -167,10 +165,7 @@ def bare_charge_continuity_residual(
     The local ``chi**2 * Psi`` term cancels from the U(1) charge rate. This
     function tests the identity rather than advancing a new equation.
     """
-    arrays = tuple(
-        np.asarray(value)
-        for value in (psi_r, psi_i, momentum_r, momentum_i, chi)
-    )
+    arrays = tuple(np.asarray(value) for value in (psi_r, psi_i, momentum_r, momentum_i, chi))
     if any(array.shape != arrays[0].shape for array in arrays[1:]):
         raise ValueError("all fields must have matching shapes")
     if arrays[0].ndim != 3:
@@ -256,19 +251,19 @@ def phase_current_energy_density(
     psi_r_prev_f = psi_r_prev.astype(out_dtype, copy=False)
     psi_i_prev_f = psi_i_prev.astype(out_dtype, copy=False)
 
-    dpsi_r_dt = (psi_r_f - psi_r_prev_f) / out_dtype(dt)
-    dpsi_i_dt = (psi_i_f - psi_i_prev_f) / out_dtype(dt)
+    dpsi_r_dt = (psi_r_f - psi_r_prev_f) / out_dtype(dt)  # type: ignore[operator]
+    dpsi_i_dt = (psi_i_f - psi_i_prev_f) / out_dtype(dt)  # type: ignore[operator]
     j0 = psi_r_f * dpsi_i_dt - psi_i_f * dpsi_r_dt
 
     jx = noether_spatial_current(psi_r_f, psi_i_f, axis=0)
     jy = noether_spatial_current(psi_r_f, psi_i_f, axis=1)
     jz = noether_spatial_current(psi_r_f, psi_i_f, axis=2)
 
-    amp_sq = psi_r_f * psi_r_f + psi_i_f * psi_i_f
+    amp_sq = psi_r_f * psi_r_f + psi_i_f * psi_i_f  # type: ignore[operator]
     amp_safe = np.maximum(amp_sq, out_dtype(amplitude_floor))
     c2 = out_dtype(c_speed * c_speed)
     energy = 0.5 * (j0 * j0 + c2 * (jx * jx + jy * jy + jz * jz)) / amp_safe
-    return energy.astype(out_dtype)
+    return cast("NDArray[np.floating]", energy.astype(out_dtype))
 
 
 def phase_coherence(

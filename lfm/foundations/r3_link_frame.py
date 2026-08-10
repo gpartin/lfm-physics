@@ -32,7 +32,6 @@ from lfm.analysis.frame_completion import (
 )
 from lfm.constants import C_DEFAULT, CHI0, EPSILON_W, KAPPA, LAMBDA_H
 
-
 R3_REGISTER_ID = "R3=(Psi_a,chi,S_AB,UFrame_ij,U1_ij,U3_ij)"
 R3_ACTION_ID = "LFM-R3-LINK-FRAME-CANDIDATE-v1"
 
@@ -88,12 +87,8 @@ class R3LinkFrameParameters:
             raise ValueError("R3 positive parameters must be finite")
         if not np.isfinite(self.epsilon_w) or abs(self.epsilon_w) >= 1.0:
             raise ValueError("epsilon_w must satisfy abs(epsilon_w)<1")
-        if (
-            self.frame_link_stiffness is not None
-            and (
-                not np.isfinite(self.frame_link_stiffness)
-                or self.frame_link_stiffness <= 0.0
-            )
+        if self.frame_link_stiffness is not None and (
+            not np.isfinite(self.frame_link_stiffness) or self.frame_link_stiffness <= 0.0
         ):
             raise ValueError("frame_link_stiffness must be positive")
 
@@ -219,12 +214,8 @@ def chiral_frame_curvature(
     if matrix.shape != (4, 4):
         raise ValueError("frame_holonomy must have shape (4,4)")
     omega = 0.5 * (matrix - matrix.T)
-    temporal = np.asarray(
-        [omega[0, 1], omega[0, 2], omega[0, 3]]
-    )
-    spatial = np.asarray(
-        [omega[2, 3], omega[3, 1], omega[1, 2]]
-    )
+    temporal = np.asarray([omega[0, 1], omega[0, 2], omega[0, 3]])
+    spatial = np.asarray([omega[2, 3], omega[3, 1], omega[1, 2]])
     plus = (temporal + spatial) / np.sqrt(2.0)
     minus = (temporal - spatial) / np.sqrt(2.0)
     return plus, minus, omega
@@ -237,24 +228,20 @@ def product_plaquette_energy(
     """Return positive local loop energies for the declared R3 action."""
 
     identity4 = np.eye(4)
-    symmetric_mismatch = 0.5 * (
-        holonomy.frame + holonomy.frame.T
-    ) - identity4
+    symmetric_mismatch = 0.5 * (holonomy.frame + holonomy.frame.T) - identity4
     plus, minus, _ = chiral_frame_curvature(holonomy.frame)
     frame_stiffness = parameters.effective_frame_link_stiffness
-    frame_even = 0.5 * frame_stiffness * float(
-        np.sum(symmetric_mismatch**2)
+    frame_even = 0.5 * frame_stiffness * float(np.sum(symmetric_mismatch**2))
+    frame_chiral = (
+        0.5
+        * frame_stiffness
+        * (
+            (1.0 + parameters.epsilon_w) * float(plus @ plus)
+            + (1.0 - parameters.epsilon_w) * float(minus @ minus)
+        )
     )
-    frame_chiral = 0.5 * frame_stiffness * (
-        (1.0 + parameters.epsilon_w) * float(plus @ plus)
-        + (1.0 - parameters.epsilon_w) * float(minus @ minus)
-    )
-    phase = parameters.phase_link_stiffness * (
-        1.0 - float(np.real(holonomy.phase))
-    )
-    color = parameters.color_link_stiffness * (
-        3.0 - float(np.real(np.trace(holonomy.color)))
-    )
+    phase = parameters.phase_link_stiffness * (1.0 - float(np.real(holonomy.phase)))
+    color = parameters.color_link_stiffness * (3.0 - float(np.real(np.trace(holonomy.color))))
     total = frame_even + frame_chiral + phase + color
     return {
         "frame_even": frame_even,
@@ -305,9 +292,7 @@ def r3_action_declaration(
     payload = asdict(parameters)
     payload["frame_inertia"] = parameters.frame_inertia
     payload["radial_mass_sq"] = parameters.radial_mass_sq
-    payload["effective_frame_link_stiffness"] = (
-        parameters.effective_frame_link_stiffness
-    )
+    payload["effective_frame_link_stiffness"] = parameters.effective_frame_link_stiffness
     return {
         "action_id": R3_ACTION_ID,
         "register_id": R3_REGISTER_ID,
@@ -329,9 +314,7 @@ def r3_action_declaration(
             "positive_U1_plaquette_mismatch",
             "positive_SU3_plaquette_mismatch",
         ],
-        "weak_location": (
-            "bounded parity weighting of the two SO4 chiral curvature pieces"
-        ),
+        "weak_location": ("bounded parity weighting of the two SO4 chiral curvature pieces"),
         "parameters": payload,
         "known_open_items": [
             "frame normalization derivation",

@@ -8,6 +8,7 @@ tagged GOV-01 component propagates through the live GOV-01/GOV-02 substrate.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -17,6 +18,9 @@ from lfm.analysis.energy_current import (
     LinkCurrentMap,
 )
 from lfm.core.stencils import eigenvalue_19pt, eigenvalue_27pt
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 SOURCE_CASES = (
     "vacuum_probe",
@@ -63,7 +67,10 @@ def minimum_image_mesh(
     for shift in center_shift:
         coordinate = (base - shift + 0.5 * length) % length - 0.5 * length
         axes.append(coordinate)
-    return np.meshgrid(*axes, indexing="ij")
+    return cast(
+        "tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]",
+        np.meshgrid(*axes, indexing="ij"),
+    )
 
 
 def collective_initial_state(

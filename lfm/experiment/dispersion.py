@@ -126,8 +126,7 @@ def dispersion(
         cos_omega_dt = 1.0 - 0.5 * dt * dt * spatial_omega_sq
         if not -1.0 <= cos_omega_dt <= 1.0:
             raise ValueError(
-                "Unstable: the requested wavelength violates the exact "
-                "leapfrog phase bound"
+                "Unstable: the requested wavelength violates the exact leapfrog phase bound"
             )
         omega = math.acos(cos_omega_dt) / dt
     else:

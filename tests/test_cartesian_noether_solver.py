@@ -12,10 +12,7 @@ from lfm.particles.noether import (
 def test_cartesian_fixed_charge_gradient_matches_directional_difference() -> None:
     grid_size = 8
     dx = 0.25
-    axis = (
-        np.arange(grid_size, dtype=np.float64)
-        - 0.5 * (grid_size - 1)
-    ) * dx
+    axis = (np.arange(grid_size, dtype=np.float64) - 0.5 * (grid_size - 1)) * dx
     x, y, z = np.meshgrid(axis, axis, axis, indexing="ij")
     radius_sq = x * x + y * y + z * z
     phi = 1.7 * np.exp(-radius_sq / 0.45)
@@ -53,10 +50,7 @@ def test_cartesian_fixed_charge_gradient_matches_directional_difference() -> Non
 def test_cartesian_solver_does_not_raise_fixed_charge_energy() -> None:
     grid_size = 8
     dx = 0.25
-    axis = (
-        np.arange(grid_size, dtype=np.float64)
-        - 0.5 * (grid_size - 1)
-    ) * dx
+    axis = (np.arange(grid_size, dtype=np.float64) - 0.5 * (grid_size - 1)) * dx
     x, y, z = np.meshgrid(axis, axis, axis, indexing="ij")
     radius_sq = x * x + y * y + z * z
     phi = 2.0 * np.exp(-radius_sq / 0.5)

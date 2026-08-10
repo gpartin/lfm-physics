@@ -110,9 +110,7 @@ class FRQuantization:
             "exchange_sign_once": self.exchange_sign(1),
             "exchange_sign_twice": self.exchange_sign(2),
             "deck_character": self.deck_character,
-            "deck_character_status": (
-                "explicit_quantization_choice_not_uniquely_derived_from_LFM"
-            ),
+            "deck_character_status": ("explicit_quantization_choice_not_uniquely_derived_from_LFM"),
             "primary_references": [
                 "doi:10.1063/1.1664510",
                 "arXiv:hep-th/9301101",
@@ -228,68 +226,42 @@ def hedgehog_energy_gradient_hessian(
         sin_squared = sin_midpoint * sin_midpoint
         radial_squared = radial_midpoint * radial_midpoint
 
-        sigma_density = 0.5 * (
-            radial_squared * derivative * derivative + 2.0 * sin_squared
-        )
+        sigma_density = 0.5 * (radial_squared * derivative * derivative + 2.0 * sin_squared)
         skyrme_density = sin_squared * (
-            derivative * derivative
-            + 0.5 * sin_squared / radial_squared
+            derivative * derivative + 0.5 * sin_squared / radial_squared
         )
         sigma_sum += factor * sigma_density
         skyrme_sum += factor * skyrme_density
 
-        partial_derivative = derivative * (
-            radial_squared + 2.0 * sin_squared
-        )
+        partial_derivative = derivative * (radial_squared + 2.0 * sin_squared)
         partial_midpoint = (
             2.0
             * sin_midpoint
             * cos_midpoint
-            * (
-                1.0
-                + derivative * derivative
-                + sin_squared / radial_squared
-            )
+            * (1.0 + derivative * derivative + sin_squared / radial_squared)
         )
-        local_left = factor * (
-            -partial_derivative / dr + 0.5 * partial_midpoint
-        )
-        local_right = factor * (
-            partial_derivative / dr + 0.5 * partial_midpoint
-        )
+        local_left = factor * (-partial_derivative / dr + 0.5 * partial_midpoint)
+        local_right = factor * (partial_derivative / dr + 0.5 * partial_midpoint)
         gradient_full[index] += local_left
         gradient_full[index + 1] += local_right
         force_scale_full[index] += abs(local_left)
         force_scale_full[index + 1] += abs(local_right)
 
         second_derivative = radial_squared + 2.0 * sin_squared
-        mixed_derivative = (
-            4.0 * derivative * sin_midpoint * cos_midpoint
-        )
+        mixed_derivative = 4.0 * derivative * sin_midpoint * cos_midpoint
         second_midpoint = (
             2.0
             * np.cos(2.0 * midpoint)
-            * (
-                1.0
-                + derivative * derivative
-                + sin_squared / radial_squared
-            )
+            * (1.0 + derivative * derivative + sin_squared / radial_squared)
             + np.sin(2.0 * midpoint) ** 2 / radial_squared
         )
         hessian_left = factor * (
-            second_derivative / (dr * dr)
-            - mixed_derivative / dr
-            + 0.25 * second_midpoint
+            second_derivative / (dr * dr) - mixed_derivative / dr + 0.25 * second_midpoint
         )
         hessian_right = factor * (
-            second_derivative / (dr * dr)
-            + mixed_derivative / dr
-            + 0.25 * second_midpoint
+            second_derivative / (dr * dr) + mixed_derivative / dr + 0.25 * second_midpoint
         )
-        hessian_cross = factor * (
-            -second_derivative / (dr * dr)
-            + 0.25 * second_midpoint
-        )
+        hessian_cross = factor * (-second_derivative / (dr * dr) + 0.25 * second_midpoint)
 
         if 0 < index < values.size - 1:
             main[index - 1] += hessian_left
@@ -326,18 +298,13 @@ def hedgehog_degree(
     _, values = _validate_profile(profile, radius=radius, dr=dr)
     midpoint = 0.5 * (values[:-1] + values[1:])
     derivative = np.diff(values) / dr
-    return float(
-        -(2.0 / np.pi)
-        * np.sum(dr * derivative * np.sin(midpoint) ** 2)
-    )
+    return float(-(2.0 / np.pi) * np.sum(dr * derivative * np.sin(midpoint) ** 2))
 
 
 def hedgehog_unitarity_residual(profile: np.ndarray) -> float:
     """Return max |cos(F)^2+sin(F)^2-1| for the SU(2) parameterization."""
     values = np.asarray(profile, dtype=np.float64)
-    return float(
-        np.max(np.abs(np.cos(values) ** 2 + np.sin(values) ** 2 - 1.0))
-    )
+    return float(np.max(np.abs(np.cos(values) ** 2 + np.sin(values) ** 2 - 1.0)))
 
 
 def _stationary_residual(
@@ -365,12 +332,10 @@ def _newton_polish(
 ) -> tuple[np.ndarray, bool, int, str]:
     current = np.asarray(profile, dtype=np.float64).copy()
     for iteration in range(max_iterations + 1):
-        energy, gradient, hessian, force_scale = (
-            hedgehog_energy_gradient_hessian(
-                current,
-                radius=radius,
-                dr=dr,
-            )
+        energy, gradient, hessian, force_scale = hedgehog_energy_gradient_hessian(
+            current,
+            radius=radius,
+            dr=dr,
         )
         residual = float(np.linalg.norm(gradient)) / max(
             float(np.linalg.norm(force_scale)),
@@ -387,8 +352,7 @@ def _newton_polish(
             system = (
                 hessian
                 if damping == 0.0
-                else hessian
-                + sp.diags(damping * diagonal_scale, format="csr")
+                else hessian + sp.diags(damping * diagonal_scale, format="csr")
             )
             try:
                 import warnings
@@ -404,12 +368,10 @@ def _newton_polish(
             while step >= 1.0e-12:
                 candidate = current.copy()
                 candidate[1:-1] += step * delta
-                candidate_energy, _, _, _ = (
-                    hedgehog_energy_gradient_hessian(
-                        candidate,
-                        radius=radius,
-                        dr=dr,
-                    )
+                candidate_energy, _, _, _ = hedgehog_energy_gradient_hessian(
+                    candidate,
+                    radius=radius,
+                    dr=dr,
                 )
                 candidate_residual = _stationary_residual(
                     candidate,
@@ -417,8 +379,7 @@ def _newton_polish(
                     dr=dr,
                 )
                 if (
-                    candidate_energy.total
-                    <= energy.total * (1.0 + 1.0e-14)
+                    candidate_energy.total <= energy.total * (1.0 + 1.0e-14)
                     and candidate_residual < residual
                 ):
                     current = candidate
@@ -442,12 +403,7 @@ def _topological_rms_radius(
     radial_midpoint = 0.5 * (r[:-1] + r[1:])
     midpoint = 0.5 * (values[:-1] + values[1:])
     derivative = np.diff(values) / dr
-    weights = (
-        -(2.0 / np.pi)
-        * dr
-        * derivative
-        * np.sin(midpoint) ** 2
-    )
+    weights = -(2.0 / np.pi) * dr * derivative * np.sin(midpoint) ** 2
     degree = float(np.sum(weights))
     if degree <= 0.0:
         raise ValueError("topological density does not have positive degree")
@@ -574,14 +530,10 @@ def solve_skyrme_hedgehog(
         unitarity_residual=hedgehog_unitarity_residual(final_profile),
         derrick_relative_first_derivative=derrick_first,
         derrick_relative_second_derivative=derrick_second,
-        continuum_virial_mismatch=float(
-            abs(energy.sigma - energy.skyrme) / total_scale
-        ),
+        continuum_virial_mismatch=float(abs(energy.sigma - energy.skyrme) / total_scale),
         optimizer_converged=bool(result.success),
         optimizer_iterations=int(result.nit),
         newton_converged=bool(newton_converged),
         newton_iterations=int(newton_iterations),
-        message=(
-            f"optimizer: {result.message}; Newton: {newton_message}"
-        ),
+        message=(f"optimizer: {result.message}; Newton: {newton_message}"),
     )

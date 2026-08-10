@@ -13,7 +13,7 @@ Gaussian blobs radiate >90% of energy before wells form.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -125,7 +125,7 @@ def equilibrate_chi(
     if boundary_mask is not None:
         chi[boundary_mask] = chi0
 
-    return chi
+    return cast("NDArray[np.floating]", chi)
 
 
 def equilibrate_chi_19pt(

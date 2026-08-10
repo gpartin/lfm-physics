@@ -17,6 +17,12 @@ import numpy as np
 from lfm.constants import C_DEFAULT, CHI0, KAPPA, LAMBDA_H
 from lfm.core.stencils import laplacian_19pt, laplacian_27pt
 
+Offset = tuple[int, int, int]
+
+
+def _offset3(values: tuple[int, ...]) -> Offset:
+    return (values[0], values[1], values[2])
+
 
 def _unique_links(stencil: str) -> tuple[tuple[tuple[int, int, int], float], ...]:
     if stencil == "19":
@@ -54,7 +60,7 @@ def _all_links(stencil: str) -> tuple[tuple[tuple[int, int, int], float], ...]:
     result: list[tuple[tuple[int, int, int], float]] = []
     for offset, weight in _unique_links(stencil):
         result.append((offset, weight))
-        result.append((tuple(-value for value in offset), weight))
+        result.append((_offset3(tuple(-value for value in offset)), weight))
     return tuple(result)
 
 
@@ -194,13 +200,7 @@ def _weighted_gradient_force_density(
         neighbor = _shift(values, offset)
         neighbor_q = _shift(q, offset)
         difference = neighbor - values
-        force += (
-            0.5
-            * coefficient
-            * weight
-            * (q + neighbor_q)
-            * difference
-        )
+        force += 0.5 * coefficient * weight * (q + neighbor_q) * difference
         density += 0.25 * coefficient * weight * difference**2
     return force, density
 
@@ -210,9 +210,7 @@ def bare_kinetic_density(
     parameters: LiveClockParameters = LiveClockParameters(),
 ) -> np.ndarray:
     """Return the positive bare momentum density."""
-    return 0.5 * state.field_momentum**2 + (
-        state.chi_momentum**2 / (2.0 * parameters.chi_inertia)
-    )
+    return 0.5 * state.field_momentum**2 + (state.chi_momentum**2 / (2.0 * parameters.chi_inertia))
 
 
 def bare_potential_density(
@@ -231,11 +229,7 @@ def bare_potential_density(
         stencil=parameters.gov02_stencil,
     )
     interaction = 0.5 * state.chi**2 * state.field**2
-    radial = (
-        parameters.chi_inertia
-        * parameters.lambda_h
-        * (state.chi**2 - parameters.chi0**2) ** 2
-    )
+    radial = parameters.chi_inertia * parameters.lambda_h * (state.chi**2 - parameters.chi0**2) ** 2
     return matter_gradient + chi_gradient + interaction + radial
 
 
@@ -262,9 +256,7 @@ def total_hamiltonian(
     """Evaluate the autonomous live candidate Hamiltonian."""
     q = clock_factor(state)
     bare = bare_energy_density(state, parameters)
-    clock_kinetic = state.clock_momentum**2 / (
-        2.0 * parameters.clock_inertia
-    )
+    clock_kinetic = state.clock_momentum**2 / (2.0 * parameters.clock_inertia)
     clock_gradient = positive_gradient_density(
         state.varphi,
         coefficient=parameters.clock_inertia * parameters.clock_speed**2,
@@ -303,11 +295,7 @@ def potential_momentum_rates(
     )
 
     interaction = 0.5 * state.chi**2 * state.field**2
-    radial = (
-        parameters.chi_inertia
-        * parameters.lambda_h
-        * (state.chi**2 - parameters.chi0**2) ** 2
-    )
+    radial = parameters.chi_inertia * parameters.lambda_h * (state.chi**2 - parameters.chi0**2) ** 2
     potential = matter_gradient + chi_gradient + interaction + radial
     clock_rate = (
         parameters.clock_inertia
@@ -324,12 +312,9 @@ def clock_momentum_rate(
 ) -> np.ndarray:
     """Return the complete instantaneous clock momentum rate."""
     q = clock_factor(state)
-    return (
-        parameters.clock_inertia
-        * parameters.clock_speed**2
-        * _laplacian(state.varphi, parameters.clock_stencil)
-        - q * bare_energy_density(state, parameters)
-    )
+    return parameters.clock_inertia * parameters.clock_speed**2 * _laplacian(
+        state.varphi, parameters.clock_stencil
+    ) - q * bare_energy_density(state, parameters)
 
 
 def _potential_kick(
@@ -351,9 +336,7 @@ def _clock_kinetic_drift(
     duration: float,
     parameters: LiveClockParameters,
 ) -> None:
-    state.varphi += (
-        duration * state.clock_momentum / parameters.clock_inertia
-    )
+    state.varphi += duration * state.clock_momentum / parameters.clock_inertia
 
 
 def _bare_kinetic_drift(
@@ -364,12 +347,7 @@ def _bare_kinetic_drift(
     q = clock_factor(state)
     kinetic = bare_kinetic_density(state, parameters)
     state.field += duration * q * state.field_momentum
-    state.chi += (
-        duration
-        * q
-        * state.chi_momentum
-        / parameters.chi_inertia
-    )
+    state.chi += duration * q * state.chi_momentum / parameters.chi_inertia
     state.clock_momentum -= duration * q * kinetic
 
 
@@ -402,12 +380,15 @@ def step_fixed_clock(
     half = 0.5 * dt
     q = np.ones_like(state.field)
 
-    field_rate = weighted_gradient_force(
-        state.field,
-        q,
-        coefficient=parameters.matter_speed**2,
-        stencil=parameters.gov01_stencil,
-    ) - state.chi**2 * state.field
+    field_rate = (
+        weighted_gradient_force(
+            state.field,
+            q,
+            coefficient=parameters.matter_speed**2,
+            stencil=parameters.gov01_stencil,
+        )
+        - state.chi**2 * state.field
+    )
     chi_rate = weighted_gradient_force(
         state.chi,
         q,
@@ -427,12 +408,15 @@ def step_fixed_clock(
     state.field += dt * state.field_momentum
     state.chi += dt * state.chi_momentum / parameters.chi_inertia
 
-    field_rate = weighted_gradient_force(
-        state.field,
-        q,
-        coefficient=parameters.matter_speed**2,
-        stencil=parameters.gov01_stencil,
-    ) - state.chi**2 * state.field
+    field_rate = (
+        weighted_gradient_force(
+            state.field,
+            q,
+            coefficient=parameters.matter_speed**2,
+            stencil=parameters.gov01_stencil,
+        )
+        - state.chi**2 * state.field
+    )
     chi_rate = weighted_gradient_force(
         state.chi,
         q,
@@ -503,18 +487,11 @@ def make_traveling_packet(
         stiffness = -(
             (8.0 / 9.0) * (np.cos(kx) + np.cos(ky) + np.cos(kz))
             + (4.0 / 9.0)
-            * (
-                np.cos(kx) * np.cos(ky)
-                + np.cos(kx) * np.cos(kz)
-                + np.cos(ky) * np.cos(kz)
-            )
+            * (np.cos(kx) * np.cos(ky) + np.cos(kx) * np.cos(kz) + np.cos(ky) * np.cos(kz))
             + (2.0 / 9.0) * np.cos(kx) * np.cos(ky) * np.cos(kz)
             - (38.0 / 9.0)
         )
-    omega = np.sqrt(
-        parameters.matter_speed**2 * np.maximum(stiffness, 0.0)
-        + parameters.chi0**2
-    )
+    omega = np.sqrt(parameters.matter_speed**2 * np.maximum(stiffness, 0.0) + parameters.chi0**2)
     field_hat = np.fft.fftn(field)
     direction = np.sign(np.asarray(kx + np.zeros_like(ky) + np.zeros_like(kz)))
     momentum_hat = -1j * direction * omega * field_hat

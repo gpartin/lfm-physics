@@ -643,9 +643,9 @@ class Simulation:
             # --- t = 0: envelope centred at r₀ ---
             r2 = (X - px) ** 2 + (Y - py) ** 2 + (Z - pz) ** 2
             envelope = (amp * np.exp(-r2 / (2.0 * sig**2))).astype(self._state_dtype)
-            phase_grid = (
-                phase + kx * (X - px) + ky * (Y - py) + kz * (Z - pz)
-            ).astype(self._state_dtype)
+            phase_grid = (phase + kx * (X - px) + ky * (Y - py) + kz * (Z - pz)).astype(
+                self._state_dtype
+            )
             pr = (envelope * np.cos(phase_grid)).astype(self._state_dtype)
             pi = (envelope * np.sin(phase_grid)).astype(self._state_dtype)
 
@@ -658,9 +658,7 @@ class Simulation:
             py_prev = py - vy * dt
             pz_prev = pz - vz * dt
             r2_prev = (X - px_prev) ** 2 + (Y - py_prev) ** 2 + (Z - pz_prev) ** 2
-            envelope_prev = (amp * np.exp(-r2_prev / (2.0 * sig**2))).astype(
-                self._state_dtype
-            )
+            envelope_prev = (amp * np.exp(-r2_prev / (2.0 * sig**2))).astype(self._state_dtype)
             omega = float(np.sqrt(kx**2 + ky**2 + kz**2 + chi0**2))
             phase_prev = (
                 phase + kx * (X - px_prev) + ky * (Y - py_prev) + kz * (Z - pz_prev) + omega * dt

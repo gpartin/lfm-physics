@@ -73,9 +73,7 @@ def clock_link_static_response(
     source_values = np.asarray(source, dtype=np.float64)
     if np.any(values <= 0.0):
         raise ValueError("static response requires strictly positive stiffness")
-    return -source_values / (
-        parameters.inertia * parameters.speed**2 * values
-    )
+    return -source_values / (parameters.inertia * parameters.speed**2 * values)
 
 
 def clock_link_green_residue(
@@ -120,9 +118,7 @@ def matter_clock_sensitivity(
     if np.any(stiffness_values < 0.0):
         raise ValueError("stiffness must be nonnegative")
     chi_values = np.asarray(chi, dtype=np.float64)
-    return 2.0 * (
-        matter_speed**2 * stiffness_values + chi_values**2
-    )
+    return 2.0 * (matter_speed**2 * stiffness_values + chi_values**2)
 
 
 def solve_static_clock_link(
@@ -147,9 +143,7 @@ def solve_static_clock_link(
     if not np.all(np.isfinite(source_values)):
         raise ValueError("source must contain only finite values")
     effective_source = (
-        source_values - float(np.mean(source_values))
-        if remove_mean
-        else source_values.copy()
+        source_values - float(np.mean(source_values)) if remove_mean else source_values.copy()
     )
     if not remove_mean and abs(float(np.mean(effective_source))) > 1.0e-14:
         raise ValueError("periodic static source must have zero mean")
@@ -175,9 +169,7 @@ def solve_static_clock_link(
     field_hat = np.zeros_like(source_hat, dtype=np.complex128)
     nonzero = stiffness > 1.0e-14
     field_hat[nonzero] = -source_hat[nonzero] / (
-        parameters.inertia
-        * parameters.speed**2
-        * stiffness[nonzero]
+        parameters.inertia * parameters.speed**2 * stiffness[nonzero]
     )
     field = np.fft.ifftn(field_hat).real
     field -= float(np.mean(field))
@@ -198,9 +190,7 @@ def static_clock_link_residual(
     if field_values.shape != source_values.shape or field_values.ndim != 3:
         raise ValueError("field and source must have the same 3-D shape")
     effective_source = (
-        source_values - float(np.mean(source_values))
-        if remove_mean
-        else source_values
+        source_values - float(np.mean(source_values)) if remove_mean else source_values
     )
     if stencil == "19":
         laplacian = laplacian_19pt(field_values)
@@ -208,8 +198,4 @@ def static_clock_link_residual(
         laplacian = laplacian_27pt(field_values)
     else:
         raise ValueError("stencil must be '19' or '27'")
-    return (
-        parameters.speed**2 * laplacian
-        - effective_source / parameters.inertia
-    )
-
+    return parameters.speed**2 * laplacian - effective_source / parameters.inertia

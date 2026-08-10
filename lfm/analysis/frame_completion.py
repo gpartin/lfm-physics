@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import numpy as np
 
-
 FRAME_COMPONENT_LABELS = (
     "00",
     "11",
@@ -62,9 +61,13 @@ def source_projection_weights(
 ) -> dict[str, float]:
     """Return squared source weights in scale and shape sectors."""
 
-    vector = rest_energy_source() if source is None else np.asarray(
-        source,
-        dtype=np.float64,
+    vector = (
+        rest_energy_source()
+        if source is None
+        else np.asarray(
+            source,
+            dtype=np.float64,
+        )
     )
     if vector.shape != (FRAME_COMPONENT_COUNT,):
         raise ValueError("source must have shape (10,)")
@@ -90,13 +93,9 @@ def frame_static_operator(
     mass_sq = float(radial_mass_sq)
     inertia = float(normalization)
     if stiffness < 0.0 or mass_sq <= 0.0 or inertia <= 0.0:
-        raise ValueError(
-            "stiffness must be nonnegative; mass and normalization positive"
-        )
+        raise ValueError("stiffness must be nonnegative; mass and normalization positive")
     scale, shape = frame_projectors()
-    return inertia * (
-        (stiffness + mass_sq) * scale + stiffness * shape
-    )
+    return inertia * ((stiffness + mass_sq) * scale + stiffness * shape)
 
 
 def frame_static_response(
@@ -111,9 +110,13 @@ def frame_static_response(
     stiffness = float(lattice_stiffness)
     if stiffness <= 0.0:
         raise ValueError("static response requires nonzero positive stiffness")
-    vector = rest_energy_source() if source is None else np.asarray(
-        source,
-        dtype=np.float64,
+    vector = (
+        rest_energy_source()
+        if source is None
+        else np.asarray(
+            source,
+            dtype=np.float64,
+        )
     )
     operator = frame_static_operator(
         stiffness,
@@ -137,10 +140,7 @@ def analytic_rest_energy_response(
     inertia = float(normalization)
     if stiffness <= 0.0 or mass_sq <= 0.0 or inertia <= 0.0:
         raise ValueError("all arguments must be positive")
-    return (
-        0.75 / (inertia * stiffness)
-        + 0.25 / (inertia * (stiffness + mass_sq))
-    )
+    return 0.75 / (inertia * stiffness) + 0.25 / (inertia * (stiffness + mass_sq))
 
 
 def minimized_source_cross_energy(
@@ -158,7 +158,7 @@ def minimized_source_cross_energy(
         radial_mass_sq=radial_mass_sq,
         normalization=normalization,
     )
-    return -float(coupling) ** 2 * float(source_product) * response
+    return -(float(coupling) ** 2) * float(source_product) * response
 
 
 def zero_momentum_frame_spectrum(

@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from lfm.simulation import Simulation
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from lfm.config import SimulationConfig
 
 

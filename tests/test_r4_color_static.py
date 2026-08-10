@@ -55,9 +55,7 @@ def test_r4_color_gauss_minimum_and_chi_gradient() -> None:
             parameters,
         )[0]
 
-    derivative = (
-        minimized_energy(epsilon) - minimized_energy(-epsilon)
-    ) / (2.0 * epsilon)
+    derivative = (minimized_energy(epsilon) - minimized_energy(-epsilon)) / (2.0 * epsilon)
     assert np.isclose(
         derivative,
         gradient[site],

@@ -148,16 +148,15 @@ def _lattice_k_squared_gradient(
     gradients = np.empty_like(wave, dtype=np.float64)
     for axis in range(3):
         other = [candidate for candidate in range(3) if candidate != axis]
-        gradients[..., axis] = sin_q[..., axis] * (
-            2.0 * spec.face_weight
-            + 4.0
-            * spec.edge_weight
-            * (cos_q[..., other[0]] + cos_q[..., other[1]])
-            + 8.0
-            * spec.corner_weight
-            * cos_q[..., other[0]]
-            * cos_q[..., other[1]]
-        ) / spacing
+        gradients[..., axis] = (
+            sin_q[..., axis]
+            * (
+                2.0 * spec.face_weight
+                + 4.0 * spec.edge_weight * (cos_q[..., other[0]] + cos_q[..., other[1]])
+                + 8.0 * spec.corner_weight * cos_q[..., other[0]] * cos_q[..., other[1]]
+            )
+            / spacing
+        )
     return gradients
 
 
@@ -483,7 +482,7 @@ def poincare_algebra_matrix_residual() -> dict[str, float]:
     epsilon[1, 0, 2] = epsilon[2, 1, 0] = epsilon[0, 2, 1] = -1.0
 
     residuals: dict[str, float] = {}
-    checks = {
+    checks: dict[str, list[NDArray[np.float64]]] = {
         "P_P": [],
         "J_J": [],
         "J_K": [],
@@ -498,9 +497,7 @@ def poincare_algebra_matrix_residual() -> dict[str, float]:
             checks["P_P"].append(commutator(translations[mu], translations[nu]))
     for i in range(3):
         checks["J_H"].append(commutator(rotations[i], translations[0]))
-        checks["K_H"].append(
-            commutator(boosts[i], translations[0]) - translations[i + 1]
-        )
+        checks["K_H"].append(commutator(boosts[i], translations[0]) - translations[i + 1])
         for j in range(3):
             expected_jj = sum(epsilon[i, j, k] * rotations[k] for k in range(3))
             expected_jk = sum(epsilon[i, j, k] * boosts[k] for k in range(3))
@@ -509,12 +506,9 @@ def poincare_algebra_matrix_residual() -> dict[str, float]:
             checks["J_J"].append(commutator(rotations[i], rotations[j]) - expected_jj)
             checks["J_K"].append(commutator(rotations[i], boosts[j]) - expected_jk)
             checks["K_K"].append(commutator(boosts[i], boosts[j]) - expected_kk)
-            checks["J_P"].append(
-                commutator(rotations[i], translations[j + 1]) - expected_jp
-            )
+            checks["J_P"].append(commutator(rotations[i], translations[j + 1]) - expected_jp)
             checks["K_P"].append(
-                commutator(boosts[i], translations[j + 1])
-                - (translations[0] if i == j else 0.0)
+                commutator(boosts[i], translations[j + 1]) - (translations[0] if i == j else 0.0)
             )
 
     for name, matrices in checks.items():
@@ -550,9 +544,7 @@ def gaussian_packet(
         shape[axis] = grid_size
         offsets.append(delta.reshape(shape))
     radius_sq = offsets[0] ** 2 + offsets[1] ** 2 + offsets[2] ** 2
-    phase = k_magnitude * sum(
-        direction_arr[axis] * offsets[axis] for axis in range(3)
-    )
+    phase = k_magnitude * sum(direction_arr[axis] * offsets[axis] for axis in range(3))
     return np.exp(-0.5 * radius_sq / (sigma * sigma) + 1j * phase)
 
 
@@ -704,9 +696,7 @@ def packet_propagation_metrics(
     radial = float(np.dot(velocity, unit))
     continuum_radial = float(np.dot(continuum_velocity, unit))
     transverse = float(np.linalg.norm(velocity - radial * unit))
-    continuum_transverse = float(
-        np.linalg.norm(continuum_velocity - continuum_radial * unit)
-    )
+    continuum_transverse = float(np.linalg.norm(continuum_velocity - continuum_radial * unit))
     return {
         "grid_size": grid_size,
         "spacing": spacing,

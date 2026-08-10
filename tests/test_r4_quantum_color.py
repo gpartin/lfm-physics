@@ -19,8 +19,7 @@ from lfm.foundations.r4_quantum_color import (
     r4_quantum_color_coefficients,
     su3_fundamental_algebra_audit,
 )
-from lfm.foundations.r4_unified_live import R4Parameters
-from lfm.foundations.r4_unified_live import R4State, total_hamiltonian
+from lfm.foundations.r4_unified_live import R4Parameters, R4State, total_hamiltonian
 
 
 def _parameters(stencil: str) -> R4Parameters:
@@ -40,9 +39,7 @@ def test_vacuum_coefficients_give_positive_flux_slope(stencil: str) -> None:
     coefficients = r4_quantum_color_coefficients(_parameters(stencil))
     assert coefficients.epsilon_vacuum == pytest.approx(1.0 / 63.0)
     assert coefficients.g_squared_from_electric == pytest.approx(63.0)
-    assert coefficients.inverse_g_squared_from_magnetic == pytest.approx(
-        1.0 / 63.0
-    )
+    assert coefficients.inverse_g_squared_from_magnetic == pytest.approx(1.0 / 63.0)
     assert coefficients.fundamental_flux_slope == pytest.approx(42.0)
     bound = r4_magnetic_competition_bound(_parameters(stencil))
     assert bound.magnetic_bound_per_link > 0.0
@@ -77,23 +74,13 @@ def test_full_r4_hamiltonian_is_locally_su3_gauge_invariant(
     parameters = _parameters(stencil)
     state = R4State.vacuum(2, parameters)
     rng = np.random.default_rng(541)
-    state.r3.matter = (
-        0.02
-        * (
-            rng.normal(size=state.r3.matter.shape)
-            + 1.0j * rng.normal(size=state.r3.matter.shape)
-        )
+    state.r3.matter = 0.02 * (
+        rng.normal(size=state.r3.matter.shape) + 1.0j * rng.normal(size=state.r3.matter.shape)
     )
-    state.r3.matter_momentum = (
-        0.03
-        * (
-            rng.normal(size=state.r3.matter.shape)
-            + 1.0j * rng.normal(size=state.r3.matter.shape)
-        )
+    state.r3.matter_momentum = 0.03 * (
+        rng.normal(size=state.r3.matter.shape) + 1.0j * rng.normal(size=state.r3.matter.shape)
     )
-    state.r3.color_electric = (
-        0.01 * rng.normal(size=state.r3.color_electric.shape)
-    )
+    state.r3.color_electric = 0.01 * rng.normal(size=state.r3.color_electric.shape)
     generators = su3_generators()
     gauge = np.empty(state.r3.chi.shape + (3, 3), dtype=np.complex128)
     for site in np.ndindex(state.r3.chi.shape):

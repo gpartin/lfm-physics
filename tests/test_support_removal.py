@@ -4,7 +4,6 @@ import numpy as np
 
 from lfm.particles.stationary import continue_support_removal
 
-
 C7_OFFSETS = (
     (0, 0, 0),
     (1, 0, 0),

@@ -8,7 +8,7 @@ Lorentz, Poisson, or nonlocal Green-function update.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -17,6 +17,10 @@ from lfm.analysis.phase import canonical_charge_density
 from lfm.config import ChiPotentialModel
 from lfm.constants import C_DEFAULT, CHI0, DT_DEFAULT, KAPPA, LAMBDA_H
 from lfm.core.stencils import gradient_19pt
+
+
+def _snapshot_array(snapshot: dict[str, object], key: str) -> np.ndarray:
+    return cast("np.ndarray", snapshot[key])
 
 
 def rms(values: np.ndarray) -> float:
@@ -92,10 +96,7 @@ def clock_shear_energy_density(a_field: np.ndarray, e_field: np.ndarray) -> np.n
     """Return local clock-shear field energy density."""
 
     b_field = curl_19(a_field)
-    return 0.5 * (
-        np.sum(np.asarray(e_field) ** 2, axis=0)
-        + np.sum(b_field * b_field, axis=0)
-    )
+    return 0.5 * (np.sum(np.asarray(e_field) ** 2, axis=0) + np.sum(b_field * b_field, axis=0))
 
 
 def total_clock_shear_energy(a_field: np.ndarray, e_field: np.ndarray) -> float:
@@ -167,8 +168,7 @@ def color_noether_spatial_current(
         grad_imag = gradient_19pt(imag[component], dx=dx)
         for axis in range(3):
             current[axis] += -c2 * (
-                real[component] * grad_imag[axis]
-                - imag[component] * grad_real[axis]
+                real[component] * grad_imag[axis] - imag[component] * grad_real[axis]
             )
     return current
 
@@ -253,10 +253,7 @@ def charge_centroid(
 
     rho = np.asarray(charge_density, dtype=np.float64)
     dx_grid, dy_grid, dz_grid, dist = periodic_displacement_grid(rho.shape[0], center_hint)
-    if sign > 0:
-        weight = np.maximum(rho, 0.0)
-    else:
-        weight = np.maximum(-rho, 0.0)
+    weight = np.maximum(rho, 0.0) if sign > 0 else np.maximum(-rho, 0.0)
     mask = dist <= radius
     weighted = weight * mask
     total = float(np.sum(weighted))
@@ -272,10 +269,7 @@ def charge_centroid(
         float(np.sum(weighted * dy_grid) / total),
         float(np.sum(weighted * dz_grid) / total),
     ]
-    center = [
-        float((center_hint[axis] + disp[axis]) % rho.shape[0])
-        for axis in range(3)
-    ]
+    center = [float((center_hint[axis] + disp[axis]) % rho.shape[0]) for axis in range(3)]
     signed_charge = total if sign > 0 else -total
     return {
         "ok": True,
@@ -344,24 +338,28 @@ def run_prepared_charge_pair_probe(
 
     def snapshot(label: str) -> dict[str, Any]:
         snap = sim.phase_space_snapshot()
+        psi_real = _snapshot_array(snap, "psi_real")
+        psi_imag = _snapshot_array(snap, "psi_imag")
+        psi_real_prev = _snapshot_array(snap, "psi_real_prev")
+        psi_imag_prev = _snapshot_array(snap, "psi_imag_prev")
+        chi_snapshot = _snapshot_array(snap, "chi")
         rho = color_noether_charge_density(
-            snap["psi_real"],
-            snap["psi_imag"],
-            snap["psi_real_prev"],
-            snap["psi_imag_prev"],
+            psi_real,
+            psi_imag,
+            psi_real_prev,
+            psi_imag_prev,
             dt=dt,
         )
         current = color_noether_spatial_current(
-            snap["psi_real"],
-            snap["psi_imag"],
+            psi_real,
+            psi_imag,
             c=C_DEFAULT,
         )
         centroid_radius = min(2.0 * sigma, 0.40 * separation)
         ca = charge_centroid(rho, center_a, sign=signs[0], radius=centroid_radius)
         cb = charge_centroid(rho, center_b, sign=signs[1], radius=centroid_radius)
         sep_vec = [
-            ((cb["center"][axis] - ca["center"][axis] + 0.5 * size) % size)
-            - 0.5 * size
+            ((cb["center"][axis] - ca["center"][axis] + 0.5 * size) % size) - 0.5 * size
             for axis in range(3)
         ]
         separation_now = float(np.sqrt(sum(value * value for value in sep_vec)))
@@ -375,9 +373,9 @@ def run_prepared_charge_pair_probe(
             "packet_a": ca,
             "packet_b": cb,
             "separation": separation_now,
-            "chi_min": float(np.min(snap["chi"])),
-            "chi_max": float(np.max(snap["chi"])),
-            "psi_norm": float(np.sqrt(np.sum(np.asarray(snap["psi_real"]) ** 2 + np.asarray(snap["psi_imag"]) ** 2))),
+            "chi_min": float(np.min(chi_snapshot)),
+            "chi_max": float(np.max(chi_snapshot)),
+            "psi_norm": float(np.sqrt(np.sum(psi_real**2 + psi_imag**2))),
         }
 
     start = snapshot("start")
@@ -409,9 +407,7 @@ def run_prepared_charge_pair_probe(
         "start": start,
         "end": end,
         "delta_separation": float(end["separation"] - start["separation"]),
-        "charge_abs_retention": float(
-            end["charge_abs"] / max(start["charge_abs"], 1.0e-300)
-        ),
+        "charge_abs_retention": float(end["charge_abs"] / max(start["charge_abs"], 1.0e-300)),
     }
 
 

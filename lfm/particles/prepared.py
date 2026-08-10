@@ -81,7 +81,7 @@ def install_prepared_scalar_pair(
         raise ValueError("prepared modes can only be installed at step zero")
     if sim.config.field_level != FieldLevel.COMPLEX:
         raise ValueError("prepared moving modes require a complex field")
-    if solution_a.N != sim.config.grid_size or solution_b.N != sim.config.grid_size:
+    if sim.config.grid_size != solution_a.N or sim.config.grid_size != solution_b.N:
         raise ValueError("solution grid size must match the simulation")
 
     chi0 = float(sim.config.chi0)

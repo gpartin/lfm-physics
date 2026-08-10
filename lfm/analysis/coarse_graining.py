@@ -12,11 +12,14 @@ massless pole. The functions expose that statement numerically for the LFM
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from lfm.core.stencils import eigenvalue_19pt, eigenvalue_27pt
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 Array = np.ndarray
 
@@ -102,9 +105,7 @@ def blocked_static_propagator(
                 stiffness = np.maximum(stiffness, 0.0)
                 denominator = mass_sq + stiffness
                 if np.any(denominator <= 0.0):
-                    raise ValueError(
-                        "massless blocked propagator requires nonzero modes"
-                    )
+                    raise ValueError("massless blocked propagator requires nonzero modes")
                 response += weight / denominator
                 weight_sum += weight
 

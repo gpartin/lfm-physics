@@ -214,7 +214,5 @@ def test_valid_internal_operational_gate_can_pass() -> None:
         continuum_interpretation="effective free fall",
         operational_readout_required=True,
     )
-    report = UnifiedForceHarness([spec]).evaluate(
-        [_pass("GR-INTERNAL", identity=_identity())]
-    )
+    report = UnifiedForceHarness([spec]).evaluate([_pass("GR-INTERNAL", identity=_identity())])
     assert report.results[0].status is BenchmarkStatus.PASS

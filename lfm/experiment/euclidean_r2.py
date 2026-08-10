@@ -17,7 +17,13 @@ import numpy as np
 from lfm.constants import CHI0, KAPPA, LAMBDA_H
 from lfm.core.stencils import eigenvalue_19pt
 
+Offset = tuple[int, int, int]
+
 EuclideanRestoringModel = Literal["canonical_quartic", "flat_octic"]
+
+
+def _offset3(values: list[int]) -> Offset:
+    return (values[0], values[1], values[2])
 
 
 @dataclass(frozen=True)
@@ -46,14 +52,14 @@ def _spatial_offsets() -> tuple[tuple[tuple[int, int, int], float], ...]:
         for sign in (-1, 1):
             offset = [0, 0, 0]
             offset[axis] = sign
-            values.append((tuple(offset), 1.0 / 3.0))
+            values.append((_offset3(offset), 1.0 / 3.0))
     for axis_a, axis_b in ((0, 1), (0, 2), (1, 2)):
         for sign_a in (-1, 1):
             for sign_b in (-1, 1):
                 offset = [0, 0, 0]
                 offset[axis_a] = sign_a
                 offset[axis_b] = sign_b
-                values.append((tuple(offset), 1.0 / 6.0))
+                values.append((_offset3(offset), 1.0 / 6.0))
     return tuple(values)
 
 
@@ -138,10 +144,11 @@ class EuclideanR2Sampler:
 
     def _update_psi(self, mask: np.ndarray) -> tuple[int, int]:
         old = self.psi[mask]
-        delta = self.psi_step * (
-            self.rng.normal(size=old.shape)
-            + 1j * self.rng.normal(size=old.shape)
-        ) / math.sqrt(2.0)
+        delta = (
+            self.psi_step
+            * (self.rng.normal(size=old.shape) + 1j * self.rng.normal(size=old.shape))
+            / math.sqrt(2.0)
+        )
         new = old + delta
         summed_neighbors = self._neighbor_sum(self.psi)[mask]
         old_norm = np.sum(np.abs(old) ** 2, axis=-1)

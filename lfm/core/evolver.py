@@ -95,8 +95,8 @@ class Evolver:
 
         # Allocate arrays via backend
         self._init_arrays()
-        self._local_phase_clock_cos = None
-        self._local_phase_clock_sin = None
+        self._local_phase_clock_cos: NDArray | None = None
+        self._local_phase_clock_sin: NDArray | None = None
 
     def _init_arrays(self) -> None:
         """Allocate double-buffered arrays."""
@@ -330,27 +330,17 @@ class Evolver:
             FieldLevel.COMPLEX,
             FieldLevel.COLOR,
         }:
-            raise ValueError(
-                "gravity-recovery candidates require an LFM field register"
-            )
+            raise ValueError("gravity-recovery candidates require an LFM field register")
         if not isinstance(steps, int) or steps < 0:
             raise ValueError("steps must be a nonnegative integer")
-        if (
-            not np.isfinite(relaxation_damping)
-            or relaxation_damping < 0.0
-        ):
-            raise ValueError(
-                "relaxation_damping must be finite and nonnegative"
-            )
+        if not np.isfinite(relaxation_damping) or relaxation_damping < 0.0:
+            raise ValueError("relaxation_damping must be finite and nonnegative")
         model = ChiPotentialModel(potential_model)
         if (
-            self.config.field_level
-            in {FieldLevel.COMPLEX, FieldLevel.COLOR}
+            self.config.field_level in {FieldLevel.COMPLEX, FieldLevel.COLOR}
             and model != ChiPotentialModel.FLAT_OCTIC
         ):
-            raise ValueError(
-                "multiquadrature gravity recovery supports FLAT_OCTIC"
-            )
+            raise ValueError("multiquadrature gravity recovery supports FLAT_OCTIC")
         dt = self.config.dt if dt_override is None else float(dt_override)
         if not np.isfinite(dt) or dt <= 0.0:
             raise ValueError("dt_override must be positive and finite")
@@ -413,10 +403,7 @@ class Evolver:
                 enable_chi_floor=cfg.enable_chi_floor,
             )
         elif cfg.field_level == FieldLevel.COMPLEX:
-            if any(
-                value is None
-                for value in (i_in, ip_in, i_out, ip_out)
-            ):
+            if any(value is None for value in (i_in, ip_in, i_out, ip_out)):
                 raise RuntimeError("complex field buffers are missing")
             self.backend.step_complex_gravity_recovery(
                 r_in,
@@ -445,20 +432,13 @@ class Evolver:
                 enable_chi_floor=cfg.enable_chi_floor,
             )
         else:
-            if any(
-                value is None
-                for value in (i_in, ip_in, i_out, ip_out)
-            ):
+            if any(value is None for value in (i_in, ip_in, i_out, ip_out)):
                 raise RuntimeError("color field buffers are missing")
             sa_in = (
-                (self.sa_A if self._use_buffer_A else self.sa_B)
-                if self.sa_A is not None
-                else None
+                (self.sa_A if self._use_buffer_A else self.sa_B) if self.sa_A is not None else None
             )
             sa_out = (
-                (self.sa_B if self._use_buffer_A else self.sa_A)
-                if self.sa_A is not None
-                else None
+                (self.sa_B if self._use_buffer_A else self.sa_A) if self.sa_A is not None else None
             )
             self.backend.step_color_gravity_recovery(
                 r_in,
@@ -492,9 +472,7 @@ class Evolver:
                 sa_fields_out=sa_out,
                 sa_gamma=cfg.sa_gamma,
                 sa_d=cfg.sa_d,
-                use_stencil19_noether_current=(
-                    cfg.use_stencil19_noether_current
-                ),
+                use_stencil19_noether_current=(cfg.use_stencil19_noether_current),
                 inv_dx2=1.0 / (cfg.dx * cfg.dx),
                 enable_chi_floor=cfg.enable_chi_floor,
             )
@@ -598,8 +576,7 @@ class Evolver:
         host = np.asarray(arr, dtype=self.dtype)
         if host.shape != (self.N, self.N, self.N):
             raise ValueError(
-                "boundary mask must have shape "
-                f"({self.N}, {self.N}, {self.N}), got {host.shape}"
+                f"boundary mask must have shape ({self.N}, {self.N}, {self.N}), got {host.shape}"
             )
         if not np.isfinite(host).all():
             raise ValueError("boundary mask must contain only finite values")
@@ -640,8 +617,7 @@ class Evolver:
             dwell = np.broadcast_to(dwell[None, :, :, :], expected_full).copy()
         elif dwell.shape != expected_full:
             raise ValueError(
-                "dwell_steps must have shape "
-                f"{expected_3d} or {expected_full}, got {dwell.shape}"
+                f"dwell_steps must have shape {expected_3d} or {expected_full}, got {dwell.shape}"
             )
         if not np.isfinite(dwell).all():
             raise ValueError("dwell_steps must contain only finite values")

@@ -31,6 +31,13 @@ from lfm.viz.gravity_recovery import (
     plot_profile_comparison,
     plot_stability_sweep,
 )
+from lfm.viz.limit_orbit import (
+    animate_limit02_orbit_3d_demo,
+    animate_limit02_orbit_demo,
+    combined_limit02_chi_slice,
+    plot_limit02_orbit_3d_demo,
+    plot_limit02_orbit_demo,
+)
 from lfm.viz.projection import plot_projection, project_field
 from lfm.viz.quantum import (
     animate_3d_slices,
@@ -46,13 +53,6 @@ from lfm.viz.spacetime import spacetime_diagram
 from lfm.viz.spectrum import plot_power_spectrum
 from lfm.viz.sweep import plot_sweep
 from lfm.viz.tracker import plot_trajectories
-from lfm.viz.limit_orbit import (
-    animate_limit02_orbit_3d_demo,
-    animate_limit02_orbit_demo,
-    combined_limit02_chi_slice,
-    plot_limit02_orbit_3d_demo,
-    plot_limit02_orbit_demo,
-)
 
 __all__ = [
     # static slices

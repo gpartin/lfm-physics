@@ -16,18 +16,23 @@ from lfm.foundations.r4_unified_live import (
     R4Parameters,
     R4Rates,
     R4State,
-    group_constraint_errors,
-    reverse_momenta,
-    state_distance,
 )
 from lfm.foundations.r5_unified_live import (
     R5Parameters,
-    kinetic_energy as r5_kinetic_energy,
-    potential_energy_and_rates as r5_potential_energy_and_rates,
+    group_constraint_errors,  # noqa: F401 - public R6 re-export
+    reverse_momenta,  # noqa: F401 - public R6 re-export
+    state_distance,  # noqa: F401 - public R6 re-export
     step_r5,
+)
+from lfm.foundations.r5_unified_live import (
+    kinetic_energy as r5_kinetic_energy,
+)
+from lfm.foundations.r5_unified_live import (
+    potential_energy_and_rates as r5_potential_energy_and_rates,
+)
+from lfm.foundations.r5_unified_live import (
     total_hamiltonian as r5_total_hamiltonian,
 )
-
 
 R6_ACTION_ID = "LFM-R6-CAUSAL-WEAK-NORMALIZATION-EXPERIMENT-v1"
 R6_REGISTER_ID = "R6=R5=R4(no_new_registers)"
@@ -111,15 +116,10 @@ def r6_action_declaration(
             "face_square_coefficient": parameters.square_coefficient,
             "weak_stiffness": parameters.r4.weak_stiffness,
             "weak_inertia": parameters.r4.weak_inertia,
-            "weak_speed_squared": (
-                parameters.r4.weak_stiffness
-                / parameters.r4.weak_inertia
-            ),
+            "weak_speed_squared": (parameters.r4.weak_stiffness / parameters.r4.weak_inertia),
         },
         "retained_terms": ["complete_R5_action"],
-        "changed_terms": [
-            "weak_electric_inertia_equals_weak_magnetic_stiffness"
-        ],
+        "changed_terms": ["weak_electric_inertia_equals_weak_magnetic_stiffness"],
         "new_registers": [],
         "new_potential_terms": [],
         "forbidden_mechanisms_used": [],
