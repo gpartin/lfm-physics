@@ -90,6 +90,90 @@ class TestFieldAccess:
         ed = sim.get_energy_density()
         assert np.all(ed >= 0)
 
+    def test_periodic_boundary_has_zero_absorption_mask(self):
+        sim = Simulation(_small_config(boundary_type=BoundaryType.PERIODIC), backend="cpu")
+        mask = sim.get_boundary_mask()
+        assert mask.shape == (N, N, N)
+        assert np.count_nonzero(mask) == 0
+
+    def test_frozen_boundary_retains_nonzero_absorption_mask(self):
+        sim = Simulation(_small_config(boundary_type=BoundaryType.FROZEN), backend="cpu")
+        mask = sim.get_boundary_mask()
+        assert mask.shape == (N, N, N)
+        assert np.count_nonzero(mask) > 0
+
+    def test_custom_boundary_mask_is_copied_and_round_trips(self):
+        sim = Simulation(_small_config(boundary_type=BoundaryType.PERIODIC), backend="cpu")
+        mask = np.ones((N, N, N), dtype=np.float32)
+        mask[2:4, 5:7, :] = 0.0
+        sim.set_boundary_mask(mask)
+        observed = sim.get_boundary_mask()
+        np.testing.assert_array_equal(observed, mask)
+        observed[0, 0, 0] = 0.0
+        assert sim.get_boundary_mask()[0, 0, 0] == pytest.approx(1.0)
+
+    @pytest.mark.parametrize(
+        "mask",
+        [
+            np.zeros((N, N), dtype=np.float32),
+            np.full((N, N, N), -0.01, dtype=np.float32),
+            np.full((N, N, N), 1.01, dtype=np.float32),
+            np.full((N, N, N), np.nan, dtype=np.float32),
+        ],
+    )
+    def test_custom_boundary_mask_rejects_invalid_values(self, mask):
+        sim = Simulation(_small_config(boundary_type=BoundaryType.PERIODIC), backend="cpu")
+        with pytest.raises(ValueError):
+            sim.set_boundary_mask(mask)
+
+    def test_custom_boundary_mask_is_frozen_after_evolution(self):
+        sim = Simulation(_small_config(boundary_type=BoundaryType.PERIODIC), backend="cpu")
+        sim.run(1, record_metrics=False)
+        with pytest.raises(RuntimeError, match="before evolution"):
+            sim.set_boundary_mask(np.zeros((N, N, N), dtype=np.float32))
+
+    def test_custom_boundary_mask_enforces_wall_in_production_step(self):
+        sim = Simulation(_small_config(boundary_type=BoundaryType.PERIODIC), backend="cpu")
+        mask = np.ones((N, N, N), dtype=np.float32)
+        mask[2:4, 5:7, :] = 0.0
+        sim.set_boundary_mask(mask)
+        sim.set_psi_real(np.ones((N, N, N), dtype=np.float32))
+        sim.run(1, record_metrics=False)
+        field = sim.get_psi_real()
+        assert np.count_nonzero(field[mask == 1.0]) == 0
+        assert np.any(np.abs(field[mask == 0.0]) > 0.0)
+
+    def test_phase_space_snapshot_color_inventory_and_copy_isolation(self):
+        sim = Simulation(
+            _small_config(field_level=FieldLevel.COLOR, n_colors=3),
+            backend="cpu",
+        )
+        shape = (3, N, N, N)
+        current_r = np.full(shape, 0.25, dtype=np.float32)
+        previous_r = np.full(shape, -0.5, dtype=np.float32)
+        current_i = np.full(shape, 0.75, dtype=np.float32)
+        previous_i = np.full(shape, -1.0, dtype=np.float32)
+        current_chi = np.full((N, N, N), CHI0 + 0.25, dtype=np.float32)
+        previous_chi = np.full((N, N, N), CHI0 - 0.5, dtype=np.float32)
+        sim.set_psi_real(current_r)
+        sim.set_psi_real_prev(previous_r)
+        sim.set_psi_imag(current_i)
+        sim.set_psi_imag_prev(previous_i)
+        sim.set_chi(current_chi)
+        sim.set_chi_prev(previous_chi)
+
+        snapshot = sim.phase_space_snapshot()
+        assert snapshot["step"] == 0
+        np.testing.assert_array_equal(snapshot["psi_real"], current_r)
+        np.testing.assert_array_equal(snapshot["psi_real_prev"], previous_r)
+        np.testing.assert_array_equal(snapshot["psi_imag"], current_i)
+        np.testing.assert_array_equal(snapshot["psi_imag_prev"], previous_i)
+        np.testing.assert_array_equal(snapshot["chi"], current_chi)
+        np.testing.assert_array_equal(snapshot["chi_prev"], previous_chi)
+
+        snapshot["chi"][0, 0, 0] = -999.0
+        assert sim.get_chi()[0, 0, 0] == pytest.approx(CHI0 + 0.25)
+
 
 # ──── Soliton placement ────
 
@@ -365,6 +449,39 @@ class TestCheckpoint:
         sim.save_checkpoint(path)
         loaded = Simulation.load_checkpoint(path)
         assert len(loaded.history) == len(sim.history)
+
+    def test_round_trip_restores_phase_space_boundary_and_continuation(self, tmp_path):
+        cfg = _small_config(boundary_type=BoundaryType.PERIODIC)
+        sim = Simulation(cfg, backend="cpu")
+        rng = np.random.default_rng(20260715)
+        real = rng.normal(0.0, 0.01, (N, N, N)).astype(np.float32)
+        chi = (CHI0 + rng.normal(0.0, 1e-3, (N, N, N))).astype(np.float32)
+        mask = np.zeros((N, N, N), dtype=np.float32)
+        mask[0, :, :] = 1.0
+        mask[:, 5, 2:7] = 1.0
+        sim.set_psi_real(real)
+        sim.set_psi_real_prev(real + np.float32(1e-4))
+        sim.set_chi(chi)
+        sim.set_chi_prev(chi + np.float32(1e-5))
+        sim.set_boundary_mask(mask)
+        sim.run(2, record_metrics=False)
+
+        path = tmp_path / "phase_space.npz"
+        sim.save_checkpoint(path)
+        loaded = Simulation.load_checkpoint(path, backend="cpu")
+
+        np.testing.assert_array_equal(loaded.get_boundary_mask(), mask)
+        expected = sim.phase_space_snapshot()
+        observed = loaded.phase_space_snapshot()
+        for key in ("psi_real", "psi_real_prev", "chi", "chi_prev"):
+            np.testing.assert_array_equal(observed[key], expected[key])
+
+        sim.run(1, record_metrics=False)
+        loaded.run(1, record_metrics=False)
+        expected = sim.phase_space_snapshot()
+        observed = loaded.phase_space_snapshot()
+        for key in ("psi_real", "psi_real_prev", "chi", "chi_prev"):
+            np.testing.assert_array_equal(observed[key], expected[key])
 
     def test_complex_field_round_trip(self, tmp_path):
         cfg = _small_config(field_level=FieldLevel.COMPLEX)

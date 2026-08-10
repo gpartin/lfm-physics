@@ -42,6 +42,17 @@ Typical double-slit usage::
 """
 
 from lfm.experiment.barrier import Barrier, Slit
+from lfm.experiment.charge_coupling import (
+    ChargeCouplingParameters,
+    ChargeCouplingStep,
+    canonical_charge_density,
+    charge_coupled_hamiltonian,
+    charge_coupled_rates,
+    charge_frequency,
+    charge_frequency_derivative,
+    step_charge_coupled_lfm,
+    total_canonical_charge,
+)
 from lfm.experiment.collision import CollisionResult, collision
 from lfm.experiment.common import ExperimentConfig, ExperimentResult, midplane_slice
 from lfm.experiment.detector import DetectorScreen
@@ -52,6 +63,11 @@ from lfm.experiment.entanglement import (
     EntanglementResult,
     EntanglementSuiteResult,
     entanglement,
+)
+from lfm.experiment.limit_orbit import (
+    integrate_limit02_two_body,
+    summarize_limit02_orbit,
+    sweep_limit02_orbits,
 )
 from lfm.experiment.ringdown import (
     DEFAULT_RINGDOWN_K_MODES,
@@ -65,6 +81,8 @@ from lfm.experiment.source import ContinuousSource
 __all__ = [
     "Barrier",
     "Slit",
+    "ChargeCouplingParameters",
+    "ChargeCouplingStep",
     "DetectorScreen",
     "ContinuousSource",
     "Dispersion",
@@ -73,6 +91,11 @@ __all__ = [
     "DoubleSlit",
     "collision",
     "CollisionResult",
+    "canonical_charge_density",
+    "charge_coupled_hamiltonian",
+    "charge_coupled_rates",
+    "charge_frequency",
+    "charge_frequency_derivative",
     "DEFAULT_RINGDOWN_K_MODES",
     "entanglement",
     "EntanglementResult",
@@ -83,6 +106,11 @@ __all__ = [
     "ExperimentConfig",
     "ExperimentResult",
     "midplane_slice",
+    "integrate_limit02_two_body",
+    "summarize_limit02_orbit",
+    "sweep_limit02_orbits",
+    "step_charge_coupled_lfm",
+    "total_canonical_charge",
     "next5_falsification_projection_v2",
     "qnm_mode_projection_check",
 ]
