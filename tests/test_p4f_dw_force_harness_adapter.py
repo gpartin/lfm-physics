@@ -4,6 +4,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
+
 from lfm.validation.unified_force import (
     BenchmarkStatus,
     ForceSector,
@@ -16,6 +18,8 @@ RUNNER = HARNESS_DIR / "run_p4f_dw_force_harness.py"
 
 
 def _runner_module():
+    if not RUNNER.exists():
+        pytest.skip(f"external parent-repo force harness file is unavailable: {RUNNER}")
     spec = importlib.util.spec_from_file_location("p4f_dw_harness_adapter", RUNNER)
     if spec is None or spec.loader is None:
         raise RuntimeError("could not load P4F-DW harness adapter")

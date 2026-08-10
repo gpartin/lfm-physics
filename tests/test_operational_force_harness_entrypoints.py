@@ -7,6 +7,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 from lfm.validation.unified_force import (
     EvidenceClass,
     ForceSector,
@@ -19,7 +21,14 @@ if str(HARNESS_DIR) not in sys.path:
     sys.path.insert(0, str(HARNESS_DIR))
 
 
+def _require_harness_file(path: Path) -> Path:
+    if not path.exists():
+        pytest.skip(f"external parent-repo force harness file is unavailable: {path}")
+    return path
+
+
 def _load_module(name: str, path: Path):
+    path = _require_harness_file(path)
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"could not load {path}")
@@ -75,7 +84,8 @@ def test_active_manifest_enforces_internal_operational_readouts() -> None:
 
 
 def test_v1_manifest_is_marked_legacy() -> None:
-    payload = json.loads((HARNESS_DIR / "benchmark_manifest.json").read_text(encoding="utf-8"))
+    manifest_path = _require_harness_file(HARNESS_DIR / "benchmark_manifest.json")
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert payload["status"].startswith("LEGACY_V1")
     assert payload["superseded_by"] == "operational_emergence_manifest.json"
 
