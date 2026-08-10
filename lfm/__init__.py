@@ -15,10 +15,13 @@ Quick start::
     print(sim.metrics())
 """
 
-__version__ = "1.4.3"
+__version__ = "1.4.5"
 
 from lfm.analysis import (
     angular_momentum_density,
+    aggregate_wave_density,
+    block_window_magnitude_sq,
+    blocked_static_propagator,
     charge_density,
     chi_statistics,
     classify_potential,
@@ -53,26 +56,39 @@ from lfm.analysis import (
     halo_mass_function,
     horizon_mass,
     interior_mask,
+    inverse_response_intercept,
     keplerian_velocity,
+    leapfrog_branch_projection,
+    localized_weighted_centroid,
+    localized_state_observables,
     list_sparc_galaxies,
     matter_power_spectrum,
     measure_chi_midpoint,
     measure_force,
     measure_separation,
     metric_perturbation,
+    metric_refractive_index,
     momentum_density,
     noether_spatial_current,
+    op05_spherical_chi_deflection,
+    periodic_mode_coefficient,
     phase_coherence,
+    phase_current_energy_density,
     phase_field,
+    plaquette_winding_summary,
     positive_noether_current,
     power_spectrum,
     precession_rate,
+    principal_internal_projection,
     project_field_onto_modes,
+    project_leapfrog_mode,
     radial_profile,
     relative_spread,
+    response_log_slope,
     rotation_curve,
     rotation_curve_fit,
     schwarzschild_chi,
+    schwarzschild_radius_si,
     smoothed_color_variance,
     sparc_load,
     spinor_center_of_energy,
@@ -95,13 +111,15 @@ from lfm.analysis import (
     weak_parity_asymmetry,
     well_fraction,
 )
-from lfm.config import BoundaryType, ChiMode, FieldLevel, PhysicsScale, SimulationConfig
+from lfm.config import BoundaryType, ChiMode, FieldLevel, PhysicsScale, Precision, SimulationConfig
 from lfm.config_presets import full_physics, gravity_em, gravity_only, spinor_field
 from lfm.constants import (
     AGE_UNIVERSE_GYR,
     ALPHA_EM,
     ALPHA_S,
+    ARCSEC_PER_RADIAN,
     BETA_0,
+    C_SI,
     CHI0,
     D_ST,
     DT_DEFAULT,
@@ -109,6 +127,7 @@ from lfm.constants import (
     E_AMPLITUDE_BY_GRID,
     EPSILON_CC,
     EPSILON_W,
+    G_SI,
     KAPPA,
     KAPPA_C,
     KAPPA_STRING,
@@ -127,6 +146,8 @@ from lfm.constants import (
     SA_GAMMA,
     SA_L,
     SIN2_THETA_W,
+    SOLAR_MASS_KG,
+    SOLAR_RADIUS_M,
     TOTAL_RADIUS_LOWER_BOUND_PLANCK,
     Z2_COORD,
     D,
@@ -134,6 +155,7 @@ from lfm.constants import (
 from lfm.core.backends import get_backend, gpu_available
 from lfm.core.backends.remote_backend import configure_remote
 from lfm.core.evolver import Evolver
+from lfm.core.stencils import gradient_19pt, noether_current_19pt_raw
 from lfm.experiment import (
     DEFAULT_RINGDOWN_K_MODES,
     Barrier,
@@ -143,6 +165,7 @@ from lfm.experiment import (
     Dispersion,
     ExperimentConfig,
     ExperimentResult,
+    integrate_limit02_two_body,
     Next5FalsificationResult,
     QNMProjectionResult,
     Slit,
@@ -150,11 +173,15 @@ from lfm.experiment import (
     dispersion,
     next5_falsification_projection_v2,
     qnm_mode_projection_check,
+    summarize_limit02_orbit,
+    sweep_limit02_orbits,
 )
 from lfm.fields import (
+    Limit02BodyProfile,
     apply_rotation_x,
     apply_rotation_z,
     boosted_soliton,
+    build_limit02_body_profile,
     disk_positions,
     disk_velocities,
     equilibrate_chi,
@@ -165,16 +192,19 @@ from lfm.fields import (
     gaussian_spinor,
     grid_positions,
     initialize_disk,
+    limit02_acceleration_from_profile,
     place_solitons,
     planar_r1_light_packet,
     poisson_solve_fft,
     poisson_solve_fft_19pt,
+    periodic_trilinear_sample,
     r1_light_acceleration,
     r1_light_step,
     r1_vacuum_subtracted_potential,
     seed_noise,
     sparse_positions,
     spherical_phase_source,
+    smooth_spherical_density,
     tetrahedral_positions,
     uniform_chi,
     vortex_spinor,
@@ -293,6 +323,14 @@ from lfm.planning import (
     scale_limit_note,
     use_case_preset,
 )
+from lfm.particles.stationary import (
+    StationaryBranchPoint,
+    SupportRemovalPoint,
+    continue_support_removal,
+    continue_stationary_branch,
+    solve_support_removal_point,
+    solve_stationary_branch_point,
+)
 from lfm.scenarios import (
     BodyType,
     CelestialBody,
@@ -302,7 +340,7 @@ from lfm.scenarios import (
     solar_system,
 )
 from lfm.simulation import Simulation
-from lfm.sweep import sweep, sweep_2d
+from lfm.sweep import sweep, sweep_2d, sweep_cases
 from lfm.units import CosmicScale, PlanckScale
 from lfm.viz.celestial import animate_celestial_3d
 from lfm.viz.collision import animate_collision_3d
@@ -314,6 +352,11 @@ __all__ = [
     "CHI0",
     "D",
     "D_ST",
+    "G_SI",
+    "C_SI",
+    "SOLAR_MASS_KG",
+    "SOLAR_RADIUS_M",
+    "ARCSEC_PER_RADIAN",
     "KAPPA",
     "KAPPA_C",
     "KAPPA_STRING",
@@ -349,6 +392,7 @@ __all__ = [
     "SimulationConfig",
     "FieldLevel",
     "BoundaryType",
+    "Precision",
     "PhysicsScale",
     "ChiMode",
     # Config presets
@@ -358,7 +402,11 @@ __all__ = [
     "spinor_field",
     # Backends & Simulation
     "Evolver",
+    "gradient_19pt",
     "Simulation",
+    "StationaryBranchPoint",
+    "continue_stationary_branch",
+    "solve_stationary_branch_point",
     "get_backend",
     "gpu_available",
     "configure_remote",
@@ -389,6 +437,11 @@ __all__ = [
     "disk_positions",
     "disk_velocities",
     "initialize_disk",
+    "Limit02BodyProfile",
+    "smooth_spherical_density",
+    "build_limit02_body_profile",
+    "periodic_trilinear_sample",
+    "limit02_acceleration_from_profile",
     # Experiment components
     "Barrier",
     "Slit",
@@ -405,6 +458,9 @@ __all__ = [
     "DEFAULT_RINGDOWN_K_MODES",
     "ExperimentConfig",
     "ExperimentResult",
+    "integrate_limit02_two_body",
+    "summarize_limit02_orbit",
+    "sweep_limit02_orbits",
     # Planning
     "FeasibilityReport",
     "UseCaseName",
@@ -436,6 +492,14 @@ __all__ = [
     "confinement_proxy",
     "fluid_fields",
     "continuity_residual",
+    "aggregate_wave_density",
+    "block_window_magnitude_sq",
+    "blocked_static_propagator",
+    "inverse_response_intercept",
+    "response_log_slope",
+    "principal_internal_projection",
+    "plaquette_winding_summary",
+    "localized_state_observables",
     # SPARC galaxy data
     "sparc_load",
     "list_sparc_galaxies",
@@ -453,12 +517,16 @@ __all__ = [
     "static_interaction_potential",
     # Ringdown extraction
     "fit_ringdown_series",
+    "periodic_mode_coefficient",
+    "leapfrog_branch_projection",
+    "project_leapfrog_mode",
     "project_field_onto_modes",
     "relative_spread",
     "split_frequency_bands",
     "target_band_summary",
     # Spectrum & Tracker
     "power_spectrum",
+    "localized_weighted_centroid",
     "track_peaks",
     "flatten_trajectories",
     "detect_collision_events",
@@ -470,6 +538,9 @@ __all__ = [
     "time_dilation_factor",
     "gravitational_potential",
     "schwarzschild_chi",
+    "schwarzschild_radius_si",
+    "metric_refractive_index",
+    "op05_spherical_chi_deflection",
     "find_apparent_horizon",
     "horizon_mass",
     # Phase (EM / charge)
@@ -477,6 +548,7 @@ __all__ = [
     "charge_density",
     "noether_spatial_current",
     "positive_noether_current",
+    "phase_current_energy_density",
     "phase_coherence",
     "coulomb_interaction_energy",
     # Angular momentum
@@ -504,6 +576,7 @@ __all__ = [
     # Sweep
     "sweep",
     "sweep_2d",
+    "sweep_cases",
     # Units
     "CosmicScale",
     "PlanckScale",

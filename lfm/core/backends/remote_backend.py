@@ -2,9 +2,9 @@
 LFM Remote Backend
 ===================
 
-Implements the ``Backend`` protocol by dispatching simulation calls to the
-``POST /v1/simulate_job`` endpoint on the WaveGuard API instead of running
-locally.
+Provides a direct job client for the ``POST /v1/simulate_job`` endpoint on
+the WaveGuard API. Unlike the local NumPy and CuPy backends, this class does
+not implement the step-by-step ``Backend`` protocol used by ``Simulation``.
 
 Configuration is read from environment variables (or ``configure_remote()``):
 
@@ -23,7 +23,10 @@ Usage::
     )
 
     backend = lfm.get_backend("remote")
-    # Then use lfm.Simulation normally — it will call the remote API
+    result = backend.run_steps(psi, chi, n_steps=100)
+
+The remote service currently accepts direct float32 jobs only. It does not
+implement the local step-by-step protocol used by ``lfm.Simulation``.
 """
 
 from __future__ import annotations
@@ -73,10 +76,9 @@ def configure_remote(
 class RemoteBackend:
     """Backend implementation that executes GOV-01/02 on the WaveGuard cloud GPU.
 
-    Implements the minimal interface expected by ``lfm.Simulation``
-    (``allocate``, ``step_real``, ``run_steps``).
-
-    Most use-cases go through the higher-level ``run_job()`` method directly.
+    Use the higher-level ``run_job()`` or ``run_steps()`` methods directly.
+    This class intentionally does not implement the local ``Simulation``
+    backend protocol because a remote job executes as one server request.
     """
 
     def __init__(

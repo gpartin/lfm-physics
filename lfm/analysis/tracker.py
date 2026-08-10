@@ -12,6 +12,110 @@ if TYPE_CHECKING:
     from lfm.simulation import Simulation
 
 
+def localized_weighted_centroid(
+    field: NDArray,
+    center: tuple[float, float, float] | NDArray,
+    radius: float,
+) -> dict[str, float | bool]:
+    """Measure a localized weighted centroid around a predicted body centre.
+
+    This tracker is intended for extended configurations whose broad internal
+    structure can produce several local maxima. Only samples inside a
+    spherical window are included, so a nearby larger body does not
+    automatically capture the smaller body's identity.
+
+    Parameters
+    ----------
+    field:
+        Non-negative 3-D density-like field.
+    center:
+        Predicted centre in grid coordinates.
+    radius:
+        Radius of the spherical tracking window in grid cells.
+
+    Returns
+    -------
+    dict
+        ``valid``, ``x``, ``y``, ``z``, ``weight``, ``peak``, and
+        ``rms_radius``. A zero-weight window is returned as invalid without
+        moving the supplied centre.
+    """
+    density = np.asarray(field, dtype=np.float64)
+    if density.ndim != 3:
+        raise ValueError("field must be a 3-D array")
+    if radius <= 0.0:
+        raise ValueError("radius must be positive")
+
+    predicted = np.asarray(center, dtype=np.float64)
+    if predicted.shape != (3,):
+        raise ValueError("center must contain exactly three coordinates")
+
+    starts = np.maximum(0, np.floor(predicted - radius).astype(int))
+    stops = np.minimum(
+        np.asarray(density.shape, dtype=int),
+        np.ceil(predicted + radius).astype(int) + 1,
+    )
+    if np.any(starts >= stops):
+        return {
+            "valid": False,
+            "x": float(predicted[0]),
+            "y": float(predicted[1]),
+            "z": float(predicted[2]),
+            "weight": 0.0,
+            "peak": 0.0,
+            "rms_radius": float("nan"),
+        }
+
+    slices = tuple(slice(int(starts[a]), int(stops[a])) for a in range(3))
+    local = density[slices]
+    axes = [
+        np.arange(starts[a], stops[a], dtype=np.float64)
+        for a in range(3)
+    ]
+    gx, gy, gz = np.meshgrid(*axes, indexing="ij")
+    distance_sq = (
+        (gx - predicted[0]) ** 2
+        + (gy - predicted[1]) ** 2
+        + (gz - predicted[2]) ** 2
+    )
+    weights = np.where(distance_sq <= radius * radius, local, 0.0)
+    total = float(np.sum(weights))
+    if not np.isfinite(total) or total <= 0.0:
+        return {
+            "valid": False,
+            "x": float(predicted[0]),
+            "y": float(predicted[1]),
+            "z": float(predicted[2]),
+            "weight": 0.0,
+            "peak": float(np.max(local)) if local.size else 0.0,
+            "rms_radius": float("nan"),
+        }
+
+    centroid = np.asarray(
+        [
+            np.sum(weights * gx) / total,
+            np.sum(weights * gy) / total,
+            np.sum(weights * gz) / total,
+        ],
+        dtype=np.float64,
+    )
+    radius_sq = (
+        (gx - centroid[0]) ** 2
+        + (gy - centroid[1]) ** 2
+        + (gz - centroid[2]) ** 2
+    )
+    rms_radius = float(np.sqrt(np.sum(weights * radius_sq) / total))
+    return {
+        "valid": True,
+        "x": float(centroid[0]),
+        "y": float(centroid[1]),
+        "z": float(centroid[2]),
+        "weight": total,
+        "peak": float(np.max(weights)),
+        "rms_radius": rms_radius,
+    }
+
+
 def track_peaks(
     sim: Simulation,
     steps: int,

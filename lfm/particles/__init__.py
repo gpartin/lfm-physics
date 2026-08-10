@@ -1,5 +1,5 @@
 """
-lfm.particles — Particle Catalog and Eigenmode Solver
+lfm.particles - Particle Catalog and Eigenmode Solver
 ======================================================
 
 Provides the particle specification dataclass, the canonical particle
@@ -119,12 +119,44 @@ from lfm.particles.motion import (
     measure_momentum_density,
     measure_velocity,
 )
+from lfm.particles.noether import (
+    CartesianFixedChargeEnergy,
+    CartesianNoetherSolution,
+    CartesianNoetherState,
+    RadialNoetherEnergy,
+    RadialNoetherSolution,
+    RadialNoetherSweepResult,
+    cartesian_localization_metrics,
+    cartesian_fixed_charge_energy_and_gradient,
+    cartesian_noether_charge,
+    cartesian_noether_hamiltonian,
+    cartesian_stationary_residual,
+    lift_radial_noether_state,
+    make_radial_bag_guess,
+    prolong_radial_fields,
+    prolong_radial_solution,
+    radial_fixed_charge_energy_and_gradient,
+    radial_fixed_charge_hessian,
+    radial_shell_geometry,
+    solve_radial_noether_soliton,
+    solve_cartesian_noether_soliton,
+    sparse_newton_polish_radial,
+    sweep_radial_noether_solitons,
+)
 from lfm.particles.solver import (
     SolitonSolution,
     boost_fields,
     relax_eigenmode,
     solve_eigenmode,
     ylm_seed,
+)
+from lfm.particles.stationary import (
+    StationaryBranchPoint,
+    SupportRemovalPoint,
+    continue_stationary_branch,
+    continue_support_removal,
+    solve_stationary_branch_point,
+    solve_support_removal_point,
 )
 
 __all__ = [
@@ -232,6 +264,29 @@ __all__ = [
     "measure_center_of_energy",
     "measure_momentum_density",
     "measure_velocity",
+    # Fixed-Noether-charge radial discovery solver
+    "RadialNoetherEnergy",
+    "RadialNoetherSolution",
+    "RadialNoetherSweepResult",
+    "CartesianNoetherState",
+    "CartesianFixedChargeEnergy",
+    "CartesianNoetherSolution",
+    "radial_shell_geometry",
+    "radial_fixed_charge_energy_and_gradient",
+    "radial_fixed_charge_hessian",
+    "make_radial_bag_guess",
+    "prolong_radial_fields",
+    "prolong_radial_solution",
+    "solve_radial_noether_soliton",
+    "sparse_newton_polish_radial",
+    "sweep_radial_noether_solitons",
+    "lift_radial_noether_state",
+    "cartesian_fixed_charge_energy_and_gradient",
+    "solve_cartesian_noether_soliton",
+    "cartesian_stationary_residual",
+    "cartesian_noether_charge",
+    "cartesian_noether_hamiltonian",
+    "cartesian_localization_metrics",
     # Phase 4: Composite systems
     "AtomState",
     "MoleculeState",
@@ -245,4 +300,11 @@ __all__ = [
     # Phase 6: Collision
     "CollisionSetup",
     "create_collision",
+    # Bare stationary branch solver
+    "StationaryBranchPoint",
+    "SupportRemovalPoint",
+    "continue_support_removal",
+    "continue_stationary_branch",
+    "solve_support_removal_point",
+    "solve_stationary_branch_point",
 ]

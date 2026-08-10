@@ -142,6 +142,40 @@ class BoundaryType(enum.Enum):
     """Sponge layer. Reduces reflections for scattering experiments."""
 
 
+class Precision(str, enum.Enum):
+    """Floating-point precision used for persistent simulation state."""
+
+    FLOAT32 = "float32"
+    """Single precision. This is the canonical production default."""
+
+    FLOAT64 = "float64"
+    """Double precision for numerical-accuracy studies."""
+
+
+class ChiPotentialModel(enum.IntEnum):
+    """Experiment-only local chi stabilization laws.
+
+    The canonical production path remains ``CANONICAL_QUARTIC``. The other
+    values are explicit GOV-02 gravity-recovery ablations and are used only by
+    :meth:`lfm.Simulation.run_gravity_recovery`.
+    """
+
+    CANONICAL_QUARTIC = 0
+    FLAT_OCTIC = 1
+    FLAT_DODECIC = 2
+    FLAT_POWER_8 = 3
+    FLAT_POWER_10 = 4
+    FLAT_POWER_12 = 5
+    SMOOTH_EXPONENTIAL = 6
+    RATIONAL_CROSSOVER = 7
+    HYPERBOLIC_CROSSOVER = 8
+    NONLINEAR_GRADIENT = 9
+    AMPLITUDE_STRENGTHENED = 10
+    SOURCE_DEPENDENT = 11
+    VARIABLE_INERTIA = 12
+    RADICAL_CROSSOVER = 13
+
+
 @dataclass
 class SimulationConfig:
     """Complete configuration for an LFM simulation.
@@ -166,6 +200,11 @@ class SimulationConfig:
 
     epsilon_w: float = EPSILON_W
     """Weak/helicity coupling = 0.1. Only matters when j(x,t) is computed."""
+
+    use_stencil19_noether_current: bool = False
+    """Use the 19-point face-and-edge link current for the optional A1
+    current-feedback extension. False preserves the historical face-only
+    production observable."""
 
     kappa_c: float = 0.0
     """Color variance coupling (v14). 0.0 = colorblind (v13 default).
@@ -203,6 +242,20 @@ class SimulationConfig:
 
     c: float = C_DEFAULT
     """Wave speed. 1.0 in natural lattice units."""
+
+    dx: float = 1.0
+    """Numerical lattice spacing in the dimensionless LFM coordinates.
+
+    The canonical production default is one. Values below one are permitted
+    for continuum-refinement studies and scale only the spatial stencil.
+    """
+
+    enable_chi_floor: bool = True
+    """Apply the historical ``chi >= -chi0`` black-hole excision floor.
+
+    This remains enabled by default for backward compatibility. Conservative
+    source-free decisions must disable it explicitly.
+    """
 
     # Field type
     field_level: FieldLevel = FieldLevel.REAL
@@ -279,14 +332,20 @@ class SimulationConfig:
     Set automatically when ``physical_scale`` is provided.
     """
 
-    # Derived (computed in __post_init__)
-    dx: float = field(init=False, default=1.0)
-    """Grid spacing. Always 1.0 in natural units."""
+    precision: Precision = Precision.FLOAT32
+    """Persistent field precision. Defaults to the canonical float32 path."""
 
+    # Derived (computed in __post_init__)
     sigma: float = field(init=False, default=0.0)
     """Gaussian soliton width = grid_size / blob_sigma_factor."""
 
     def __post_init__(self) -> None:
+        try:
+            self.precision = Precision(self.precision)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                "precision must be Precision.FLOAT32 or Precision.FLOAT64"
+            ) from exc
         # Apply regime defaults BEFORE validation so derived fields see them.
         if self.physical_scale is not None:
             fl, cm, ls, kc = _SCALE_DEFAULTS[self.physical_scale]
@@ -295,7 +354,6 @@ class SimulationConfig:
             self.lambda_self = ls
             self.kappa_c = kc
         self._validate()
-        self.dx = 1.0
         self.sigma = self.grid_size / self.blob_sigma_factor
         if self.e_amplitude == 0.0:
             self.e_amplitude = E_AMPLITUDE_BY_GRID.get(
@@ -311,11 +369,15 @@ class SimulationConfig:
             raise ValueError(f"grid_size must be >= 8, got {self.grid_size}")
         if self.dt <= 0:
             raise ValueError(f"dt must be positive, got {self.dt}")
-        # CFL limit depends on chi0: dt < 1/sqrt(16/3 + chi0^2)
-        # For chi0=0 (massless/EM) the limit is the wave-only CFL: 1/sqrt(16/3)
+        if self.dx <= 0:
+            raise ValueError(f"dx must be positive, got {self.dx}")
+        # CFL limit depends on both numerical spacing and chi0:
+        # dt < 1/sqrt(c^2*(16/3)/dx^2 + chi0^2).
         import math
 
-        cfl_limit = 1.0 / math.sqrt(16.0 / 3.0 + self.chi0**2)
+        cfl_limit = 1.0 / math.sqrt(
+            self.c**2 * (16.0 / 3.0) / self.dx**2 + self.chi0**2
+        )
         if self.dt > cfl_limit:
             raise ValueError(
                 f"dt={self.dt} exceeds CFL limit {cfl_limit:.4f} "

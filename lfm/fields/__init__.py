@@ -39,6 +39,13 @@ from lfm.fields.light import (
     r1_vacuum_subtracted_potential,
     spherical_phase_source,
 )
+from lfm.fields.macroscopic import (
+    Limit02BodyProfile,
+    build_limit02_body_profile,
+    limit02_acceleration_from_profile,
+    periodic_trilinear_sample,
+    smooth_spherical_density,
+)
 from lfm.fields.random import seed_noise, uniform_chi
 from lfm.fields.soliton import gaussian_soliton, place_solitons, wave_kick
 from lfm.fields.spinor import (
@@ -78,4 +85,10 @@ __all__ = [
     "r1_vacuum_subtracted_potential",
     "r1_light_acceleration",
     "r1_light_step",
+    # macroscopic LIMIT-02
+    "Limit02BodyProfile",
+    "smooth_spherical_density",
+    "build_limit02_body_profile",
+    "periodic_trilinear_sample",
+    "limit02_acceleration_from_profile",
 ]
