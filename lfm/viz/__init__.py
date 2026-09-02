@@ -26,6 +26,18 @@ from lfm.viz.collision import animate_collision_3d
 from lfm.viz.evolution import plot_energy_components, plot_evolution
 from lfm.viz.fields import plot_isosurface
 from lfm.viz.galaxy import galaxy_summary_plot
+from lfm.viz.gravity_recovery import (
+    plot_energy_history,
+    plot_profile_comparison,
+    plot_stability_sweep,
+)
+from lfm.viz.limit_orbit import (
+    animate_limit02_orbit_3d_demo,
+    animate_limit02_orbit_demo,
+    combined_limit02_chi_slice,
+    plot_limit02_orbit_3d_demo,
+    plot_limit02_orbit_demo,
+)
 from lfm.viz.projection import plot_projection, project_field
 from lfm.viz.quantum import (
     animate_3d_slices,
@@ -73,6 +85,14 @@ __all__ = [
     "plot_isosurface",
     "plot_power_spectrum",
     "plot_trajectories",
+    "combined_limit02_chi_slice",
+    "plot_limit02_orbit_3d_demo",
+    "animate_limit02_orbit_3d_demo",
+    "plot_limit02_orbit_demo",
+    "animate_limit02_orbit_demo",
     "plot_sweep",
     "galaxy_summary_plot",
+    "plot_energy_history",
+    "plot_profile_comparison",
+    "plot_stability_sweep",
 ]
