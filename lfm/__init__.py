@@ -111,7 +111,15 @@ from lfm.analysis import (
     weak_parity_asymmetry,
     well_fraction,
 )
-from lfm.config import BoundaryType, ChiMode, FieldLevel, PhysicsScale, Precision, SimulationConfig
+from lfm.config import (
+    BoundaryType,
+    ChiMode,
+    ChiPotentialModel,
+    FieldLevel,
+    PhysicsScale,
+    Precision,
+    SimulationConfig,
+)
 from lfm.config_presets import full_physics, gravity_em, gravity_only, spinor_field
 from lfm.constants import (
     AGE_UNIVERSE_GYR,
@@ -395,6 +403,7 @@ __all__ = [
     "Precision",
     "PhysicsScale",
     "ChiMode",
+    "ChiPotentialModel",
     # Config presets
     "gravity_only",
     "gravity_em",

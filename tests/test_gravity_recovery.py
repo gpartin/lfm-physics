@@ -103,20 +103,35 @@ def test_only_canonical_potential_has_vacuum_curvature() -> None:
         assert abs(curvature) < 2.0e-4
 
 
-def test_canonical_candidate_matches_production_real_step() -> None:
+def test_flat_octic_candidate_matches_production_real_step() -> None:
     state = _state()
-    canonical = Simulation(_config(), backend="cpu")
+    production = Simulation(_config(), backend="cpu")
     candidate = Simulation(_config(), backend="cpu")
-    _load(canonical, state)
+    _load(production, state)
     _load(candidate, state)
-    canonical.run(1, record_metrics=False)
+    production.run(1, record_metrics=False)
     candidate.run_gravity_recovery(
+        1,
+        ChiPotentialModel.FLAT_OCTIC,
+        freeze_psi=False,
+    )
+    assert np.allclose(candidate.psi_real, production.psi_real, atol=1.0e-13)
+    assert np.allclose(candidate.chi, production.chi, atol=1.0e-13)
+
+
+def test_quartic_candidate_is_historical_control_not_production() -> None:
+    state = _state()
+    production = Simulation(_config(), backend="cpu")
+    quartic = Simulation(_config(), backend="cpu")
+    _load(production, state)
+    _load(quartic, state)
+    production.run(1, record_metrics=False)
+    quartic.run_gravity_recovery(
         1,
         ChiPotentialModel.CANONICAL_QUARTIC,
         freeze_psi=False,
     )
-    assert np.allclose(candidate.psi_real, canonical.psi_real, atol=1.0e-13)
-    assert np.allclose(candidate.chi, canonical.chi, atol=1.0e-13)
+    assert not np.allclose(quartic.chi, production.chi, atol=1.0e-13)
 
 
 def test_frozen_source_remains_exactly_frozen() -> None:

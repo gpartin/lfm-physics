@@ -5,7 +5,7 @@ Leapfrog Time Integrator
 Coupled GOV-01 + GOV-02 evolution using Verlet (leapfrog) integration.
 
 GOV-01: Ψⁿ⁺¹ = 2Ψⁿ − Ψⁿ⁻¹ + Δt²[c²∇²Ψⁿ − (χⁿ)²Ψⁿ]
-GOV-02: χⁿ⁺¹ = 2χⁿ − χⁿ⁻¹ + Δt²[c²∇²χⁿ − (κ/χ₀)χⁿ(|Ψⁿ|² − E₀²) − 4λ_H·χⁿ((χⁿ)²−χ₀²)]
+GOV-02: χⁿ⁺¹ = 2χⁿ − χⁿ⁻¹ + Δt²[c²∇²χⁿ − (κ/χ₀)χⁿ(|Ψⁿ|² − E₀²) − (8λ_H/χ₀⁴)χⁿ((χⁿ)²−χ₀²)³]
 
 v28.0: χ-dependent coupling (κ/χ₀)·χ replaces constant κ for exact Lagrangian
 consistency and Noether-conserved Hamiltonian.
@@ -150,7 +150,7 @@ def _step_real(
 
     chi_accel = c2 * lap_chi - chi_source
     if config.lambda_self > 0:
-        chi_accel -= 4 * config.lambda_self * chi * (chi**2 - config.chi0**2)
+        chi_accel += _flat_octic_self_force(chi, config.lambda_self, config.chi0)
 
     chi_next = 2.0 * chi - chi_prev + dt2 * chi_accel
 
@@ -196,7 +196,7 @@ def _step_complex(
     chi_source = (config.kappa / config.chi0) * chi * (energy_density - config.e0_sq)
     chi_accel = c2 * lap_chi - chi_source
     if config.lambda_self > 0:
-        chi_accel -= 4 * config.lambda_self * chi * (chi**2 - config.chi0**2)
+        chi_accel += _flat_octic_self_force(chi, config.lambda_self, config.chi0)
 
     chi_next = 2.0 * chi - chi_prev + dt2 * chi_accel
 
@@ -284,7 +284,7 @@ def _step_color(
     chi_source = (config.kappa / config.chi0) * chi * (energy_density - config.e0_sq)
     chi_accel = c2 * lap_chi - chi_source - color_variance_term
     if config.lambda_self > 0:
-        chi_accel -= 4 * config.lambda_self * chi * (chi**2 - config.chi0**2)
+        chi_accel += _flat_octic_self_force(chi, config.lambda_self, config.chi0)
 
     chi_next = 2.0 * chi - chi_prev + dt2 * chi_accel
 
@@ -298,6 +298,17 @@ def _step_color(
     state.psi = psi_next
     state.chi_prev = chi
     state.chi = chi_next
+
+
+def _flat_octic_self_force(
+    chi: NDArray[np.floating],
+    lambda_self: float,
+    chi0: float,
+) -> NDArray[np.floating]:
+    """Return the v38 flat-octic force term -dV8/dchi."""
+
+    delta = chi**2 - chi0**2
+    return -(8.0 * lambda_self / chi0**4) * chi * delta**3
 
 
 def _spherical_boundary_mask(

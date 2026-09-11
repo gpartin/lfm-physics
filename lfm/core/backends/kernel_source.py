@@ -272,8 +272,11 @@ void evolve_gov01_gov02(
                   - 4.0f * chi_c;
     lap_chi *= inv_dx2;
 
-    // Mexican hat: -4*lam*chi*(chi^2 - chi0^2)
-    float chi_self = -4.0f * lam * chi_c * (chi_sq - chi0 * chi0);
+    // v38 flat-octic self-interaction: -(8*lam/chi0^4)*chi*(chi^2 - chi0^2)^3
+    float chi_delta = chi_sq - chi0 * chi0;
+    float chi0_sq = chi0 * chi0;
+    float chi0_fourth = chi0_sq * chi0_sq;
+    float chi_self = -8.0f * lam * chi_c * chi_delta * chi_delta * chi_delta / chi0_fourth;
 
     // GOV-02 v28.0: colorblind gravity + color variance + CCV + SCV
     float chi_new = 2.0f * chi_c - chi_prev[idx] + dt2 * (
@@ -457,8 +460,11 @@ void evolve_real(
     // GOV-01
     float E_new = 2.0f * E_c - E_prev[idx] + dt2 * (lap_E - chi_sq * E_c);
 
-    // Mexican hat self-interaction
-    float chi_self = -4.0f * lam * chi_c * (chi_sq - chi0 * chi0);
+    // v38 flat-octic self-interaction: -(8*lam/chi0^4)*chi*(chi^2 - chi0^2)^3
+    float chi_delta = chi_sq - chi0 * chi0;
+    float chi0_sq = chi0 * chi0;
+    float chi0_fourth = chi0_sq * chi0_sq;
+    float chi_self = -8.0f * lam * chi_c * chi_delta * chi_delta * chi_delta / chi0_fourth;
 
     // GOV-02 v28.0
     float chi_new = 2.0f * chi_c - chi_prev[idx] + dt2 * (
@@ -816,8 +822,11 @@ void evolve_complex(
     j_z *= inv_dx;
     float j_scalar = 0.5f * (j_x + j_y + j_z);
 
-    // Mexican hat
-    float chi_self = -4.0f * lam * chi_c * (chi_sq - chi0 * chi0);
+    // v38 flat-octic self-interaction: -(8*lam/chi0^4)*chi*(chi^2 - chi0^2)^3
+    float chi_delta = chi_sq - chi0 * chi0;
+    float chi0_sq = chi0 * chi0;
+    float chi0_fourth = chi0_sq * chi0_sq;
+    float chi_self = -8.0f * lam * chi_c * chi_delta * chi_delta * chi_delta / chi0_fourth;
 
     // GOV-02
     float chi_new = 2.0f * chi_c - chi_prev[idx] + dt2 * (

@@ -33,6 +33,18 @@ _GRAVITY_RECOVERY_LINKS = (
 )
 
 
+def _flat_octic_self_force(
+    chi: NDArray,
+    *,
+    lambda_self: float,
+    chi0: float,
+) -> NDArray:
+    """Return the v38 flat-octic force term -dV8/dchi."""
+
+    delta = chi * chi - chi0 * chi0
+    return -(8.0 * lambda_self / chi0**4) * chi * delta**3
+
+
 class NumpyBackend:
     """CPU compute backend using NumPy."""
 
@@ -133,7 +145,11 @@ class NumpyBackend:
         chi_source = (kappa / chi0) * chi * (E * E - e0_sq)
         chi_accel = lap_chi - chi_source
         if lambda_self > 0:
-            chi_accel -= 4.0 * lambda_self * chi * (chi_sq - chi0 * chi0)
+            chi_accel += _flat_octic_self_force(
+                chi,
+                lambda_self=lambda_self,
+                chi0=chi0,
+            )
         chi_new = 2.0 * chi - chi_prev + dt2 * chi_accel
 
         if enable_chi_floor:
@@ -495,7 +511,11 @@ class NumpyBackend:
         chi_source = (kappa / chi0) * chi * (psi_sq + epsilon_w * j_total - e0_sq)
         chi_accel = lap_chi - chi_source
         if lambda_self > 0:
-            chi_accel -= 4.0 * lambda_self * chi * (chi_sq - chi0 * chi0)
+            chi_accel += _flat_octic_self_force(
+                chi,
+                lambda_self=lambda_self,
+                chi0=chi0,
+            )
         chi_new = 2.0 * chi - chi_prev + dt2 * chi_accel
 
         if enable_chi_floor:
@@ -688,7 +708,11 @@ class NumpyBackend:
             lap_chi - chi_source - color_var_term - kappa_string * ccv_term - kappa_tube * scv_term
         )
         if lambda_self > 0:
-            chi_accel -= 4.0 * lambda_self * chi * (chi_sq - chi0 * chi0)
+            chi_accel += _flat_octic_self_force(
+                chi,
+                lambda_self=lambda_self,
+                chi0=chi0,
+            )
         chi_new = 2.0 * chi - chi_prev + dt2 * chi_accel
 
         if enable_chi_floor:

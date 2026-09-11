@@ -50,16 +50,16 @@ class ChiMode(enum.Enum):
     """Which GOV-02 update rule to use for the χ field.
 
     WAVE
-        Full second-order PDE (default). Both ∂²χ/∂t² and ∇²χ active.
-        Required for solitons, orbits, quantum, nuclear, and solar-scale.
+        Full second-order PDE (default). Both ∂²χ/∂t² and ∇²χ active. This
+        is the current v38 canonical live-dynamics path.
     MEMORY
-        GOV-03 quasi-static approximation: χ² = χ₀² − g⟨|Ψ|²⟩_τ.
-        χ tracks a running average of energy over τ steps (dark matter halo).
-        Appropriate for galactic- and cosmic-scale dark matter simulations.
+        Historical GOV-03 quasi-static approximation:
+        χ² = χ₀² − g⟨|Ψ|²⟩_τ. This limit is under v38 revalidation and is
+        not implemented by :meth:`lfm.Simulation.run`.
     STATIC
-        GOV-04 Poisson limit: ∇²χ = (κ/c²)(|Ψ|² − E₀²).
-        χ solved once from instantaneous energy density.
-        Fastest; valid when χ responds much faster than Ψ dynamics.
+        GOV-04 Poisson limit. Use the explicit equilibration utilities for
+        static source preparation; this is not a live :meth:`lfm.Simulation.run`
+        mode.
     """
 
     WAVE = "wave"
@@ -86,8 +86,8 @@ class PhysicsScale(enum.Enum):
     | MOLECULAR  | ~ 1 nm         | COMPLEX    | WAVE      | Chemistry / bonds |
     | CLASSICAL  | > 1 μm         | REAL       | WAVE      | Gravity only      |
     | SOLAR      | ~ 10⁹ m        | REAL       | WAVE      | Orbital mechanics |
-    | GALACTIC   | ~ 1 parsec     | REAL       | MEMORY    | Dark matter halo  |
-    | COSMIC     | ~ 1 Mpc        | REAL       | MEMORY    | Large-scale struct|
+    | GALACTIC   | ~ 1 parsec     | REAL       | WAVE      | v38 χ response    |
+    | COSMIC     | ~ 1 Mpc        | REAL       | WAVE      | v38 χ response    |
     +------------+----------------+------------+-----------+-------------------+
 
     The minimum resolvable particle at each scale is one with Compton
@@ -124,8 +124,8 @@ _SCALE_DEFAULTS: dict[PhysicsScale, tuple[FieldLevel, ChiMode, float, float]] = 
     PhysicsScale.MOLECULAR: (FieldLevel.COMPLEX, ChiMode.WAVE, 0.0, 0.0),
     PhysicsScale.CLASSICAL: (FieldLevel.REAL, ChiMode.WAVE, 0.0, 0.0),
     PhysicsScale.SOLAR: (FieldLevel.REAL, ChiMode.WAVE, 0.0, 0.0),
-    PhysicsScale.GALACTIC: (FieldLevel.REAL, ChiMode.MEMORY, 0.0, 0.0),
-    PhysicsScale.COSMIC: (FieldLevel.REAL, ChiMode.MEMORY, 0.0, 0.0),
+    PhysicsScale.GALACTIC: (FieldLevel.REAL, ChiMode.WAVE, LAMBDA_H, 0.0),
+    PhysicsScale.COSMIC: (FieldLevel.REAL, ChiMode.WAVE, LAMBDA_H, 0.0),
 }
 
 
@@ -155,9 +155,9 @@ class Precision(str, enum.Enum):
 class ChiPotentialModel(enum.IntEnum):
     """Experiment-only local chi stabilization laws.
 
-    The canonical production path remains ``CANONICAL_QUARTIC``. The other
-    values are explicit GOV-02 gravity-recovery ablations and are used only by
-    :meth:`lfm.Simulation.run_gravity_recovery`.
+    The canonical production path is the v38 flat-octic self-interaction when
+    ``lambda_self`` is positive. ``CANONICAL_QUARTIC`` is retained here as a
+    historical control for gravity-recovery ablations.
     """
 
     CANONICAL_QUARTIC = 0
@@ -195,8 +195,9 @@ class SimulationConfig:
     """Gravity coupling = 1/63."""
 
     lambda_self: float = 0.0
-    """Mexican hat self-coupling. 0.0 = gravity-only (cosmological default).
-    Set to LAMBDA_H (4/31) for Higgs physics, BH interiors, vacuum stability."""
+    """Flat-octic chi self-coupling. 0.0 disables the self-interaction for
+    reduced gravity-only diagnostics. Set to LAMBDA_H (4/31) for the current
+    v38 canonical chi stabilizer."""
 
     epsilon_w: float = EPSILON_W
     """Weak/helicity coupling = 0.1. Only matters when j(x,t) is computed."""
@@ -224,7 +225,7 @@ class SimulationConfig:
     kappa_tube: float = 0.0
     """Smoothed color variance (SCV) coupling (v16). Default 0.0 = off.
     Set to KAPPA_TUBE (30/63) for full confinement with λ_self=LAMBDA_H,
-    or to 10*KAPPA for stable experiments without Mexican hat.
+    or to 10*KAPPA for stable experiments without the flat-octic stabilizer.
     Adds −κ_tube·SCV to GOV-02. Only active at FieldLevel.COLOR."""
 
     sa_gamma: float = SA_GAMMA
@@ -324,10 +325,10 @@ class SimulationConfig:
     chi_mode: ChiMode = ChiMode.WAVE
     """Which GOV-02 update rule to use.  See :class:`ChiMode`.
 
-    ``WAVE`` (default): full second-order PDE — required for solitons, orbits,
-    and quantum-scale simulations.
-    ``MEMORY``: GOV-03 τ-averaging (dark matter halos).
-    ``STATIC``: GOV-04 Poisson solve (quasi-static Newtonian limit).
+    ``WAVE`` (default): full second-order PDE and current v38 live path.
+    ``MEMORY``: historical GOV-03 τ-averaging; not implemented in
+    :meth:`lfm.Simulation.run`.
+    ``STATIC``: GOV-04 Poisson limit; use explicit equilibration utilities.
 
     Set automatically when ``physical_scale`` is provided.
     """
@@ -344,6 +345,10 @@ class SimulationConfig:
             self.precision = Precision(self.precision)
         except (TypeError, ValueError) as exc:
             raise ValueError("precision must be Precision.FLOAT32 or Precision.FLOAT64") from exc
+        try:
+            self.chi_mode = ChiMode(self.chi_mode)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("chi_mode must be ChiMode.WAVE, ChiMode.MEMORY, or ChiMode.STATIC") from exc
         # Apply regime defaults BEFORE validation so derived fields see them.
         if self.physical_scale is not None:
             fl, cm, ls, kc = _SCALE_DEFAULTS[self.physical_scale]
@@ -447,7 +452,7 @@ class SimulationConfig:
 
         This is the recommended way to configure scale-based simulations::
 
-            # Nuclear-scale: COLOR field, WAVE chi, Mexican hat on
+            # Nuclear-scale: COLOR field, WAVE chi, flat-octic stabilizer on
             cfg = SimulationConfig.for_scale(PhysicsScale.NUCLEAR, grid_size=64)
 
             # Solar-scale: REAL field, WAVE chi, gravity only

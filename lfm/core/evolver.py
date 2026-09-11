@@ -34,6 +34,7 @@ import numpy as np
 
 from lfm.config import (
     BoundaryType,
+    ChiMode,
     ChiPotentialModel,
     FieldLevel,
     SimulationConfig,
@@ -70,6 +71,13 @@ class Evolver:
                 "direct float32 remote jobs"
             )
         self.config = config
+        if config.chi_mode != ChiMode.WAVE:
+            raise NotImplementedError(
+                "Simulation.run currently supports ChiMode.WAVE only. "
+                "ChiMode.MEMORY is a historical LIMIT-01 approximation under "
+                "v38 revalidation, and ChiMode.STATIC is available only through "
+                "explicit Poisson/equilibration utilities."
+            )
         self.backend = get_backend(backend, precision=config.precision)
         self.dtype = self.backend.dtype
         self.N = config.grid_size

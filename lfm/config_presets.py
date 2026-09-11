@@ -44,7 +44,7 @@ def gravity_em(grid_size: int = 64, **overrides: object) -> SimulationConfig:
     """Level 1: Complex Ψ, gravity + EM.
 
     For: charged leptons, photons, hydrogen atom, Coulomb force.
-    Mexican hat enabled for vacuum stability.
+    v38 flat-octic chi stabilizer enabled for vacuum stability.
     """
     params: dict[str, object] = dict(
         grid_size=grid_size,
@@ -60,7 +60,7 @@ def full_physics(grid_size: int = 64, **overrides: object) -> SimulationConfig:
     """Level 2: 3-color Ψₐ, all four forces.
 
     For: quarks, hadrons, confinement, strong interactions.
-    Enables Mexican hat, color variance, cross-color coupling,
+    Enables the v38 flat-octic chi stabilizer, color variance, cross-color coupling,
     CCV, SCV flux tubes, and S_a Helmholtz smoothing.
     """
     params: dict[str, object] = dict(

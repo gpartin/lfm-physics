@@ -31,6 +31,7 @@ from lfm.viz.gravity_recovery import (
     plot_profile_comparison,
     plot_stability_sweep,
 )
+from lfm.viz.holonomy import LatticeHolonomySnapshot, render_lattice_holonomy_gif
 from lfm.viz.limit_orbit import (
     animate_limit02_orbit_3d_demo,
     animate_limit02_orbit_demo,
@@ -95,4 +96,6 @@ __all__ = [
     "plot_energy_history",
     "plot_profile_comparison",
     "plot_stability_sweep",
+    "LatticeHolonomySnapshot",
+    "render_lattice_holonomy_gif",
 ]
