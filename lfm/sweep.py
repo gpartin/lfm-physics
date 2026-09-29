@@ -88,6 +88,8 @@ def sweep(
     *,
     equilibrate: bool = True,
     soliton: dict[str, Any] | None = None,
+    case_runner: Callable[[Simulation, Any], dict[str, Any]] | None = None,
+    backend: str = "auto",
 ) -> list[dict[str, Any]]:
     """Run *steps* for each value in *values*, recording final metrics.
 
@@ -97,7 +99,9 @@ def sweep(
         Base configuration (will be copied for each run).
     param : str
         Name of a ``SimulationConfig`` attribute to vary
-        (e.g. ``"kappa"``, ``"grid_size"``).
+        (e.g. ``"kappa"``, ``"grid_size"``). With ``case_runner``, a name
+        absent from the configuration denotes an external I/O parameter and
+        is passed only to the callback, not added to the configuration.
     values : list
         Parameter values to sweep over.
     steps : int
@@ -109,21 +113,51 @@ def sweep(
     soliton : dict or None
         If provided, place a soliton with these kwargs before each run.
         Example: ``{"position": (32,32,32), "amplitude": 6.0}``.
+    case_runner : callable or None
+        Optional externally driven episode runner ``case_runner(sim, value)``.
+        The callback owns input scheduling and evolution, and returns the
+        metrics for this case. Requires ``steps=0``, ``equilibrate=False``, and
+        ``soliton=None``; no automatic evolution or metrics call is performed.
+    backend : str
+        Simulation backend. The default preserves automatic selection.
 
     Returns
     -------
     list[dict]
         One dict per value with ``{param: value, **metrics}``.
     """
+    if case_runner is not None:
+        if not callable(case_runner):
+            raise TypeError("case_runner must be callable")
+        if steps != 0 or equilibrate or soliton is not None:
+            raise ValueError(
+                "case_runner requires steps=0, equilibrate=False, and soliton=None"
+            )
+    elif not hasattr(config, param):
+        raise AttributeError(f"SimulationConfig has no attribute {param!r}")
+
     results: list[dict[str, Any]] = []
 
     for val in values:
         cfg = deepcopy(config)
 
-        # Handle grid_size specially — position may need adjusting
-        setattr(cfg, param, val)
+        if hasattr(cfg, param):
+            setattr(cfg, param, val)
 
-        sim = Simulation(cfg)
+        sim = Simulation(cfg) if backend == "auto" else Simulation(cfg, backend=backend)
+
+        if case_runner is not None:
+            m = case_runner(sim, val)
+            if not isinstance(m, dict):
+                raise TypeError("case_runner must return a metrics dict")
+            row: dict[str, Any] = {param: val}
+            if metric_names is not None:
+                for k in metric_names:
+                    row[k] = m.get(k)
+            else:
+                row.update(m)
+            results.append(row)
+            continue
 
         if soliton is not None:
             kw = dict(soliton)
