@@ -53,7 +53,7 @@ Choose the right level for your physics:
 | Level | `FieldLevel` | Physics |
 |-------|-------------|---------|
 | Real (Ψ ∈ ℝ) | `REAL` | Gravity, dark matter |
-| Complex (Ψ ∈ ℂ) | `COMPLEX` | + Electromagnetism (charge = phase) |
+| Complex (Ψ ∈ ℂ) | `COMPLEX` | + Complex phase dynamics (EM closure unestablished) |
 | Colour (Ψ ∈ ℂ³) | `COLOR` | + Strong / weak force |
 
 ```python

@@ -41,9 +41,9 @@ def gravity_only(grid_size: int = 64, **overrides: object) -> SimulationConfig:
 
 
 def gravity_em(grid_size: int = 64, **overrides: object) -> SimulationConfig:
-    """Level 1: Complex Ψ, gravity + EM.
+    """Legacy complex-field preset (historical name retained).
 
-    For: charged leptons, photons, hydrogen atom, Coulomb force.
+    Supports phase-interference probes; does not establish Coulomb/Maxwell closure.
     Mexican hat enabled for vacuum stability.
     """
     params: dict[str, object] = dict(

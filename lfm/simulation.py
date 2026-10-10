@@ -511,7 +511,7 @@ class Simulation:
         sigma : float or None
             Width (default from config).
         phase : float
-            Complex phase (0 = electron, π = positron).
+            Initial complex phase; 0/π are not validated signed electric charges.
         velocity : (vx, vy, vz) or None
             Initial velocity in lattice units (|v| < c = 1).  Adds a
             spatial phase gradient k·(∂r−r₀) where k = χ₀·v/c,
@@ -523,10 +523,10 @@ class Simulation:
 
         >>> sim.place_soliton((32, 32, 32), amplitude=6.0)
 
-        Electron–positron pair (opposite phases) separated by 20 cells:
+        Opposite-phase Gaussian pair separated by 20 cells:
 
-        >>> sim.place_soliton((32, 22, 32), amplitude=4.0, phase=0.0)     # e⁻
-        >>> sim.place_soliton((32, 42, 32), amplitude=4.0, phase=3.1416)  # e⁺
+        >>> sim.place_soliton((32, 22, 32), amplitude=4.0, phase=0.0)
+        >>> sim.place_soliton((32, 42, 32), amplitude=4.0, phase=3.1416)
 
         Moving soliton with velocity 0.1c along the x-axis:
 

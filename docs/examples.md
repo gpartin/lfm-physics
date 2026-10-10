@@ -82,15 +82,10 @@ equations.
 
 **File**: `examples/05_electric_charge.py`
 
-Switch to complex wave fields (`FieldLevel.COMPLEX`) and discover that the
-**phase** of $\Psi$ acts as electric charge:
-
-- $\theta = 0$ → "electron" (negative)
-- $\theta = \pi$ → "positron" (positive)
-
-Same-phase solitons undergo constructive interference → energy UP → **repel**.
-Opposite-phase solitons undergo destructive interference → energy DOWN →
-**attract**.  Coulomb's law emerges from wave interference.
+Compare endpoint separation changes for same/opposite-phase Gaussian
+preparations using the legacy complex-field solver. This measures motion of a
+field diagnostic, not signed charge or a Coulomb force law. See
+[coulomb_audit.md](coulomb_audit.md) for the required quantitative gates.
 
 ---
 

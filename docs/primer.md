@@ -75,7 +75,7 @@ From χ₀ = 19 alone, LFM derives 40+ physical constants to high accuracy.
 |------------|---------------|
 | **Gravity** | Energy (|Ψ|²) dips χ → potential well → attraction |
 | **Dark matter** | χ wells persist after matter moves away (memory) |
-| **Electromagnetism** | Phase of complex Ψ = charge; interference = Coulomb |
+| **Electromagnetism** | Phase interference available; Coulomb/Maxwell closure unestablished |
 | **Expansion** | Voids evacuate → χ rises → photons slow down |
 | **Particles** | Standing waves trapped in self-consistent χ wells |
 | **Atoms** | Nuclear χ well + bound electron eigenmodes |
