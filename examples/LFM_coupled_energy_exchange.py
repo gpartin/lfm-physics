@@ -9,6 +9,15 @@ full R2 channel register represented as six real components:
 
     (Re Psi_1, Im Psi_1, Re Psi_2, Im Psi_2, Re Psi_3, Im Psi_3)
 
+Historical model scope
+----------------------
+
+This example preserves the v38 equations and Hamiltonian below. It is not a
+v39.0.2 implementation: that model changes GOV-01 to the complex-C3 z-dependent
+nonlinearity and GOV-02 to its corresponding mu source. Do not use this demo
+as validation of v39.0.2 or reinterpret its saved results as that model.
+See docs/pr4_compatibility.md for the migration boundary.
+
 Discrete substrate equations used by this demo
 ----------------------------------------------
 

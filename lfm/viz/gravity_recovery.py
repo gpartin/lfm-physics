@@ -3,12 +3,20 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import matplotlib.pyplot as plt
 import numpy as np
 
+from lfm.viz._util import _require_matplotlib
 
-def _save(figure: plt.Figure, path: str | Path) -> Path:
+if TYPE_CHECKING:
+    from matplotlib.figure import Figure
+
+
+def _save(figure: Figure, path: str | Path) -> Path:
+    _require_matplotlib()
+    import matplotlib.pyplot as plt
+
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
     figure.savefig(output, dpi=180, bbox_inches="tight")
@@ -26,6 +34,9 @@ def plot_profile_comparison(
     path: str | Path,
 ) -> Path:
     """Plot radial substrate displacement and acceleration proxy."""
+
+    _require_matplotlib()
+    import matplotlib.pyplot as plt
 
     radius = np.asarray(radius, dtype=np.float64)
     profile = np.asarray(profile, dtype=np.float64)
@@ -63,6 +74,9 @@ def plot_energy_history(
 ) -> Path:
     """Plot relative Hamiltonian drift."""
 
+    _require_matplotlib()
+    import matplotlib.pyplot as plt
+
     steps = np.asarray(steps, dtype=np.float64)
     total_energy = np.asarray(total_energy, dtype=np.float64)
     scale = max(abs(float(total_energy[0])), 1.0e-30)
@@ -87,6 +101,9 @@ def plot_stability_sweep(
     path: str | Path,
 ) -> Path:
     """Plot bounded and unstable points in a timestep sweep."""
+
+    _require_matplotlib()
+    import matplotlib.pyplot as plt
 
     timesteps = np.asarray(timesteps, dtype=np.float64)
     maximum_amplitudes = np.asarray(maximum_amplitudes, dtype=np.float64)
