@@ -3,6 +3,7 @@
 Neither chi_min nor the initial norm is a force or total interaction energy.
 The filename is retained for compatibility; see docs/coulomb_audit.md.
 """
+
 from __future__ import annotations
 
 import numpy as np
