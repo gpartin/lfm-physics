@@ -7,6 +7,18 @@ on:
     branches: [main]
 
 jobs:
+  base-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install base package without visualization extras
+        run: pip install . pytest
+      - name: Verify optional dependency and backend contracts
+        run: python -m pytest tests/test_backend_contract.py tests/test_optional_viz.py
+
   quality:
     runs-on: ubuntu-latest
 

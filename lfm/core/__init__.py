@@ -19,5 +19,21 @@ custom multi-grid schemes).
 """
 
 from lfm.core.evolver import Evolver
+from lfm.core.stencils import (
+    eigenvalue_19pt,
+    eigenvalue_27pt,
+    gradient_19pt,
+    laplacian_19pt,
+    laplacian_27pt,
+    noether_current_19pt_raw,
+)
 
-__all__ = ["Evolver"]
+__all__ = [
+    "Evolver",
+    "eigenvalue_19pt",
+    "eigenvalue_27pt",
+    "gradient_19pt",
+    "laplacian_19pt",
+    "laplacian_27pt",
+    "noether_current_19pt_raw",
+]

@@ -489,7 +489,7 @@ def _build_collision_sim(
         np.clip(chi_template, 0.01, None, out=chi_template)
         dchi_template = chi_template - np.float32(geo.chi0)
         # Use chi_min as approximate eigenvalue (wave frequency inside well)
-        eigenvalue = float(max(chi_template.min(), 1.0))
+        eigenvalue = max(float(chi_template.min()), 1.0)
         if verbose:
             print(
                 f"  Poisson-only ready: chi_min={chi_template.min():.4f}  "

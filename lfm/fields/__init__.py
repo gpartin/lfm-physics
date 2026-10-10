@@ -26,10 +26,26 @@ from lfm.fields.arrangements import (
 from lfm.fields.boosted import boosted_soliton
 from lfm.fields.equilibrium import (
     equilibrate_chi,
+    equilibrate_chi_19pt,
     equilibrate_from_fields,
+    equilibrate_from_fields_19pt,
     poisson_solve_fft,
+    poisson_solve_fft_19pt,
 )
-from lfm.fields.light import spherical_phase_source
+from lfm.fields.light import (
+    planar_r1_light_packet,
+    r1_light_acceleration,
+    r1_light_step,
+    r1_vacuum_subtracted_potential,
+    spherical_phase_source,
+)
+from lfm.fields.macroscopic import (
+    Limit02BodyProfile,
+    build_limit02_body_profile,
+    limit02_acceleration_from_profile,
+    periodic_trilinear_sample,
+    smooth_spherical_density,
+)
 from lfm.fields.random import seed_noise, uniform_chi
 from lfm.fields.soliton import gaussian_soliton, place_solitons, wave_kick
 from lfm.fields.spinor import (
@@ -45,8 +61,11 @@ __all__ = [
     "wave_kick",
     "boosted_soliton",
     "poisson_solve_fft",
+    "poisson_solve_fft_19pt",
     "equilibrate_chi",
+    "equilibrate_chi_19pt",
     "equilibrate_from_fields",
+    "equilibrate_from_fields_19pt",
     "seed_noise",
     "uniform_chi",
     "tetrahedral_positions",
@@ -62,4 +81,14 @@ __all__ = [
     "apply_rotation_z",
     # light
     "spherical_phase_source",
+    "planar_r1_light_packet",
+    "r1_vacuum_subtracted_potential",
+    "r1_light_acceleration",
+    "r1_light_step",
+    # macroscopic LIMIT-02
+    "Limit02BodyProfile",
+    "smooth_spherical_density",
+    "build_limit02_body_profile",
+    "periodic_trilinear_sample",
+    "limit02_acceleration_from_profile",
 ]

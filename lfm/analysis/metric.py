@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
-from lfm.constants import CHI0
+from lfm.constants import ARCSEC_PER_RADIAN, C_SI, CHI0, G_SI
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -150,6 +150,109 @@ def schwarzschild_chi(
     safe = np.where(r > r_s, 1.0 - r_s / r, 0.0)
     chi = np.where(r > r_s, chi0 * np.sqrt(safe), 0.0)
     return chi.astype(np.float32)
+
+
+def schwarzschild_radius_si(
+    mass_kg: float,
+    gravitational_constant: float = G_SI,
+    c_si: float = C_SI,
+) -> float:
+    """Return the Schwarzschild radius in meters for an SI mass input."""
+    if mass_kg <= 0.0:
+        raise ValueError("mass_kg must be positive")
+    if gravitational_constant <= 0.0:
+        raise ValueError("gravitational_constant must be positive")
+    if c_si <= 0.0:
+        raise ValueError("c_si must be positive")
+    return float(2.0 * gravitational_constant * mass_kg / (c_si * c_si))
+
+
+def metric_refractive_index(
+    chi: NDArray,
+    chi0: float = CHI0,
+    ppn_gamma: float = 1.0,
+) -> NDArray:
+    """Return the LFM geometric-optics refractive index from the chi metric.
+
+    The GOV-01 metric map gives g00 = -(chi/chi0)^2. In the weak-field
+    optical limit, the PPN spatial metric contribution gives
+    n = (chi0 / chi) ** (1 + gamma). The canonical LFM weak-GR closure has
+    gamma = 1, so n = (chi0 / chi) ** 2.
+    """
+    if chi0 <= 0.0:
+        raise ValueError("chi0 must be positive")
+    if ppn_gamma < 0.0:
+        raise ValueError("ppn_gamma must be non-negative")
+    chi_f = np.asarray(chi, dtype=np.float64)
+    if np.any(chi_f <= 0.0):
+        raise ValueError("chi must be positive for metric refractive index")
+    return np.power(chi0 / chi_f, 1.0 + ppn_gamma)
+
+
+def op05_spherical_chi_deflection(
+    mass_kg: float,
+    impact_parameter_m: float,
+    x_extent_multiplier: float = 500.0,
+    sample_count: int = 20001,
+    ppn_gamma: float = 1.0,
+) -> dict[str, object]:
+    """Integrate OP-05 for a spherical GR-16 chi profile.
+
+    This uses the canonical LFM chain:
+
+    - GR-16: chi/chi0 = sqrt(1 - r_s / r)
+    - GR-24: gamma = 1 for the weak-field spatial metric
+    - OP-05: dtheta/dx = (1/n) * partial_y n
+
+    The returned comparator is not used by the integration; it is the
+    closed-form weak-field value 2*r_s/b for checking the numerical result.
+    """
+    if impact_parameter_m <= 0.0:
+        raise ValueError("impact_parameter_m must be positive")
+    if x_extent_multiplier <= 1.0:
+        raise ValueError("x_extent_multiplier must be greater than 1")
+    if sample_count < 101:
+        raise ValueError("sample_count must be at least 101")
+    if sample_count % 2 == 0:
+        sample_count += 1
+
+    rs_m = schwarzschild_radius_si(mass_kg)
+    x_extent_m = float(x_extent_multiplier) * impact_parameter_m
+    x_m = np.linspace(-x_extent_m, x_extent_m, sample_count, dtype=np.float64)
+    y0_m = np.full_like(x_m, impact_parameter_m)
+    radius_m = np.sqrt(x_m * x_m + y0_m * y0_m)
+    exponent = 0.5 * (1.0 + ppn_gamma)
+    safe = np.maximum(1.0 - rs_m / radius_m, 1.0e-15)
+    n_eff = np.power(safe, -exponent)
+
+    dn_dr = -exponent * rs_m / (radius_m * radius_m) * np.power(safe, -exponent - 1.0)
+    dn_dy = dn_dr * y0_m / radius_m
+    dtheta_dx = dn_dy / n_eff
+    angle_rad = abs(float(np.trapezoid(dtheta_dx, x_m)))
+    comparator_rad = 2.0 * rs_m / impact_parameter_m
+
+    increments = 0.5 * (dtheta_dx[1:] + dtheta_dx[:-1]) * np.diff(x_m)
+    theta_rad = np.concatenate([[0.0], np.cumsum(increments)])
+    y_increments = 0.5 * (theta_rad[1:] + theta_rad[:-1]) * np.diff(x_m)
+    y_m = impact_parameter_m + np.concatenate([[0.0], np.cumsum(y_increments)])
+
+    return {
+        "mass_kg": float(mass_kg),
+        "impact_parameter_m": float(impact_parameter_m),
+        "schwarzschild_radius_m": float(rs_m),
+        "x_extent_multiplier": float(x_extent_multiplier),
+        "sample_count": int(sample_count),
+        "ppn_gamma": float(ppn_gamma),
+        "x_over_b": (x_m / impact_parameter_m).tolist(),
+        "y_over_b": (y_m / impact_parameter_m).tolist(),
+        "theta_arcsec": (np.abs(theta_rad) * ARCSEC_PER_RADIAN).tolist(),
+        "n_eff": n_eff.tolist(),
+        "dtheta_dx": dtheta_dx.tolist(),
+        "recovered_angle_radians": float(angle_rad),
+        "recovered_angle_arcsec": float(angle_rad * ARCSEC_PER_RADIAN),
+        "canonical_comparator_arcsec": float(comparator_rad * ARCSEC_PER_RADIAN),
+        "comparator_relative_error": float((angle_rad - comparator_rad) / comparator_rad),
+    }
 
 
 # ---------------------------------------------------------------------------

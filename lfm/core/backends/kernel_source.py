@@ -1,5 +1,4 @@
-"""
-CUDA Kernel Source Strings
+"""CUDA Kernel Source Strings
 ==========================
 
 Production CUDA kernels for LFM leapfrog evolution.
@@ -11,6 +10,28 @@ Three kernels:
 - PHASE1_KERNEL_SRC: Parametric resonance with oscillating χ
 - EVOLUTION_REAL_KERNEL_SRC: Simplified real-E gravity-only kernel
 """
+
+import re
+
+_FLOAT_TYPE_TOKEN = re.compile(r"\bfloat\b")
+_FLOAT_LITERAL_SUFFIX = re.compile(r"(?<=[0-9.])f\b")
+
+
+def kernel_source_for_precision(source: str, precision: str) -> str:
+    """Return a CUDA source variant for the requested state precision.
+
+    The float32 path returns the original source unchanged so the canonical
+    production kernels retain identical arithmetic and compilation input.
+    The float64 path promotes both storage/local types and every explicitly
+    float-suffixed numeric literal.
+    """
+    if precision == "float32":
+        return source
+    if precision != "float64":
+        raise ValueError(f"unsupported CUDA precision: {precision!r}")
+    promoted = _FLOAT_TYPE_TOKEN.sub("double", source)
+    return _FLOAT_LITERAL_SUFFIX.sub("", promoted)
+
 
 # ---------------------------------------------------------------------------
 # Full 3-color complex evolution kernel (Level 2 — all four forces)
@@ -45,7 +66,10 @@ void evolve_gov01_gov02(
     const float eps_cc,
     const float* __restrict__ Sa_in,
     const float kappa_string,
-    const float kappa_tube)
+    const float kappa_tube,
+    const int use_stencil19_noether_current,
+    const float inv_dx2,
+    const int enable_chi_floor)
 {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     int total = N * N * N;
@@ -134,6 +158,8 @@ void evolve_gov01_gov02(
                                      + Psi_i[off+ipkp] + Psi_i[off+ipkm] + Psi_i[off+imkp] + Psi_i[off+imkm]
                                      + Psi_i[off+jpkp] + Psi_i[off+jpkm] + Psi_i[off+jmkp] + Psi_i[off+jmkm])
                      - 4.0f * Pi_val;
+        lap_Pr *= inv_dx2;
+        lap_Pi *= inv_dx2;
 
         // GOV-01 leapfrog
         float Pr_new = 2.0f * Pr - Psi_r_prev[aidx] + dt2 * (lap_Pr - chi_sq * Pr);
@@ -159,9 +185,40 @@ void evolve_gov01_gov02(
         psi_sq_total += e_a;
 
         // Momentum density: Sum_a Im(Psi_a* . nabla(Psi_a))
-        float j_x = Pr * (Psi_i[off+ip] - Psi_i[off+im]) - Pi_val * (Psi_r[off+ip] - Psi_r[off+im]);
-        float j_y = Pr * (Psi_i[off+jp] - Psi_i[off+jm]) - Pi_val * (Psi_r[off+jp] - Psi_r[off+jm]);
-        float j_z = Pr * (Psi_i[off+kp] - Psi_i[off+km]) - Pi_val * (Psi_r[off+kp] - Psi_r[off+km]);
+        float j_x;
+        float j_y;
+        float j_z;
+        if (use_stencil19_noether_current) {
+            float dPr_x = (1.0f/3.0f) * (Psi_r[off+ip] - Psi_r[off+im])
+                        + (1.0f/6.0f) * (Psi_r[off+ipjp] + Psi_r[off+ipjm] + Psi_r[off+ipkp] + Psi_r[off+ipkm]
+                                      - Psi_r[off+imjp] - Psi_r[off+imjm] - Psi_r[off+imkp] - Psi_r[off+imkm]);
+            float dPi_x = (1.0f/3.0f) * (Psi_i[off+ip] - Psi_i[off+im])
+                        + (1.0f/6.0f) * (Psi_i[off+ipjp] + Psi_i[off+ipjm] + Psi_i[off+ipkp] + Psi_i[off+ipkm]
+                                      - Psi_i[off+imjp] - Psi_i[off+imjm] - Psi_i[off+imkp] - Psi_i[off+imkm]);
+            float dPr_y = (1.0f/3.0f) * (Psi_r[off+jp] - Psi_r[off+jm])
+                        + (1.0f/6.0f) * (Psi_r[off+ipjp] + Psi_r[off+imjp] + Psi_r[off+jpkp] + Psi_r[off+jpkm]
+                                      - Psi_r[off+ipjm] - Psi_r[off+imjm] - Psi_r[off+jmkp] - Psi_r[off+jmkm]);
+            float dPi_y = (1.0f/3.0f) * (Psi_i[off+jp] - Psi_i[off+jm])
+                        + (1.0f/6.0f) * (Psi_i[off+ipjp] + Psi_i[off+imjp] + Psi_i[off+jpkp] + Psi_i[off+jpkm]
+                                      - Psi_i[off+ipjm] - Psi_i[off+imjm] - Psi_i[off+jmkp] - Psi_i[off+jmkm]);
+            float dPr_z = (1.0f/3.0f) * (Psi_r[off+kp] - Psi_r[off+km])
+                        + (1.0f/6.0f) * (Psi_r[off+ipkp] + Psi_r[off+imkp] + Psi_r[off+jpkp] + Psi_r[off+jmkp]
+                                      - Psi_r[off+ipkm] - Psi_r[off+imkm] - Psi_r[off+jpkm] - Psi_r[off+jmkm]);
+            float dPi_z = (1.0f/3.0f) * (Psi_i[off+kp] - Psi_i[off+km])
+                        + (1.0f/6.0f) * (Psi_i[off+ipkp] + Psi_i[off+imkp] + Psi_i[off+jpkp] + Psi_i[off+jmkp]
+                                      - Psi_i[off+ipkm] - Psi_i[off+imkm] - Psi_i[off+jpkm] - Psi_i[off+jmkm]);
+            j_x = Pr * dPi_x - Pi_val * dPr_x;
+            j_y = Pr * dPi_y - Pi_val * dPr_y;
+            j_z = Pr * dPi_z - Pi_val * dPr_z;
+        } else {
+            j_x = Pr * (Psi_i[off+ip] - Psi_i[off+im]) - Pi_val * (Psi_r[off+ip] - Psi_r[off+im]);
+            j_y = Pr * (Psi_i[off+jp] - Psi_i[off+jm]) - Pi_val * (Psi_r[off+jp] - Psi_r[off+jm]);
+            j_z = Pr * (Psi_i[off+kp] - Psi_i[off+km]) - Pi_val * (Psi_r[off+kp] - Psi_r[off+km]);
+        }
+        float inv_dx = sqrt(inv_dx2);
+        j_x *= inv_dx;
+        j_y *= inv_dx;
+        j_z *= inv_dx;
         j_total += 0.5f * (j_x + j_y + j_z);
         // Store per-color currents for CCV
         j_color_x[a] = j_x;
@@ -213,6 +270,7 @@ void evolve_gov01_gov02(
                                   + chi[ipkp] + chi[ipkm] + chi[imkp] + chi[imkm]
                                   + chi[jpkp] + chi[jpkm] + chi[jmkp] + chi[jmkm])
                   - 4.0f * chi_c;
+    lap_chi *= inv_dx2;
 
     // Mexican hat: -4*lam*chi*(chi^2 - chi0^2)
     float chi_self = -4.0f * lam * chi_c * (chi_sq - chi0 * chi0);
@@ -224,7 +282,7 @@ void evolve_gov01_gov02(
         - kappa_string * ccv - kappa_tube * scv);
 
     // BH excision: clamp to Z2 second vacuum
-    if (chi_new < -chi0) chi_new = -chi0;
+    if (enable_chi_floor && chi_new < -chi0) chi_new = -chi0;
 
     // Frozen boundary
     chi_new = mask * chi0 + absorb * chi_new;
@@ -337,7 +395,9 @@ void evolve_real(
     const float kappa,
     const float lam,
     const float chi0,
-    const float E0_sq)
+    const float E0_sq,
+    const float inv_dx2,
+    const int enable_chi_floor)
 {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     int total = N * N * N;
@@ -391,6 +451,8 @@ void evolve_real(
                                   + chi[ipkp] + chi[ipkm] + chi[imkp] + chi[imkm]
                                   + chi[jpkp] + chi[jpkm] + chi[jmkp] + chi[jmkm])
                   - 4.0f * chi_c;
+    lap_E *= inv_dx2;
+    lap_chi *= inv_dx2;
 
     // GOV-01
     float E_new = 2.0f * E_c - E_prev[idx] + dt2 * (lap_E - chi_sq * E_c);
@@ -403,7 +465,7 @@ void evolve_real(
         lap_chi - (kappa / chi0) * chi_c * (E_c * E_c - E0_sq) + chi_self);
 
     // BH excision
-    if (chi_new < -chi0) chi_new = -chi0;
+    if (enable_chi_floor && chi_new < -chi0) chi_new = -chi0;
 
     // Absorbing boundary — damp both new and prev to prevent leapfrog reflection.
     float mask = boundary_mask[idx];
@@ -421,6 +483,210 @@ void evolve_real(
 # ---------------------------------------------------------------------------
 # Complex single-component kernel (Level 1 — gravity + EM)
 # ---------------------------------------------------------------------------
+GRAVITY_RECOVERY_REAL_KERNEL_SRC = r"""
+extern "C" __global__ __launch_bounds__(256)
+void evolve_real_gravity_recovery(
+    const float* __restrict__ E,
+    const float* __restrict__ E_prev,
+    const float* __restrict__ chi,
+    const float* __restrict__ chi_prev,
+    const float* __restrict__ boundary_mask,
+    float* __restrict__ E_next,
+    float* __restrict__ E_prev_next,
+    float* __restrict__ chi_next,
+    float* __restrict__ chi_prev_next,
+    const int N,
+    const float dt,
+    const float kappa,
+    const float lam,
+    const float chi0,
+    const float E0_sq,
+    const int potential_model,
+    const int freeze_psi,
+    const float relaxation_damping,
+    const float inv_dx2,
+    const int enable_chi_floor)
+{
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    int total = N * N * N;
+    if (idx >= total) return;
+
+    int i = idx / (N * N);
+    int j = (idx / N) % N;
+    int k = idx % N;
+
+    int row_p = ((i + 1) % N) * N * N;
+    int row_m = ((i - 1 + N) % N) * N * N;
+    int row_c = i * N * N;
+    int col_p = ((j + 1) % N) * N;
+    int col_m = ((j - 1 + N) % N) * N;
+    int col_c = j * N;
+    int dep_p = (k + 1) % N;
+    int dep_m = (k - 1 + N) % N;
+    int ip = row_p + col_c + k;
+    int im = row_m + col_c + k;
+    int jp = row_c + col_p + k;
+    int jm = row_c + col_m + k;
+    int kp = row_c + col_c + dep_p;
+    int km = row_c + col_c + dep_m;
+    int ipjp = row_p + col_p + k;
+    int ipjm = row_p + col_m + k;
+    int imjp = row_m + col_p + k;
+    int imjm = row_m + col_m + k;
+    int ipkp = row_p + col_c + dep_p;
+    int ipkm = row_p + col_c + dep_m;
+    int imkp = row_m + col_c + dep_p;
+    int imkm = row_m + col_c + dep_m;
+    int jpkp = row_c + col_p + dep_p;
+    int jpkm = row_c + col_p + dep_m;
+    int jmkp = row_c + col_m + dep_p;
+    int jmkm = row_c + col_m + dep_m;
+
+    float E_c = E[idx];
+    float chi_c = chi[idx];
+    float chi_sq = chi_c * chi_c;
+    float chi0_sq = chi0 * chi0;
+    float dt2 = dt * dt;
+
+    float lap_E = (1.0f/3.0f) * (E[ip] + E[im] + E[jp] + E[jm] + E[kp] + E[km])
+                + (1.0f/6.0f) * (E[ipjp] + E[ipjm] + E[imjp] + E[imjm]
+                                + E[ipkp] + E[ipkm] + E[imkp] + E[imkm]
+                                + E[jpkp] + E[jpkm] + E[jmkp] + E[jmkm])
+                - 4.0f * E_c;
+    float lap_chi = (1.0f/3.0f) * (chi[ip] + chi[im] + chi[jp] + chi[jm] + chi[kp] + chi[km])
+                  + (1.0f/6.0f) * (chi[ipjp] + chi[ipjm] + chi[imjp] + chi[imjm]
+                                  + chi[ipkp] + chi[ipkm] + chi[imkp] + chi[imkm]
+                                  + chi[jpkp] + chi[jpkm] + chi[jmkp] + chi[jmkm])
+                  - 4.0f * chi_c;
+    lap_E *= inv_dx2;
+    lap_chi *= inv_dx2;
+
+    float E_new;
+    if (freeze_psi) {
+        E_new = E_c;
+    } else {
+        E_new = 2.0f * E_c - E_prev[idx]
+              + dt2 * (lap_E - chi_sq * E_c);
+    }
+
+    float source_density = E_c * E_c - E0_sq;
+    float y = (chi_sq - chi0_sq) / chi0_sq;
+    float y2 = y * y;
+    float y3 = y2 * y;
+    float y5 = y3 * y2;
+    float y7 = y5 * y2;
+    float y9 = y7 * y2;
+    float y11 = y9 * y2;
+    float f_prime = 0.0f;
+
+    if (potential_model == 0) {
+        f_prime = 2.0f * y;
+    } else if (
+        potential_model == 1
+        || potential_model == 9
+        || potential_model == 12
+    ) {
+        f_prime = 4.0f * y3;
+    } else if (potential_model == 2) {
+        f_prime = 6.0f * y5;
+    } else if (potential_model == 3) {
+        f_prime = 8.0f * y7;
+    } else if (potential_model == 4) {
+        f_prime = 10.0f * y9;
+    } else if (potential_model == 5) {
+        f_prime = 12.0f * y11;
+    } else if (potential_model == 6) {
+        float exp_term = exp(-y2);
+        f_prime = 2.0f * y * (1.0f - exp_term + y2 * exp_term);
+    } else if (potential_model == 7) {
+        float denominator = 1.0f + y2;
+        f_prime = 2.0f * y3 * (2.0f + y2)
+                / (denominator * denominator);
+    } else if (potential_model == 8) {
+        float tanh_y = tanh(y);
+        float sech_sq = 1.0f - tanh_y * tanh_y;
+        f_prime = 2.0f * y * tanh_y
+                * (tanh_y + y * sech_sq);
+    } else if (potential_model == 10) {
+        f_prime = 4.0f * y3 + 6.0f * y5;
+    } else if (potential_model == 11) {
+        float source_ratio = source_density / chi0_sq;
+        f_prime = 4.0f * y3 + 2.0f * source_ratio * y;
+    } else if (potential_model == 13) {
+        f_prime = 4.0f * y7 / sqrt(1.0f + y2 * y2 * y2 * y2);
+    }
+
+    float self_force = -2.0f * lam * chi0_sq * chi_c * f_prime;
+    float chi_accel = lap_chi
+                    - (kappa / chi0) * chi_c * source_density
+                    + self_force;
+
+    if (potential_model == 9) {
+        float d_ip = chi[ip] - chi_c;
+        float d_im = chi[im] - chi_c;
+        float d_jp = chi[jp] - chi_c;
+        float d_jm = chi[jm] - chi_c;
+        float d_kp = chi[kp] - chi_c;
+        float d_km = chi[km] - chi_c;
+        float nonlinear = (1.0f/3.0f) * (
+            d_ip*d_ip*d_ip + d_im*d_im*d_im
+            + d_jp*d_jp*d_jp + d_jm*d_jm*d_jm
+            + d_kp*d_kp*d_kp + d_km*d_km*d_km
+        );
+        float d_ipjp = chi[ipjp] - chi_c;
+        float d_ipjm = chi[ipjm] - chi_c;
+        float d_imjp = chi[imjp] - chi_c;
+        float d_imjm = chi[imjm] - chi_c;
+        float d_ipkp = chi[ipkp] - chi_c;
+        float d_ipkm = chi[ipkm] - chi_c;
+        float d_imkp = chi[imkp] - chi_c;
+        float d_imkm = chi[imkm] - chi_c;
+        float d_jpkp = chi[jpkp] - chi_c;
+        float d_jpkm = chi[jpkm] - chi_c;
+        float d_jmkp = chi[jmkp] - chi_c;
+        float d_jmkm = chi[jmkm] - chi_c;
+        nonlinear += (1.0f/6.0f) * (
+            d_ipjp*d_ipjp*d_ipjp + d_ipjm*d_ipjm*d_ipjm
+            + d_imjp*d_imjp*d_imjp + d_imjm*d_imjm*d_imjm
+            + d_ipkp*d_ipkp*d_ipkp + d_ipkm*d_ipkm*d_ipkm
+            + d_imkp*d_imkp*d_imkp + d_imkm*d_imkm*d_imkm
+            + d_jpkp*d_jpkp*d_jpkp + d_jpkm*d_jpkm*d_jpkm
+            + d_jmkp*d_jmkp*d_jmkp + d_jmkm*d_jmkm*d_jmkm
+        );
+        chi_accel += inv_dx2 * nonlinear / chi0_sq;
+    }
+
+    float velocity = (chi_c - chi_prev[idx]) / dt;
+    if (potential_model == 12) {
+        float inertia = 1.0f + y2;
+        float inertia_derivative = 4.0f * chi_c * y / chi0_sq;
+        chi_accel = (
+            chi_accel
+            - 0.5f * inertia_derivative * velocity * velocity
+        ) / inertia;
+    }
+
+    float damping_half_step = 0.5f * relaxation_damping * dt;
+    float chi_new = (
+        2.0f * chi_c
+        - (1.0f - damping_half_step) * chi_prev[idx]
+        + dt2 * chi_accel
+    ) / (1.0f + damping_half_step);
+
+    if (enable_chi_floor && chi_new < -chi0) chi_new = -chi0;
+
+    float mask = boundary_mask[idx];
+    float absorb = 1.0f - mask;
+    E_new = absorb * E_new;
+    chi_new = mask * chi0 + absorb * chi_new;
+
+    E_next[idx] = E_new;
+    E_prev_next[idx] = freeze_psi ? E_c : absorb * E_c;
+    chi_next[idx] = chi_new;
+    chi_prev_next[idx] = chi_c;
+}
+"""
+
 EVOLUTION_COMPLEX_KERNEL_SRC = r"""
 extern "C" __global__ __launch_bounds__(256)
 void evolve_complex(
@@ -443,7 +709,10 @@ void evolve_complex(
     const float lam,
     const float chi0,
     const float E0_sq,
-    const float eps_w)
+    const float eps_w,
+    const int use_stencil19_noether_current,
+    const float inv_dx2,
+    const int enable_chi_floor)
 {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     int total = N * N * N;
@@ -501,6 +770,9 @@ void evolve_complex(
                                   + chi[ipkp] + chi[ipkm] + chi[imkp] + chi[imkm]
                                   + chi[jpkp] + chi[jpkm] + chi[jmkp] + chi[jmkm])
                   - 4.0f * chi_c;
+    lap_Pr *= inv_dx2;
+    lap_Pi *= inv_dx2;
+    lap_chi *= inv_dx2;
 
     // GOV-01
     float Pr_new = 2.0f * Pr - Psi_r_prev[idx] + dt2 * (lap_Pr - chi_sq * Pr);
@@ -508,9 +780,40 @@ void evolve_complex(
 
     // |Psi|^2 and momentum density j
     float psi_sq = Pr * Pr + Pi_val * Pi_val;
-    float j_x = Pr * (Psi_i[ip] - Psi_i[im]) - Pi_val * (Psi_r[ip] - Psi_r[im]);
-    float j_y = Pr * (Psi_i[jp] - Psi_i[jm]) - Pi_val * (Psi_r[jp] - Psi_r[jm]);
-    float j_z = Pr * (Psi_i[kp] - Psi_i[km]) - Pi_val * (Psi_r[kp] - Psi_r[km]);
+    float j_x;
+    float j_y;
+    float j_z;
+    if (use_stencil19_noether_current) {
+        float dPr_x = (1.0f/3.0f) * (Psi_r[ip] - Psi_r[im])
+                    + (1.0f/6.0f) * (Psi_r[ipjp] + Psi_r[ipjm] + Psi_r[ipkp] + Psi_r[ipkm]
+                                  - Psi_r[imjp] - Psi_r[imjm] - Psi_r[imkp] - Psi_r[imkm]);
+        float dPi_x = (1.0f/3.0f) * (Psi_i[ip] - Psi_i[im])
+                    + (1.0f/6.0f) * (Psi_i[ipjp] + Psi_i[ipjm] + Psi_i[ipkp] + Psi_i[ipkm]
+                                  - Psi_i[imjp] - Psi_i[imjm] - Psi_i[imkp] - Psi_i[imkm]);
+        float dPr_y = (1.0f/3.0f) * (Psi_r[jp] - Psi_r[jm])
+                    + (1.0f/6.0f) * (Psi_r[ipjp] + Psi_r[imjp] + Psi_r[jpkp] + Psi_r[jpkm]
+                                  - Psi_r[ipjm] - Psi_r[imjm] - Psi_r[jmkp] - Psi_r[jmkm]);
+        float dPi_y = (1.0f/3.0f) * (Psi_i[jp] - Psi_i[jm])
+                    + (1.0f/6.0f) * (Psi_i[ipjp] + Psi_i[imjp] + Psi_i[jpkp] + Psi_i[jpkm]
+                                  - Psi_i[ipjm] - Psi_i[imjm] - Psi_i[jmkp] - Psi_i[jmkm]);
+        float dPr_z = (1.0f/3.0f) * (Psi_r[kp] - Psi_r[km])
+                    + (1.0f/6.0f) * (Psi_r[ipkp] + Psi_r[imkp] + Psi_r[jpkp] + Psi_r[jmkp]
+                                  - Psi_r[ipkm] - Psi_r[imkm] - Psi_r[jpkm] - Psi_r[jmkm]);
+        float dPi_z = (1.0f/3.0f) * (Psi_i[kp] - Psi_i[km])
+                    + (1.0f/6.0f) * (Psi_i[ipkp] + Psi_i[imkp] + Psi_i[jpkp] + Psi_i[jmkp]
+                                  - Psi_i[ipkm] - Psi_i[imkm] - Psi_i[jpkm] - Psi_i[jmkm]);
+        j_x = Pr * dPi_x - Pi_val * dPr_x;
+        j_y = Pr * dPi_y - Pi_val * dPr_y;
+        j_z = Pr * dPi_z - Pi_val * dPr_z;
+    } else {
+        j_x = Pr * (Psi_i[ip] - Psi_i[im]) - Pi_val * (Psi_r[ip] - Psi_r[im]);
+        j_y = Pr * (Psi_i[jp] - Psi_i[jm]) - Pi_val * (Psi_r[jp] - Psi_r[jm]);
+        j_z = Pr * (Psi_i[kp] - Psi_i[km]) - Pi_val * (Psi_r[kp] - Psi_r[km]);
+    }
+    float inv_dx = sqrt(inv_dx2);
+    j_x *= inv_dx;
+    j_y *= inv_dx;
+    j_z *= inv_dx;
     float j_scalar = 0.5f * (j_x + j_y + j_z);
 
     // Mexican hat
@@ -521,7 +824,7 @@ void evolve_complex(
         lap_chi - (kappa / chi0) * chi_c * (psi_sq + eps_w * j_scalar - E0_sq) + chi_self);
 
     // BH excision
-    if (chi_new < -chi0) chi_new = -chi0;
+    if (enable_chi_floor && chi_new < -chi0) chi_new = -chi0;
 
     // Absorbing boundary — damp both new and prev to prevent leapfrog reflection.
     float mask = boundary_mask[idx];
