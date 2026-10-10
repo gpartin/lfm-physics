@@ -231,15 +231,15 @@ mu = lfm.create_particle("muon", velocity=(0.04, 0.0, 0.0))
 See [examples/26_electron_traverse.py](examples/26_electron_traverse.py) and
 [examples/27_electron_vs_muon.py](examples/27_electron_vs_muon.py).
 
-### Coulomb Force (Phase = Charge)
+### Historical phase-interference controls
 
-```python
-# theta=0 → negative charge (electron)
-# theta=pi → positive charge (positron)
-# Same phase repels; opposite phase attracts — from GOV-01 interference alone
-```
+The phase examples compare initial overlap or endpoint separation of Gaussian
+preparations. They do not establish signed electric charge, Coulomb's force law,
+or Maxwell closure. The current public solver predates v39.0.2.
 
-See [examples/28_coulomb_force.py](examples/28_coulomb_force.py).
+See [the Coulomb audit and test protocol](docs/coulomb_audit.md),
+[example 28](examples/28_coulomb_force.py), and the acceleration probe
+`experiments/quantitative/exp_14_coulomb_dynamics.py`.
 
 ### Hydrogen Atom and Molecule
 
@@ -469,7 +469,7 @@ A machine-readable [`CITATION.cff`](CITATION.cff) is included in the repository
 | [LFM-048](https://zenodo.org/communities/lfm-physics) | Spin-½ and the Dirac equation emerge from Lorentz symmetry of GOV-01 solutions |
 | [LFM-050](https://zenodo.org/communities/lfm-physics) | Kepler T² ∝ r³ reproduced to 0.04 % error from GOV-01 + GOV-02 alone |
 | [LFM-051/052](https://zenodo.org/communities/lfm-physics) | Hydrogen atom and molecular binding emerge as standing-wave eigenmodes |
-| [LFM-065](https://zenodo.org/communities/lfm-physics) | Electric charge = wave phase θ; Coulomb force from phase interference |
+| [LFM-065](https://zenodo.org/communities/lfm-physics) | Historical phase-interference proposal; Coulomb/Maxwell closure unestablished |
 | [LFM-070](https://zenodo.org/communities/lfm-physics) | Bell-inequality violation (S ≈ 2√2) from χ-geometry correlations |
 | [LFM-071](https://zenodo.org/communities/lfm-physics) | Dark energy Ω_Λ = 13/19 = 0.684 derived from lattice mode counting (0.12 % error) |
 | [LFM-075](https://zenodo.org/communities/lfm-physics) | Higgs self-coupling λ_H = 4/31 derived from second-shell lattice geometry |
@@ -491,7 +491,7 @@ sim.equilibrate()
 sim.run(steps=10_000)
 print(sim.metrics())          # kepler_error < 0.04 %
 
-# reproduce Paper 065 – Coulomb repulsion from phase
+# historical Paper 065 phase-motion demo (not Coulomb validation)
 cfg = presets.gravity_em(grid_size=64)
 sim = lfm.Simulation(cfg)
 e1 = sim.place_particle("electron", position=(20, 32, 32))

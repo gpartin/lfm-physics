@@ -1,26 +1,16 @@
-"""28 — Coulomb Force: e- + e+ Attract, e- + e- Repel
+"""28 — Historical phase-dependent chi-well motion demo.
 
-Electric charge emerges from the PHASE of the complex wave field.
-  - Electron (e-): phase = 0
-  - Positron (e+): phase = pi
-
-When two same-phase particles overlap, GOV-01 interference INCREASES |psi|^2,
-which deepens the chi-well (GOV-02), raising energy.  Higher-energy = repulsion.
-
-When opposite-phase particles overlap, interference is destructive, |psi|^2
-decreases, chi-well shallows, energy falls.  Lower-energy = attraction.
-
-This experiment places two particles nearby and measures whether their chi-wells
-move toward or away from each other over short evolution.
+Measures endpoint well-gap changes; neither signed charge nor a Coulomb
+force-distance law is established. Well minima can change identity or merge.
+See docs/coulomb_audit.md. Filename retained for historical compatibility.
 """
-
 import numpy as np
 
 import lfm
 from lfm.config import BoundaryType, FieldLevel, SimulationConfig
 from _common import make_out_dir, parse_no_anim, run_and_save_3d_movie
 
-print("28 — Coulomb Force: Charge from Phase")
+print("28 — Phase-dependent chi-well motion")
 print("=" * 55)
 print()
 
@@ -72,7 +62,7 @@ def run_demo(label, phase1, phase2):
     gap1 = chi_gap(sim)
     if not (math.isnan(gap0) or math.isnan(gap1)):
         delta = gap1 - gap0
-        direction = "approach (attract)" if delta < 0 else "separate (repel)"
+        direction = "decreasing gap" if delta < 0 else "nondecreasing gap"
     else:
         delta = float("nan")
         direction = "undetermined"
@@ -81,15 +71,15 @@ def run_demo(label, phase1, phase2):
 
 print("Measuring chi-well gap change after 2000 steps:")
 print()
-run_demo("e- + e+  (phase 0 vs pi)", 0.0, math.pi)
-run_demo("e- + e-  (phase 0 vs 0)", 0.0, 0.0)
-run_demo("e+ + e+  (phase pi vs pi)", math.pi, math.pi)
+run_demo("phase 0 vs pi", 0.0, math.pi)
+run_demo("phase 0 vs 0", 0.0, 0.0)
+run_demo("phase pi vs pi", math.pi, math.pi)
 print()
-print("Same charge -> repel (gap grows).  Opposite charge -> attract (gap shrinks).")
+print("Gap changes alone do not measure a reciprocal signed force law.")
 print()
-print("Electric charge is the wave PHASE. No Coulomb law was injected.")
+print("Coulomb and Maxwell emergence NOT ESTABLISHED.")
 
-# 3-D movie: e- + e+ attracting each other
+# 3-D movie: opposite-phase preparation
 _demo = place_two(0.0, math.pi)
 run_and_save_3d_movie(_demo, steps=1000, out_dir=_OUT, stem="coulomb_force",
     field="psi_real", snapshot_every=20, intensity_floor=0.001, no_anim=_args.no_anim)

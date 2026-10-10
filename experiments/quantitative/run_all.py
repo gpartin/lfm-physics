@@ -8,7 +8,7 @@ Usage::
 Each experiment tests a QUANTITATIVE prediction of LFM against
 known physics, using ONLY GOV-01 + GOV-02 (no external physics).
 
-Experiments 01-08: Core physics (mass-energy, gravity, Coulomb, dispersion,
+Experiments 01-08: Core physics (mass-energy, gravity, initial phase overlap, dispersion,
     redshift, mass hierarchy, string tension, dark energy modes).
 Experiments 09-13: Quantum information (superposition, measurement,
     no-cloning, decoherence).
@@ -44,7 +44,7 @@ def main() -> None:
     print()
     print("╔" + "═" * 68 + "╗")
     print("║   LFM QUANTITATIVE EXPERIMENT SUITE — 13 EXPERIMENTS             ║")
-    print("║   Goal: Close every cold-reviewer gap with NUMBERS               ║")
+    print("║   Scope: per-experiment diagnostics; inspect claim limits               ║")
     print("╚" + "═" * 68 + "╝")
     print()
 
@@ -85,7 +85,7 @@ def main() -> None:
     print()
 
     if n_pass == n_total:
-        print("🏆 ALL EXPERIMENTS PASSED — LFM makes quantitative predictions.")
+        print("🏆 ALL EXPERIMENTS PASSED — per-experiment gates only; not universal physics validation.")
     else:
         print(f"⚠️  {n_total - n_pass} experiment(s) failed. Review output above.")
 
